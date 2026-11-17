@@ -13,6 +13,9 @@ googleid = "1.2.1"
 koin = "4.2.2"
 ktor = "3.5.1"
 supabase = "3.8.0"
+# Newest PowerSync release whose AARs still accept compileSdk 36: 1.15.0 and
+# later declare minCompileSdk=37 (the build's compileSdk is fixed at 36).
+powersync = "1.14.1"
 kotlinx-coroutines = "1.11.0"
 junit4 = "4.13.2"
 junitJupiter = "5.14.4"
@@ -53,6 +56,15 @@ supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt" }
 # The `android` engine (HttpURLConnection) rather than OkHttp: Ktor 3.6.0's
 # OkHttp engine pulls okhttp-android 5.5.0, which requires compileSdk 37.
 ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
+
+# PowerSync Kotlin SDK (M1 sync). `:common` instead of `:core` is what the
+# encryption guide requires: `:core` bundles a SQLite driver and a Ktor engine,
+# while `:common` lets the app supply the encrypted driver
+# (`com.powersync:sqlite3multipleciphers`) and reuse ktor-client-android.
+# 1.14.1 is built against Kotlin 2.3 and requires Ktor 3.5.0, so the existing
+# Ktor 3.5.1 resolves it without change.
+powersync-common = { module = "com.powersync:common", version.ref = "powersync" }
+powersync-sqlite3multipleciphers = { module = "com.powersync:sqlite3multipleciphers", version.ref = "powersync" }
 
 # Dependency injection
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin" }

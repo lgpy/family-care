@@ -6,7 +6,6 @@ import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
-import io.github.lgpy.familycare.core.data.SupabaseClientFactory
 import io.github.lgpy.familycare.core.domain.auth.AuthState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -53,15 +52,6 @@ class SupabaseAuthRepository(
         }
 
     override suspend fun signOut(): Result<Unit> = runAuth { auth.signOut() }
-
-    companion object {
-        /**
-         * Builds the client and the repository together, so callers (the app's
-         * Koin graph) never need Supabase types on their classpath.
-         */
-        fun create(supabaseUrl: String, publishableKey: String): SupabaseAuthRepository =
-            SupabaseAuthRepository(SupabaseClientFactory.create(supabaseUrl, publishableKey))
-    }
 }
 
 /**
