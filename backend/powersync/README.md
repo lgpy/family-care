@@ -58,6 +58,10 @@ PowerSync Cloud (the instance created in M0):
    connection on dev (2026-11-17). The dev instance uses "Connect Postgres
    Manually" (direct host `db.<ref>.supabase.co:5432`, user `powersync_role`,
    SSL verify-full) plus **Use Supabase Auth** and the JWKS URI.
+   Also add **JWT Audience** `authenticated`: Supabase access tokens carry
+   `aud: authenticated`, and without it PowerSync rejects them
+   (`PSYNC_S2105 Unexpected "aud" claim value`), so uploads succeed but
+   downloads never arrive and local rows vanish after the next checkpoint.
 4. Check the instance **Health** view shows replication running, then sign in on
    a phone and confirm a row appears locally.
 
