@@ -1,0 +1,108 @@
+# Decision Log
+
+Each decision records what was decided and why. To change one, add a new entry that supersedes it.
+
+---
+
+### D1 — Flutter for the client app — *superseded by D22*
+- **Decision:** Build the app in Flutter (Dart).
+- **Why:** Android now, web and iOS later from one codebase. Mature libraries for local databases, offline sync and local notifications. Good fit for a solo developer.
+- **Alternatives considered:** Native Kotlin (Android only), Kotlin/Compose Multiplatform (less mature web/iOS, fewer sync options), React Native/Expo (weaker Android background notifications).
+
+### D2 — Supabase (PostgreSQL) in an EU region as the backend
+- **Decision:** Use Supabase for database, authentication, file storage and server functions, hosted in the EU.
+- **Why:** The data is relational. Postgres Row-Level Security enforces access control inside the database. Supabase is open source, so we can self-host to leave. Signed DPA available.
+- **Plan:** Start on the free tier; upgrade to Pro (~$25/month) when we rely on it (D20).
+- **Alternatives considered:** Firebase (NoSQL fit is poor, more lock-in, harder GDPR story), custom backend (too much to build for an MVP), self-hosting (operational burden for health data).
+
+### D3 — Offline-first with local SQLite + PowerSync
+- **Decision:** The app reads and writes a local SQLite database; PowerSync syncs it with Postgres in the background.
+- **Why:** The app must work without signal (pharmacy, hospital). Building our own sync would cost weeks of edge cases.
+- **Note:** "Real-time" is a bonus on top of offline-first, not the requirement.
+
+### D4 — Dose reminders are scheduled on the device
+- **Decision:** Reminders are local notifications scheduled by the phone. Server push (FCM) is only used for coordination alerts (escalations, low stock, appointment changes).
+- **Why:** Reminders must fire without network or server availability.
+- **Consequences:** Must handle reboots, Android Doze and manufacturer battery optimisation. Push payloads contain no health data.
+
+### D5 — Modular monolith with extension points
+- **Decision:** One app and one backend, split into a shared core and independent feature modules.
+- **Rules:** Modules depend on the core, never on each other. Modules reference patients by ID only. Shared screens (dashboard, calendar, timeline, tasks, notifications) are populated by modules registering contributions.
+- **Why:** New features become new modules without changing existing ones. No microservice complexity.
+
+### D6 — Append-only records for doses and stock
+- **Decision:** Dose outcomes and stock changes are logged as immutable entries. Current state is derived from them.
+- **Why:** Two offline phones never overwrite each other; history and auditability come for free.
+
+### D7 — Reminder policy is a per-patient setting
+- **Decision:** Each patient has a reminder policy:
+  - **Grandparents:** *primary + escalation* — the primary caregiver is reminded; if the dose is unconfirmed after a delay, the other caregiver is alerted.
+  - **Me and my mother:** *all caregivers* — both phones are reminded; first confirmation wins.
+- **Why:** Calm and safe for the grandparents; simple for ourselves.
+- **Superseded in part by D11** (policy for me and my mother).
+
+### D8 — Bilingual: Portuguese (Portugal) and English
+- **Decision:** All UI text translatable from day one. Per-user language. Notifications generated in the recipient's language. User-entered data is never translated.
+- **Why:** Cheap now, painful to retrofit.
+
+### D9 — Medication model: versioned regimens, derived "missed", stock as a ledger
+- **Decision:** See [domain/medications.md](domain/medications.md).
+  - Regimens are never edited in place; changes end the old one and start a new one.
+  - "Missed" is computed, never stored.
+  - Stock is the sum of movements; low stock is measured in days.
+- **Why:** Accurate history for doctors, no offline conflicts, low-stock thresholds that work for any medication.
+
+### D10 — Server-trusted encryption for the MVP (provisional)
+- **Decision:** TLS in transit, provider encryption at rest, encrypted local database, strict database access control. No end-to-end encryption in the MVP.
+- **Why:** End-to-end encryption would prevent server-side escalations, low-stock jobs, future AI features and account recovery.
+- **Revisit:** Client-side encryption for documents, when the documents module is designed.
+
+### D11 — Self-managed reminders for caregiver-patients (supersedes D7 for me and my mother)
+- **Decision:** When a patient is also a user (me, my mother), the default policy is *self-managed*: `primary_with_escalation` with the primary set to the patient's own account. Only the patient's phone is reminded; the other caregiver is alerted only if the dose stays unconfirmed past the escalation delay.
+- **Grandparents:** unchanged — `primary_with_escalation` with a chosen primary caregiver.
+- **Why:** Each of us manages our own medication without notifying the other, while keeping a safety net. No new policy type needed: self-managed is a default, not a separate mechanism.
+- **Resolves:** Q1.
+
+### D12–D17 — Security and privacy
+Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
+- **D12 — Authentication:** Sign in with Google only (MVP); caregivers' Google accounts must have 2-Step Verification; mandatory biometric/PIN app lock; MFA on all admin/provider accounts.
+- **D13 — Authorization:** deny-by-default Row-Level Security on every table; one access function; PowerSync sync rules and database policies tested against the same access scenarios.
+- **D14 — Audit:** all changes and security events logged by database triggers, append-only. Individual reads are not loggable offline-first; syncs and document downloads are.
+- **D15 — Backups:** provider daily backups + nightly independent encrypted backups (database incl. auth schema, later files) to a second EU provider, undeletable by app/admin accounts; quarterly restore tests. RPO 24 h (accepted), RTO 1 day; no point-in-time recovery.
+- **D16 — GDPR stance:** design as if GDPR fully applies even if the household exemption covers us. Per-patient export, deletion and archive; optional agreement note per patient; DPAs with all processors; defined retention.
+- **D17 — No third-party analytics or tracking SDKs.** Crash reporting off or scrubbed of personal data.
+
+### D18 — Manual APK installation (for now)
+- **Decision:** Distribute signed release APKs installed by hand (via a private shared Drive folder). No Google Play for now.
+- **Why:** Two users; no store account, review or policy forms needed.
+- **Consequences:** Updates are manual. The release signing key must never be lost (stored in password manager + offline backup), or the app must be reinstalled. Switching to Google Play later is possible with the same key. Details: [build-plan §7](build-plan.md).
+
+### D19 — Dose reminders use alarm-clock alarms, plus per-brand setup and a health check
+- **Decision:** Schedule dose reminders as Android alarm-clock alarms (shows an alarm icon in the status bar). Guide the user through brand-specific battery settings (Honor/MagicOS, Samsung/One UI). Check on every app start that permissions and future alarms are in place.
+- **Why:** Both phones (Honor 200, Samsung Galaxy A) come from makers known for closing background apps. Alarm-clock alarms are the most reliable type; the health check catches silent breakage; server escalation remains the final safety net. Details: [build-plan §8](build-plan.md).
+
+### D20 — Start on free tiers; pay only when relied upon
+- **Decision:** Build and start using the app entirely on free tiers (Supabase, PowerSync, Firebase, Backblaze B2, GitHub). At M7 decide on Supabase Pro (~$25/month), recommended once real data depends on it. PowerSync stays free unless deactivation becomes a real problem (then: self-host the free Open Edition rather than paying ~$49/month).
+- **Why:** For two users the free limits are far above our needs. The real free-tier risks are pausing after a week of inactivity (avoided by daily use; the app works offline meanwhile) and no provider backups on Supabase Free (covered by our own nightly backup).
+- **Consequence:** The independent backup job and a tested restore must be in place **before** real health data enters prod (moved forward from M7). Details: [build-plan §6](build-plan.md).
+- **Supersedes:** the paid-tier plan in D2.
+
+### D21 — Application ID: `io.github.lgpy.familycare`
+- **Decision:** The Android application ID is `io.github.lgpy.familycare`.
+- **Why:** Application IDs are conventionally a reversed domain the developer controls. Without an own domain, the GitHub Pages domain `lgpy.github.io` (owned via the GitHub account `lgpy`) is the accepted convention. Contains no health-related or personal information beyond the public handle.
+- **Consequence:** Permanent. A later own domain does not require changing it.
+
+### D22 — Native Android app in Kotlin + Jetpack Compose (supersedes D1)
+- **Decision:** Build the client as a native Android app: Kotlin, Jetpack Compose, Gradle modules. Business rules live in **pure Kotlin `domain` modules** with no Android dependencies.
+- **Why:** Preference for a native app. Most direct control over the hardest requirement — reliable reminders on Honor (MagicOS) and Samsung (One UI) — through AlarmManager, receivers and WorkManager without plugin layers. All required pieces exist natively: PowerSync Kotlin SDK with Supabase connector and local encryption, supabase-kt with Google sign-in via Credential Manager.
+- **Future platforms:** the pure Kotlin domain modules are ready for Kotlin Multiplatform. iOS later: share them (with SwiftUI or Compose Multiplatform screens). Web later: a separate web client (shares the backend; domain logic can be compiled for the web via Kotlin Multiplatform or rewritten).
+- **Trade-off accepted:** web and iOS cost more later than with Flutter.
+- **Unchanged:** everything else (Supabase, PowerSync, local alarms, module rules, security). Dose-slot logic is still duplicated between app (Kotlin) and server (TypeScript), guarded by shared test vectors.
+
+---
+
+## Open questions
+
+- ~~**Q1 — Default policy for caregiver-patients.**~~ Resolved by D11: self-managed.
+- **Q2 — Security and GDPR deep-dive.** Drafted in [security-and-privacy.md](security-and-privacy.md) D12–D17 accepted. Only S2 (grandparents' agreement) remains open, non-blocking.
+- **Q3 — Default timings.** Escalation delay 30 min, missed window 2 h, low-stock threshold 7 days, appointment reminders evening before + 1 h before. To validate in use.

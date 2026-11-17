@@ -1,0 +1,93 @@
+# UX: Screens and Daily Use
+
+Wireframes are rough sketches to validate the domain model, not visual design.
+
+## Navigation
+
+```
+[ Today ]  [ Patients ]  [ Agenda ]  [ Shopping ]  [ More ]
+```
+
+## 1. Today (dashboard)
+
+Sorted by urgency, not by module. Each section is a card contributed by a module.
+
+```
+┌──────────────────────────────────────────┐
+│ Today · Mon 16 Nov        [All ▾ patients]│
+├──────────────────────────────────────────┤
+│ ⚠ NEEDS ATTENTION                         │
+│  Grandma · 08:00 · 4 meds · not confirmed │
+│     (escalated to you at 08:30)  [Give ✓] │
+│  Metformin (Grandpa) · 5 days left        │
+├──────────────────────────────────────────┤
+│ 💊 DOSES TODAY                            │
+│  08:00 ✓ Grandpa (3)   by Mom 08:04       │
+│  13:00 ○ Grandma (2)            [Give ✓]  │
+│  21:00 ○ You (1) · Mom (2) · Grandma (1)  │
+├──────────────────────────────────────────┤
+│ 📅 NEXT 7 DAYS                            │
+│  Wed · Grandpa · Blood test · 08:30 fast! │
+│  Fri · Mom · Cardiology · Hosp. Santa X   │
+└──────────────────────────────────────────┘
+```
+
+## 2. Dose confirmation
+
+- **"Give ✓"** confirms all doses of that patient's time slot in one tap.
+- Opening the slot allows exceptions (e.g. one pill refused → skipped, reason "refused").
+- Recording "given by someone else" is available.
+- **Notification actions:** "Given ✓" and "Snooze 15 min", usable without opening the app.
+
+## 3. Patient profile
+
+```
+Grandma Maria                       [⋯]
+🔴 Allergies: Penicillin · Ibuprofen     ← always visible
+Conditions: Hypertension, Type 2 diabetes
+[ Medications ] [ Appointments ] [ Info ] [ History ]
+```
+
+- **Info:** emergency contacts, SNS number, family doctor. Basis for a future emergency card.
+- **History:** timeline filled by all modules (regimen changes, appointments, later measurements and documents).
+
+## 4. Add medication (4 steps)
+
+1. **What:** name, strength, form, requires prescription?
+2. **When and how much:** schedule type, times, quantity per time, start/end date.
+3. **Stock:** current quantity, low-stock threshold in days (default 7).
+4. **Who's reminded:** inherited from the patient; can be overridden.
+
+## 5. Shopping
+
+```
+NEEDS PRESCRIPTION FIRST
+  ☐ Metformin 850mg (Grandpa) · 5 days left  [Request from GP]
+READY TO BUY
+  ☐ Atorvastatin 20mg (Mom) · 9 days left · prescription valid until 03/2027
+```
+
+Ticking an item asks "How many did you buy?" and records a refill in the stock ledger.
+
+## 6. Agenda
+
+- Appointments across all patients as a list, filterable by patient. Month view in v2.
+- Each appointment: type (consultation, blood test, exam, checkup), place, doctor, preparation notes (e.g. fasting, bring previous results), reminders (evening before, 1 hour before), follow-up.
+
+## 7. More
+
+Circle members and invitations · reminder policy per patient · language · app lock · data export.
+
+## Walkthrough: one morning
+
+1. **08:00** — Grandma's 4 medications are due. Policy *primary + escalation*, primary = Mom. Only Mom's phone is reminded. She's out; nothing confirmed.
+2. **08:30** — The server sees the slot unconfirmed past the escalation delay and pushes to me: "A dose needs attention" (no health data in the text).
+3. **08:35** — I give the pills; Grandma refuses one. I log 3 taken + 1 skipped (refused), given by me.
+4. **08:35** — Stock decreases by 3. Metformin falls to 5 days (< 7) → `StockLow` → shown on Today for both of us; shopping list shows "Needs prescription first".
+5. **09:10** — Mom opens the app. Her notification is gone; Today shows "Given by you at 08:35".
+
+### What the walkthrough added to the model
+- Group confirmation per time slot (UI only; storage stays per medication).
+- "Given by someone else".
+- Separate settings for escalation delay and missed window.
+- Snooze is local only and doesn't delay escalation.
