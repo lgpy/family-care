@@ -1,0 +1,12 @@
+# Normalise line endings in the repository; scripts must stay LF so they run
+# on Windows (Git Bash) clones with core.autocrlf=true as well as on CI.
+* text=auto
+
+*.sh            text eol=lf
+.githooks/*     text eol=lf
+android/gradlew text eol=lf
+*.bat           text eol=crlf
+
+*.jar  binary
+*.png  binary
+*.webp binary

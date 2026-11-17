@@ -17,7 +17,7 @@ import org.koin.compose.koinInject
 
 @Composable
 fun TodayScreen(
-    onOpenAbout: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val careCircleId = koinInject<CareCircleId>()
@@ -36,8 +36,8 @@ fun TodayScreen(
             text = stringResource(R.string.today_body, careCircleId.value),
             style = MaterialTheme.typography.bodyLarge,
         )
-        Button(onClick = onOpenAbout) {
-            Text(text = stringResource(R.string.about_open))
+        Button(onClick = onOpenSettings) {
+            Text(text = stringResource(R.string.settings_open))
         }
     }
 }

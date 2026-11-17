@@ -1,0 +1,102 @@
+#!/bin/sh
+#
+# Family Care pre-commit hook — build-plan M1: secret protection.
+#
+# Scans only the staged changes with gitleaks, using this repo's .gitleaks.toml,
+# and redacts anything it reports. The hook fails closed: if gitleaks is missing
+# or the scan cannot run, the commit is blocked instead of quietly letting a
+# secret through.
+#
+# Enable once per clone:  scripts/install-hooks.sh
+# Emergency only:         git commit --no-verify
+#
+# Deliberately POSIX sh (Git for Windows runs hooks with its bundled sh).
+
+set -u
+
+# Hooks run at the top of the working tree, but resolve it anyway so the config
+# path and the scan target do not depend on the caller's directory.
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+	echo "pre-commit: not inside a git working tree — cannot run the secret scan." >&2
+	exit 1
+}
+cd "$repo_root" || {
+	echo "pre-commit: cannot enter $repo_root — cannot run the secret scan." >&2
+	exit 1
+}
+
+config="$repo_root/.gitleaks.toml"
+if [ ! -f "$config" ]; then
+	echo "pre-commit: $config is missing — cannot run the secret scan, commit blocked." >&2
+	echo "Restore the file from the repository history (do not commit without the scan)." >&2
+	exit 1
+fi
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+	cat >&2 <<'EOF'
+pre-commit: gitleaks is not installed, so the secret scan cannot run — commit blocked.
+
+Install it, then retry the commit:
+  Windows   winget install --id Gitleaks.Gitleaks -e
+            (alternatives: choco install gitleaks / scoop install gitleaks)
+  macOS     brew install gitleaks
+  Linux     download the release binary from
+            https://github.com/gitleaks/gitleaks/releases
+
+Then run scripts/install-hooks.sh once (it checks gitleaks and enables this hook).
+
+Emergency only, for this single commit, skipping every check:
+  git commit --no-verify
+EOF
+	exit 1
+fi
+
+# v8.19 renamed `protect` to `git` (the old command still works but is hidden).
+# Use the current syntax where the installed version supports it.
+raw_version=$(gitleaks version 2>/dev/null | head -n 1)
+version=${raw_version#v}
+major=${version%%.*}
+rest=${version#*.}
+minor=${rest%%.*}
+
+version_ok=0
+case "$major" in
+'' | *[!0-9]*) ;;
+*)
+	case "$minor" in
+	'' | *[!0-9]*) ;;
+	*) version_ok=1 ;;
+	esac
+	;;
+esac
+
+modern=1 # 1 = `gitleaks git --staged` (v8.19+), 0 = `gitleaks protect --staged`
+if [ "$version_ok" -eq 1 ]; then
+	if [ "$major" -lt 8 ] || { [ "$major" -eq 8 ] && [ "$minor" -lt 19 ]; }; then
+		modern=0
+	fi
+fi
+
+if [ "$modern" -eq 1 ]; then
+	gitleaks git --staged --config "$config" --redact --verbose
+	status=$?
+	if [ "$status" -eq 126 ] && [ "$version_ok" -eq 0 ]; then
+		# Unknown version and the current flags were rejected: pre-8.19 syntax.
+		gitleaks protect --staged --config "$config" --redact --verbose
+		status=$?
+	fi
+else
+	gitleaks protect --staged --config "$config" --redact --verbose
+	status=$?
+fi
+
+if [ "$status" -ne 0 ]; then
+	echo "" >&2
+	echo "pre-commit: gitleaks reported a possible secret in the staged changes (or failed to scan)." >&2
+	echo "Remove the secret from the change. If it is a genuine false positive, allowlist it in .gitleaks.toml." >&2
+	echo "Reported secrets are redacted above. Emergency skip: git commit --no-verify" >&2
+	exit 1
+fi
+
+echo "pre-commit: gitleaks found no secrets in the staged changes."
+exit 0

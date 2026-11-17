@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare
 
 import android.app.Application
+import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.di.appModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -12,9 +13,13 @@ import org.koin.core.context.startKoin
 class FamilyCareApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        startKoin {
+        val koin = startKoin {
             androidContext(this@FamilyCareApplication)
             modules(appModule)
-        }
+        }.koin
+
+        // Start observing the process lifecycle before the first activity
+        // starts, so a cold start begins locked (D12).
+        koin.get<AppLockController>().start()
     }
 }

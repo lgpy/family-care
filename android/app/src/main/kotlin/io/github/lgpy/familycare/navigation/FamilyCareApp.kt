@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import io.github.lgpy.familycare.ui.AboutScreen
+import io.github.lgpy.familycare.ui.SettingsScreen
 import io.github.lgpy.familycare.ui.TodayScreen
 
 @Composable
@@ -21,6 +22,11 @@ fun FamilyCareApp(
     ) {
         composable(Destination.Today.route) {
             TodayScreen(
+                onOpenSettings = { navController.navigate(Destination.Settings.route) },
+            )
+        }
+        composable(Destination.Settings.route) {
+            SettingsScreen(
                 onOpenAbout = { navController.navigate(Destination.About.route) },
             )
         }

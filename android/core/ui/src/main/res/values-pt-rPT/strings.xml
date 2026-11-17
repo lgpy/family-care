@@ -7,4 +7,24 @@
     <string name="about_title">Sobre</string>
     <string name="about_body">A aplicação Family Care está a ser construída passo a passo. Este ecrã existe para confirmar que a navegação funciona.</string>
     <string name="back">Voltar</string>
+
+    <string name="settings_title">Definições</string>
+    <string name="settings_open">Definições</string>
+    <string name="settings_language_title">Idioma</string>
+    <string name="settings_language_body">Aplica-se a este dispositivo.</string>
+    <string name="language_system">Predefinição do sistema</string>
+    <string name="language_portuguese">Português (Portugal)</string>
+    <string name="language_english">English</string>
+    <string name="settings_app_lock_title">Bloqueio da aplicação</string>
+    <string name="settings_app_lock_body">Sempre ativo. É necessário um bloqueio do ecrã para abrir a aplicação Family Care.</string>
+
+    <string name="lock_title">Bloqueado</string>
+    <string name="lock_body">Desbloqueie para ver a informação de saúde da sua família.</string>
+    <string name="lock_unlock">Desbloquear</string>
+    <string name="lock_prompt_title">Desbloquear o Family Care</string>
+    <string name="lock_prompt_subtitle">Use a impressão digital, o rosto ou o bloqueio do ecrã</string>
+    <string name="lock_auth_failed">Não foi possível desbloquear. Tente novamente.</string>
+    <string name="lock_no_screen_lock_title">É necessário um bloqueio do ecrã</string>
+    <string name="lock_no_screen_lock_body">A aplicação Family Care precisa de um bloqueio do ecrã (PIN, padrão ou biometria) para proteger a informação de saúde. Defina um nas definições do dispositivo e volte.</string>
+    <string name="lock_open_security_settings">Abrir definições de segurança</string>
 </resources>

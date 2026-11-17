@@ -10,6 +10,14 @@ android {
         // D21: permanent application ID.
         applicationId = "io.github.lgpy.familycare"
     }
+
+    // Generates the locale config declared by the merged manifest, so the
+    // languages the app ships in (en, pt-PT) also appear under Android's
+    // per-app language settings. Languages are declared in the resources of
+    // the modules below; res/resources.properties names the unqualified one.
+    androidResources {
+        generateLocaleConfig = true
+    }
 }
 
 dependencies {
@@ -26,6 +34,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.fragment)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     implementation(platform(libs.koin.bom))

@@ -12,6 +12,11 @@ class DestinationTest {
     }
 
     @Test
+    fun settingsIsPartOfTheShell() {
+        assertEquals("settings", Destination.Settings.route)
+    }
+
+    @Test
     fun routesAreNonBlankAndUnique() {
         val routes = Destination.entries.map { it.route }
 

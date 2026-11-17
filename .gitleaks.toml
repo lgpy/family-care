@@ -1,7 +1,8 @@
 # gitleaks baseline configuration (build-plan M1: secret protection).
 #
 # Extends the default rule set; rules are never weakened, only scoped.
-# Run: gitleaks detect --source . --config .gitleaks.toml --redact --verbose
+# Run (gitleaks 8.19+): gitleaks git . --config .gitleaks.toml --redact --verbose
+# Staged changes only (what the pre-commit hook does): add --staged
 
 title = "Family Care"
 

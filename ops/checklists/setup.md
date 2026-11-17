@@ -69,6 +69,7 @@ One project serves both Google sign-in and push notifications.
   - [ ] keystore password, key alias, key password → password manager
 - [ ] Note the key's **SHA-1 fingerprint** (needed for the Google OAuth Android client in M1).
 - [ ] Never put the keystore or its passwords in the repository.
+- [ ] **Before your first commit:** install gitleaks (`winget install --id Gitleaks.Gitleaks -e`) and run `scripts/install-hooks.sh` once per clone, so the pre-commit hook scans staged changes for secrets (§3, build-plan M1).
 
 ## 9. Phones
 - [x] Your Honor 200 and Mom's Samsung: Android and security updates installed; screen lock (PIN/fingerprint) on.

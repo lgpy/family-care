@@ -7,4 +7,24 @@
     <string name="about_title">About</string>
     <string name="about_body">Family Care is being built one step at a time. This screen exists to prove navigation works.</string>
     <string name="back">Back</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_open">Settings</string>
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_body">Applies to this device.</string>
+    <string name="language_system">System default</string>
+    <string name="language_portuguese">Português (Portugal)</string>
+    <string name="language_english">English</string>
+    <string name="settings_app_lock_title">App lock</string>
+    <string name="settings_app_lock_body">Always on. A screen lock is required to open Family Care.</string>
+
+    <string name="lock_title">Locked</string>
+    <string name="lock_body">Unlock to see your family’s health information.</string>
+    <string name="lock_unlock">Unlock</string>
+    <string name="lock_prompt_title">Unlock Family Care</string>
+    <string name="lock_prompt_subtitle">Use your fingerprint, face or screen lock</string>
+    <string name="lock_auth_failed">Could not unlock. Try again.</string>
+    <string name="lock_no_screen_lock_title">Screen lock required</string>
+    <string name="lock_no_screen_lock_body">Family Care needs a screen lock (PIN, pattern or biometrics) to protect health information. Set one in your device settings, then come back.</string>
+    <string name="lock_open_security_settings">Open security settings</string>
 </resources>
