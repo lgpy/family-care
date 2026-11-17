@@ -8,6 +8,7 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import io.github.lgpy.familycare.BuildConfig
 import io.github.lgpy.familycare.core.data.auth.GoogleSignInNonce
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -51,7 +52,7 @@ class GoogleSignIn(private val webClientId: String) {
                 )
             } else {
                 // A credential type this app did not ask for: nothing usable.
-                GoogleSignInOutcome.Failed
+                GoogleSignInOutcome.Failed(debugDetail("unexpected credential type ${credential.type}"))
             }
         } catch (_: GetCredentialCancellationException) {
             // The user dismissed the sheet: not an error, show nothing.
@@ -59,14 +60,17 @@ class GoogleSignIn(private val webClientId: String) {
         } catch (exception: GetCredentialException) {
             // No account, Play Services missing, provider misconfigured, ...
             // The exception message can name the account, so it is not surfaced
-            // and not logged (security-and-privacy §1 T6).
-            GoogleSignInOutcome.Failed
-        } catch (_: Exception) {
+            // and not logged (security-and-privacy §1 T6). Debug builds show
+            // the exception type only, which never names the account.
+            GoogleSignInOutcome.Failed(debugDetail("${exception::class.simpleName}: ${exception.type}"))
+        } catch (exception: Exception) {
             // e.g. GoogleIdTokenCredential.createFrom failing on a malformed
             // response. Treated like any other failure.
-            GoogleSignInOutcome.Failed
+            GoogleSignInOutcome.Failed(debugDetail(exception::class.simpleName.orEmpty()))
         }
     }
+
+    private fun debugDetail(detail: String): String? = detail.takeIf { BuildConfig.DEBUG }
 
     private companion object {
         /**
@@ -89,6 +93,10 @@ sealed interface GoogleSignInOutcome {
     /** The user dismissed the sheet. No message is shown. */
     data object Cancelled : GoogleSignInOutcome
 
-    /** No usable credential; the screen shows a localized error. */
-    data object Failed : GoogleSignInOutcome
+    /**
+     * No usable credential; the screen shows a localized error. [debugDetail]
+     * is set in debug builds only, to diagnose setup problems on devices whose
+     * logs are not readable (e.g. Honor/MagicOS).
+     */
+    data class Failed(val debugDetail: String? = null) : GoogleSignInOutcome
 }

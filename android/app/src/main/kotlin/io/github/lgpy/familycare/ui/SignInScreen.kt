@@ -1,5 +1,6 @@
 package io.github.lgpy.familycare.ui
 
+import io.github.lgpy.familycare.BuildConfig
 import android.app.Activity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -79,12 +80,16 @@ fun SignInScreen(
                         scope.launch {
                             when (val outcome = googleSignIn.requestIdToken(activity)) {
                                 is GoogleSignInOutcome.IdToken ->
-                                    viewModel.onIdTokenReceived(outcome.idToken, outcome.rawNonce)
+                                    viewModel.onIdTokenReceived(
+                                        outcome.idToken,
+                                        outcome.rawNonce,
+                                        showDebugDetail = BuildConfig.DEBUG,
+                                    )
 
                                 // Dismissing the sheet is a normal choice, not an error.
                                 GoogleSignInOutcome.Cancelled -> viewModel.onCredentialCancelled()
 
-                                GoogleSignInOutcome.Failed -> viewModel.onCredentialFailed()
+                                is GoogleSignInOutcome.Failed -> viewModel.onCredentialFailed(outcome.debugDetail)
                             }
                         }
                     },
@@ -101,6 +106,14 @@ fun SignInScreen(
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
                 )
+                uiState.debugDetail?.let { detail ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = detail,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }

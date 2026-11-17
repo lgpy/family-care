@@ -19,6 +19,8 @@ data class SignInUiState(
     val signingIn: Boolean = false,
     /** Show the localized "could not sign in" message. */
     val failed: Boolean = false,
+    /** Debug builds only: technical reason shown under the message. */
+    val debugDetail: String? = null,
 )
 
 /**
@@ -47,20 +49,28 @@ class SignInViewModel(private val authRepository: AuthRepository) : ViewModel() 
     }
 
     /** No Google credential was available (no account, no Play Services). */
-    fun onCredentialFailed() {
-        _uiState.value = SignInUiState(failed = true)
+    fun onCredentialFailed(debugDetail: String? = null) {
+        _uiState.value = SignInUiState(failed = true, debugDetail = debugDetail)
     }
 
     /** Exchanges the Google ID token for a Supabase session. */
-    fun onIdTokenReceived(idToken: String, rawNonce: String) {
+    fun onIdTokenReceived(idToken: String, rawNonce: String, showDebugDetail: Boolean = false) {
         _uiState.value = SignInUiState(signingIn = true)
         viewModelScope.launch {
             val result = authRepository.signInWithGoogleIdToken(idToken, rawNonce)
-            _uiState.update { it.copy(signingIn = false, failed = result.isFailure) }
+            _uiState.update {
+                it.copy(
+                    signingIn = false,
+                    failed = result.isFailure,
+                    debugDetail = result.exceptionOrNull()
+                        ?.takeIf { showDebugDetail }
+                        ?.let { error -> "${error::class.simpleName}: ${error.message}" },
+                )
+            }
         }
     }
 
     fun onErrorDismissed() {
-        _uiState.update { it.copy(failed = false) }
+        _uiState.update { it.copy(failed = false, debugDetail = null) }
     }
 }
