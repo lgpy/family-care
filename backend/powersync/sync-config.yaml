@@ -1,0 +1,26 @@
+# PowerSync sync configuration (what each phone is allowed to download).
+#
+# Format: Sync Streams (config edition 3). This is the format the PowerSync docs
+# recommend for new projects; the older `bucket_definitions` Sync Rules are the
+# legacy format (docs.powersync.com/sync/rules/overview). See README.md.
+#
+# Deployed by pasting this file into the PowerSync dashboard (Sync Streams ->
+# edit YAML -> Deploy). It is deliberately not applied by the Supabase CLI.
+#
+# Reads are filtered here; writes are filtered by RLS in
+# backend/supabase/migrations/. Both are tested against the same scenario
+# (security-and-privacy §3, D13).
+
+config:
+  edition: 3
+
+streams:
+  # M1 probe (throwaway): each signed-in user downloads only their own rows.
+  # `auth.user_id()` is the `sub` claim of the Supabase JWT, i.e. auth.users.id,
+  # which is what core.sync_probe.owner_id stores.
+  #
+  # The client-side table is `sync_probe` (no schema prefix); the quoted
+  # "core" prefix is only how the source database is addressed.
+  sync_probe:
+    auto_subscribe: true
+    query: SELECT * FROM "core"."sync_probe" WHERE owner_id = auth.user_id()

@@ -87,3 +87,36 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  database:
+    name: Database tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Starts the local Postgres container and applies every migration in
+      # supabase/migrations/. No remote project is linked: nothing here can
+      # touch dev or prod.
+      - name: Start local database
+        run: supabase db start
+
+      # pgTAP isolation tests (build-plan §4): owner-only rows, other users see
+      # nothing, anon denied, RLS on every core table, publication present.
+      - name: Run database tests
+        run: supabase test db
+
+      - name: Lint database
+        run: supabase db lint --level error --fail-on error
+
+      - name: Stop local database
+        if: always()
+        run: supabase stop --no-backup
