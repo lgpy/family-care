@@ -1,0 +1,28 @@
+# gitleaks baseline configuration (build-plan M1: secret protection).
+#
+# Extends the default rule set; rules are never weakened, only scoped.
+# Run: gitleaks detect --source . --config .gitleaks.toml --redact --verbose
+
+title = "Family Care"
+
+[extend]
+# Keep the built-in rules and their defaults.
+useDefault = true
+
+[allowlist]
+description = "Design docs quote placeholder credentials; build output and caches are never committed."
+
+paths = [
+  # Documentation describes security posture and may show placeholder tokens.
+  '''^docs/''',
+  '''^ops/''',
+  # Build output and tooling caches.
+  '''(^|/)build/''',
+  '''(^|/)\.gradle/''',
+  '''(^|/)\.git/''',
+]
+
+regexes = [
+  '''(?i)example[_-]?(api[_-]?key|secret|token)''',
+  '''(?i)YOUR[_-]?(API[_-]?KEY|SECRET|TOKEN)''',
+]

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Family Care</string>
+    <string name="today_title">Today</string>
+    <string name="today_body">Care circle: %1$s</string>
+    <string name="about_open">About</string>
+    <string name="about_title">About</string>
+    <string name="about_body">Family Care is being built one step at a time. This screen exists to prove navigation works.</string>
+    <string name="back">Back</string>
+</resources>

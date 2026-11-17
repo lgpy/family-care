@@ -1,0 +1,45 @@
+# --- Build output -----------------------------------------------------------
+build/
+*/build/
+**/build/
+.gradle/
+**/.gradle/
+out/
+*.hprof
+
+# --- Local / machine-specific configuration ---------------------------------
+local.properties
+**/local.properties
+
+# --- Secrets: never committable ---------------------------------------------
+# Release signing material (build-plan §7: key lives in the password manager).
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore.properties
+google-services.json
+.env
+.env.*
+!.env.example
+secrets.properties
+
+# --- IDE / editor ------------------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.cxx/
+.externalNativeBuild/
+
+# --- Tooling caches ----------------------------------------------------------
+.kotlin/
+**/.kotlin/
+captures/
+.cache/

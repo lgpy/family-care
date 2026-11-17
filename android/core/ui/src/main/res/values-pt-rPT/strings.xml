@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Family Care</string>
+    <string name="today_title">Hoje</string>
+    <string name="today_body">Círculo de cuidados: %1$s</string>
+    <string name="about_open">Sobre</string>
+    <string name="about_title">Sobre</string>
+    <string name="about_body">A aplicação Family Care está a ser construída passo a passo. Este ecrã existe para confirmar que a navegação funciona.</string>
+    <string name="back">Voltar</string>
+</resources>
