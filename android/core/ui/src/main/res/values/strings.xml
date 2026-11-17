@@ -27,6 +27,25 @@
     <string name="settings_app_lock_title">App lock</string>
     <string name="settings_app_lock_body">Always on. A screen lock is required to open Family Care.</string>
 
+    <!-- M1 probe: the "Sync test" screen (delete in M2 with core.sync_probe). -->
+    <string name="settings_diagnostics_title">Diagnostics</string>
+    <string name="settings_diagnostics_body">Developer tools. The sync test is an M1 probe and will be removed in M2.</string>
+    <string name="sync_test_title">Sync test (M1)</string>
+    <string name="sync_test_body">One test table synced through PowerSync. Add a note in airplane mode, then check it appears on the other phone after reconnecting.</string>
+    <string name="sync_test_status_connected">Connected</string>
+    <string name="sync_test_status_connecting">Connecting</string>
+    <string name="sync_test_status_offline">Offline</string>
+    <string name="sync_test_uploading">Uploading…</string>
+    <string name="sync_test_downloading">Downloading…</string>
+    <string name="sync_test_synced_at">Synced at %1$s</string>
+    <string name="sync_test_not_synced">Not synced yet</string>
+    <string name="sync_test_error">Some changes were rejected by the server</string>
+    <string name="sync_test_note_hint">Note</string>
+    <string name="sync_test_max_length">At most %1$d characters</string>
+    <string name="sync_test_add">Add</string>
+    <string name="sync_test_delete">Delete</string>
+    <string name="sync_test_empty">No notes</string>
+
     <string name="lock_title">Locked</string>
     <string name="lock_body">Unlock to see your family’s health information.</string>
     <string name="lock_unlock">Unlock</string>

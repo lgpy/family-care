@@ -12,6 +12,7 @@ import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
 import io.github.lgpy.familycare.ui.SignInViewModel
+import io.github.lgpy.familycare.ui.SyncTestViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.Module
@@ -55,4 +56,7 @@ val appModule: Module = module {
     single { GoogleSignIn(webClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID) }
 
     viewModel { SignInViewModel(get()) }
+
+    // M1 probe: the "Sync test" screen. Delete in M2 together with core.sync_probe.
+    viewModel { SyncTestViewModel(get()) }
 }

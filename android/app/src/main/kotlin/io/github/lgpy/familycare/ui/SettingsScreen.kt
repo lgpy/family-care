@@ -38,9 +38,14 @@ import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+/**
+ * Settings, including the M1 probe entry point. The Sync test row lives under
+ * Diagnostics only until M1's done-test has run (delete in M2).
+ */
 @Composable
 fun SettingsScreen(
     onOpenAbout: () -> Unit,
+    onOpenSyncTest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val languageController = koinInject<AppLanguageController>()
@@ -152,6 +157,21 @@ fun SettingsScreen(
             text = stringResource(R.string.settings_app_lock_body),
             style = MaterialTheme.typography.bodyMedium,
         )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        // M1 probe: the done-test screen. Delete this section in M2.
+        Text(
+            text = stringResource(R.string.settings_diagnostics_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = stringResource(R.string.settings_diagnostics_body),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        TextButton(onClick = onOpenSyncTest) {
+            Text(text = stringResource(R.string.sync_test_title))
+        }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
