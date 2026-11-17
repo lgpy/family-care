@@ -53,6 +53,11 @@ PowerSync Cloud (the instance created in M0):
      flow does both. Done by hand, point the instance at the project's JWKS URL
      (`https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.json`) so
      `auth.user_id()` resolves.
+   Wait for each **Deploying** to finish before saving another page: saving
+   Client Auth while the database connection was still deploying wiped the
+   connection on dev (2026-11-17). The dev instance uses "Connect Postgres
+   Manually" (direct host `db.<ref>.supabase.co:5432`, user `powersync_role`,
+   SSL verify-full) plus **Use Supabase Auth** and the JWKS URI.
 4. Check the instance **Health** view shows replication running, then sign in on
    a phone and confirm a row appears locally.
 

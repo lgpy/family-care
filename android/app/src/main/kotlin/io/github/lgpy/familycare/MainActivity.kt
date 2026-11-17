@@ -7,6 +7,7 @@ import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockGate
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.navigation.FamilyCareApp
+import io.github.lgpy.familycare.ui.AuthGate
 import org.koin.compose.koinInject
 
 /**
@@ -29,7 +30,11 @@ class MainActivity : FragmentActivity() {
                     controller = appLockController,
                     activity = this@MainActivity,
                 ) {
-                    FamilyCareApp()
+                    // D12: the app lock comes first, then the Supabase session,
+                    // then the shell. Signed-out users never see app content.
+                    AuthGate(activity = this@MainActivity) {
+                        FamilyCareApp()
+                    }
                 }
             }
         }

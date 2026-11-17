@@ -26,4 +26,12 @@ paths = [
 regexes = [
   '''(?i)example[_-]?(api[_-]?key|secret|token)''',
   '''(?i)YOUR[_-]?(API[_-]?KEY|SECRET|TOKEN)''',
+  # Public build-time identifiers (build-plan M1): android/environments holds the
+  # Supabase URL, publishable key, Google Web client id and PowerSync URL. The
+  # Supabase *publishable* key is a public identifier by design — it ships in the
+  # APK and grants only what Row-Level Security allows — so generic-api-key
+  # always matches it. Allowed by its published prefix/shortest form only, so
+  # any other credential in that file is still reported; the file must never
+  # hold a secret (no service-role key, keystore password or private key).
+  '''^sb_publishable_[A-Za-z0-9_-]{20,}$''',
 ]

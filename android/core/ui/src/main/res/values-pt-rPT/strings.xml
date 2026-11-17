@@ -10,6 +10,15 @@
 
     <string name="settings_title">Definições</string>
     <string name="settings_open">Definições</string>
+    <string name="settings_account_title">Conta</string>
+    <string name="settings_account_signed_in_as">Sessão iniciada como %1$s</string>
+    <string name="settings_account_signed_out">Sessão não iniciada.</string>
+    <string name="settings_sign_out">Terminar sessão</string>
+    <string name="settings_sign_out_failed">Não foi possível terminar sessão. Tente novamente.</string>
+    <string name="sign_out_confirm_title">Terminar sessão?</string>
+    <string name="sign_out_confirm_body">Terá de iniciar sessão com o Google novamente para ver a informação de saúde da sua família.</string>
+    <string name="sign_out_confirm_action">Terminar sessão</string>
+    <string name="cancel">Cancelar</string>
     <string name="settings_language_title">Idioma</string>
     <string name="settings_language_body">Aplica-se a este dispositivo.</string>
     <string name="language_system">Predefinição do sistema</string>
@@ -27,4 +36,11 @@
     <string name="lock_no_screen_lock_title">É necessário um bloqueio do ecrã</string>
     <string name="lock_no_screen_lock_body">A aplicação Family Care precisa de um bloqueio do ecrã (PIN, padrão ou biometria) para proteger a informação de saúde. Defina um nas definições do dispositivo e volte.</string>
     <string name="lock_open_security_settings">Abrir definições de segurança</string>
+
+    <!-- D12: início de sessão com o Google -->
+    <string name="sign_in_body">A aplicação Family Care guarda a medicação e as consultas da sua família num único local privado. Inicie sessão com a conta Google que foi convidada para o seu círculo de cuidados.</string>
+    <string name="sign_in_with_google">Iniciar sessão com o Google</string>
+    <string name="sign_in_in_progress">A iniciar sessão…</string>
+    <string name="sign_in_loading">A verificar a sessão…</string>
+    <string name="sign_in_failed">Não foi possível iniciar sessão. Tente novamente.</string>
 </resources>

@@ -12,24 +12,30 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import io.github.lgpy.familycare.core.data.auth.AuthRepository
+import io.github.lgpy.familycare.core.domain.auth.AuthState
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.locale.AppLanguage
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
@@ -39,6 +45,12 @@ fun SettingsScreen(
 ) {
     val languageController = koinInject<AppLanguageController>()
     var selectedLanguage by remember { mutableStateOf(languageController.current()) }
+
+    val authRepository = koinInject<AuthRepository>()
+    val authState by authRepository.state.collectAsState()
+    var confirmingSignOut by remember { mutableStateOf(false) }
+    var signOutFailed by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = modifier
@@ -51,6 +63,45 @@ fun SettingsScreen(
             text = stringResource(R.string.settings_title),
             style = MaterialTheme.typography.headlineMedium,
         )
+
+        // D12: which Google account the session belongs to, and the way out.
+        Text(
+            text = stringResource(R.string.settings_account_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        when (val state = authState) {
+            is AuthState.SignedIn -> {
+                Text(
+                    text = stringResource(
+                        R.string.settings_account_signed_in_as,
+                        state.email ?: state.userId,
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                TextButton(
+                    onClick = {
+                        signOutFailed = false
+                        confirmingSignOut = true
+                    },
+                ) {
+                    Text(text = stringResource(R.string.settings_sign_out))
+                }
+                if (signOutFailed) {
+                    Text(
+                        text = stringResource(R.string.settings_sign_out_failed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+
+            else -> Text(
+                text = stringResource(R.string.settings_account_signed_out),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
         Text(
             text = stringResource(R.string.settings_language_title),
@@ -107,6 +158,31 @@ fun SettingsScreen(
         TextButton(onClick = onOpenAbout) {
             Text(text = stringResource(R.string.about_open))
         }
+    }
+
+    if (confirmingSignOut) {
+        AlertDialog(
+            onDismissRequest = { confirmingSignOut = false },
+            title = { Text(text = stringResource(R.string.sign_out_confirm_title)) },
+            text = { Text(text = stringResource(R.string.sign_out_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmingSignOut = false
+                        scope.launch {
+                            signOutFailed = authRepository.signOut().isFailure
+                        }
+                    },
+                ) {
+                    Text(text = stringResource(R.string.sign_out_confirm_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingSignOut = false }) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 }
 

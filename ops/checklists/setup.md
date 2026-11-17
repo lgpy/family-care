@@ -48,11 +48,15 @@ One project serves both Google sign-in and push notifications.
   - [x] Scopes: only `openid`, `email`, `profile`.
   - [x] Test users: your Gmail and Mom's Gmail.
 - [ ] OAuth client IDs: **wait until M1** — the Android client ID needs the signing key's fingerprint (§8).
+  - [x] Dev: Web client *Family Care – Supabase dev* (secret in the password manager) and Android client *Family Care – Android debug* (debug keystore SHA-1); Google provider enabled in Supabase dev with both IDs.
+  - [ ] Prod: Android client with the **release** key's SHA-1, Web client for Supabase prod.
 
 ## 6. PowerSync
 - [x] Account with MFA if offered.
 - [x] Note which **EU region** PowerSync Cloud offers, and make sure the Supabase projects (§4) are in the same or a nearby EU region.
-- [ ] Create instances later (M1) — nothing to configure yet.
+- [x] Create instances (M1): project *family-care* with *family-care-dev* and *family-care-prod*, both EU.
+  - [x] Dev: replication role `powersync_role` (password in the password manager), database connection (verify-full), Supabase Auth + JWKS, `backend/powersync/sync-config.yaml` deployed.
+  - [ ] Prod: same steps against Supabase prod.
 - [ ] DPA: usually part of the terms you accept at signup; if there's a separate DPA page, save it as PDF.
 
 ## 7. Backblaze B2 (independent backups)
