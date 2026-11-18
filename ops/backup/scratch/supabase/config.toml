@@ -1,0 +1,78 @@
+# Scratch Supabase stack for restore tests.
+#
+# `ops/backup/restore-test.sh` restores a decrypted backup into this project,
+# never into `backend/supabase`. It is deliberately separate from the main local
+# stack (project_id "family-care", ports 54321-54329) so a restore can never
+# overwrite the development database:
+#
+#   project_id  family-care-restore  -> containers supabase_db_family-care-restore
+#   ports       55321-55329          -> main stack keeps 54321-54329
+#   migrations  disabled             -> start empty, then restore schema.sql
+#
+# There is no migrations/ directory here: the backup is the source of the
+# schema. Start it with:
+#
+#   npx supabase@latest start --workdir ops/backup/scratch
+#
+# and stop it afterwards with:
+#
+#   npx supabase@latest stop --workdir ops/backup/scratch --no-backup
+#
+# --no-backup throws the restored data away, which is what a scratch project is
+# for.
+project_id = "family-care-restore"
+
+[api]
+enabled = true
+port = 55321
+# `core` and `meds` are deliberately absent: the scratch project starts empty
+# and only the restore creates them, so PostgREST would wait forever for
+# schemas that do not exist yet (and its health check fails the start). The
+# restore test talks to Postgres directly; nothing here needs PostgREST to
+# expose the app schemas.
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 55322
+shadow_port = 55320
+health_timeout = "2m"
+major_version = 17
+
+[db.pooler]
+enabled = false
+port = 55329
+
+[db.migrations]
+# The restore applies schema.sql itself. Nothing in the repository is applied
+# here, so a stray migration cannot make the scratch database disagree with the
+# backup being tested.
+enabled = false
+
+[db.seed]
+enabled = false
+
+[studio]
+enabled = true
+port = 55323
+
+[local_smtp]
+enabled = true
+port = 55324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+
+# No edge functions are deployed or served in the scratch stack; the restored
+# database only needs the auth schema (created by GoTrue's bootstrap) for the
+# auth.users rows.
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false

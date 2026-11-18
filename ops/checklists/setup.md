@@ -64,6 +64,20 @@ One project serves both Google sign-in and push notifications.
 - [ ] MFA on.
 - [x] Create a **private** bucket `family-care-backups` with **Object Lock enabled** (can only be turned on at creation). Default retention: *Compliance* mode, 30 days.
 - [x] Create an **application key** limited to that bucket, with *write* and *list* rights only — **no delete**. Save key ID + key. This is what the nightly job will use (D15).
+- [ ] **Lifecycle rules** (bucket → *Lifecycle Settings*), so the job never has to delete anything (it cannot):
+  - `dev/daily/` and `prod/daily/`: **keep 31 days** (custom rule: *days till hide* 31, *days till delete* 1).
+  - `dev/monthly/` and `prod/monthly/`: **keep ~366 days** (custom rule: *days till hide* 366, *days till delete* 1).
+  Together with the Object Lock retention this gives the 30 daily + 12 monthly from security-and-privacy §6.
+- [ ] **Confirm the S3 endpoint** in the bucket details (*Endpoint*): the job's default is `https://s3.eu-central-003.backblazeb2.com`. If it differs, set the repository variable: `gh variable set B2_S3_ENDPOINT --repo lgpy/family-care`.
+- [ ] **Age backup key.** The public key is committed at `ops/backup/recipients.txt`; the private key file is what decrypts every backup. Store it in KeePassXC (as an attachment) **and** an offline copy (USB stick / paper in a safe place). Never in the repository, never in GitHub. Without it the backups are unreadable.
+- [ ] **GitHub secrets for the nightly backup** (the values from §4 and this section, typed at the prompt — never on a command line that is logged):
+  ```bash
+  gh secret set SUPABASE_DB_URL_DEV --repo lgpy/family-care    # dev session pooler URL (IPv4)
+  gh secret set SUPABASE_DB_URL_PROD --repo lgpy/family-care   # prod session pooler URL (IPv4)
+  gh secret set B2_KEY_ID --repo lgpy/family-care
+  gh secret set B2_APPLICATION_KEY --repo lgpy/family-care
+  ```
+  `gh repo view --json nameWithOwner` prints the `--repo` value if the repository ever moves. Then run the workflow by hand (`gh workflow run backup.yml --repo lgpy/family-care`) and check that both jobs are green before relying on the schedule.
 - [ ] DPA: usually part of the terms you accept at signup; if there's a separate DPA page, save it as PDF.
 
 ## 8. Development machine (prepares M1)

@@ -1,0 +1,101 @@
+name: Nightly backup
+
+# Independent encrypted backup of both Supabase projects (D15,
+# docs/security-and-privacy.md §6, the gate after M4 in docs/build-plan.md).
+# The job dumps, encrypts and uploads; it holds no age private key, so it can
+# write a backup but never read one back. The B2 key can only write and list:
+# retention and deletion are the bucket's Object Lock and lifecycle rules.
+# GitHub's failure email is the alert.
+
+on:
+  schedule:
+    # 02:17 UTC every night, after the provider's own maintenance window.
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which project to back up now
+        type: choice
+        options:
+          - both
+          - dev
+          - prod
+        default: both
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Back up ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # One run per environment at a time, so a manual dispatch cannot overlap the
+    # scheduled one; dev and prod still run in parallel.
+    concurrency:
+      group: backup-${{ matrix.environment }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        # A dispatch for one environment collapses the matrix to it; a schedule
+        # (or "both") keeps dev and prod. `inputs.environment` is empty outside
+        # workflow_dispatch, which is why the last fallback is the full list.
+        environment: ${{ fromJSON(inputs.environment == 'dev' && '["dev"]' || inputs.environment == 'prod' && '["prod"]' || '["dev","prod"]') }}
+    env:
+      BACKUP_ENV: ${{ matrix.environment }}
+      # Both URLs are in the job env and the step picks one by name. A
+      # `prod ? prod_secret : dev_secret` expression would silently fall back
+      # to the dev URL when the prod secret is empty, and upload dev data as
+      # prod; selecting here cannot.
+      SUPABASE_DB_URL_DEV: ${{ secrets.SUPABASE_DB_URL_DEV }}
+      SUPABASE_DB_URL_PROD: ${{ secrets.SUPABASE_DB_URL_PROD }}
+      B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      # Optional repository variable; the documented default is B2's EU Central
+      # S3 endpoint (confirm it in the B2 bucket details).
+      B2_S3_ENDPOINT: ${{ vars.B2_S3_ENDPOINT || 'https://s3.eu-central-003.backblazeb2.com' }}
+      AWS_DEFAULT_REGION: eu-central-003
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      # Fail here, loudly, rather than let the script run without a URL: a
+      # missing secret must break the nightly job, not skip the backup.
+      - name: Check the required secrets are set
+        run: |
+          missing=0
+          url_name="SUPABASE_DB_URL_${BACKUP_ENV^^}"
+          if [ -z "${!url_name}" ]; then
+            echo "::error::$url_name is empty; set it with: gh secret set $url_name --repo $GITHUB_REPOSITORY"
+            missing=1
+          fi
+          for name in B2_KEY_ID B2_APPLICATION_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is empty; set it with: gh secret set $name --repo $GITHUB_REPOSITORY"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install --yes --quiet age
+
+      # Dumps, checksums, tar, age and the B2 upload all live in the script so
+      # this workflow stays thin. Only the encrypted .age file leaves the job;
+      # there is deliberately no upload-artifact step for any of this.
+      - name: Dump, encrypt and upload
+        run: |
+          url_name="SUPABASE_DB_URL_${BACKUP_ENV^^}"
+          export SUPABASE_DB_URL="${!url_name}"
+          mkdir -p "$RUNNER_TEMP/backup"
+          bash ops/backup/backup.sh --env "$BACKUP_ENV" --output-dir "$RUNNER_TEMP/backup"
+
+      - name: Remove the local copy
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/backup"

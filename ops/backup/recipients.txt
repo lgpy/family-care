@@ -1,0 +1,5 @@
+# age public recipients: anything encrypted to this key can only be decrypted
+# with the matching private key, which is in the password manager (KeePassXC)
+# and on paper/an offline copy. The private key is never in the repository, in
+# GitHub, or on the backup runner — CI can encrypt but not decrypt.
+age124z9vf0nuf3lqte8c8325gsefnan2v4d8enwexqztzqansps2p8qwq6n9t
