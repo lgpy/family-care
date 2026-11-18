@@ -361,6 +361,11 @@
     <string name="meds_stock_recount_action">Guardar contagem</string>
     <string name="meds_stock_discard_action">Deitar fora</string>
 
+    <!-- M5: o cartão "Stock baixo" de Hoje (D28). O título reutiliza
+         meds_stock_low_badge; uma linha é "doente · medicação — dias para acabar". -->
+    <string name="meds_low_stock_line">%1$s · %2$s — %3$s</string>
+    <string name="meds_low_stock_more">+%1$d mais</string>
+
     <!-- M5: shopping list (D28). As duas secções, as respetivas linhas e diálogos. -->
     <string name="shopping_title">Compras</string>
     <string name="shopping_empty_title">Nada para comprar</string>
@@ -410,6 +415,13 @@
     <string name="escalation_notification_title">Family Care</string>
     <string name="escalation_notification_body">Uma toma precisa de atenção</string>
     <string name="escalation_notification_public_text">Family Care · Há uma toma para dar</string>
+
+    <!-- M5: alertas de stock baixo (D28). Mesma regra do texto de escalonamento:
+         genérico, sem nomes nem dados de saúde, e o ecrã bloqueado diz o mesmo. -->
+    <string name="stock_channel_name">Stock baixo</string>
+    <string name="stock_channel_description">Quando um medicamento está a acabar</string>
+    <string name="stock_notification_title">Family Care</string>
+    <string name="stock_notification_body">Um medicamento está a acabar</string>
 
     <string name="reminders_needs_attention_title">Precisa de atenção</string>
     <string name="reminders_needs_attention_line">%1$s · %2$s · %3$s · por confirmar</string>

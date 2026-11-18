@@ -20,7 +20,7 @@ import io.github.lgpy.familycare.feature.medications.reminders.ReminderRoutes
 enum class Destination(val route: String) {
     Today("today"),
     Patients("patients"),
-    Shopping("shopping"),
+    Shopping(MedicationsRoutes.SHOPPING),
     More("more"),
     FamilyCircle("more/family-circle"),
     Reminders(ReminderRoutes.SETUP),

@@ -361,6 +361,11 @@
     <string name="meds_stock_recount_action">Save count</string>
     <string name="meds_stock_discard_action">Discard</string>
 
+    <!-- M5: the Today "Low stock" card (D28). The heading reuses
+         meds_stock_low_badge; a line is "patient · medication — days left". -->
+    <string name="meds_low_stock_line">%1$s · %2$s — %3$s</string>
+    <string name="meds_low_stock_more">+%1$d more</string>
+
     <!-- M5: shopping list (D28). The two groups, their lines and their dialogs. -->
     <string name="shopping_title">Shopping</string>
     <string name="shopping_empty_title">Nothing to buy</string>
@@ -411,6 +416,13 @@
     <string name="escalation_notification_title">Family Care</string>
     <string name="escalation_notification_body">A dose needs attention</string>
     <string name="escalation_notification_public_text">Family Care · A dose is due</string>
+
+    <!-- M5: low-stock pushes (D28). Same rule as the escalation text: generic, no
+         names or health data, and the public (locked) version says the same. -->
+    <string name="stock_channel_name">Low stock</string>
+    <string name="stock_channel_description">When a medication is running low</string>
+    <string name="stock_notification_title">Family Care</string>
+    <string name="stock_notification_body">A medication is running low</string>
 
     <string name="reminders_needs_attention_title">Needs attention</string>
     <string name="reminders_needs_attention_line">%1$s · %2$s · %3$s · not confirmed</string>

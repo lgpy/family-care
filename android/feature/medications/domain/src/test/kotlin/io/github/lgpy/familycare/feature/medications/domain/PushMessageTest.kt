@@ -16,6 +16,7 @@ class PushMessageTest {
 
     private val patientId = "6f1a8b1e-2a5b-4a1e-9a3f-1c2d3e4f5a6b"
     private val regimenId = "0b7c9d2e-3f4a-4b5c-8d6e-7f8091a2b3c4"
+    private val medicationId = "7c2d9e3f-4a5b-4c6d-9e7f-8091a2b3c4d5"
 
     @Test
     fun `escalation carries the patient, the slot and the server tag`() {
@@ -63,6 +64,29 @@ class PushMessageTest {
             PushMessages.parse(mapOf("type" to "low_stock", "regimen_id" to regimenId)),
         )
         assertEquals(PushMessage.Unknown, PushMessages.parse(emptyMap()))
+    }
+
+    @Test
+    fun `stock low carries the medication tag`() {
+        assertEquals(
+            PushMessage.StockLow(tag = "stock-$medicationId"),
+            PushMessages.parse(
+                mapOf("type" to "stock_low"),
+                notificationTag = "stock-$medicationId",
+            ),
+        )
+    }
+
+    @Test
+    fun `stock low without a tag is still a stock alert`() {
+        assertEquals(
+            PushMessage.StockLow(tag = null),
+            PushMessages.parse(mapOf("type" to "stock_low")),
+        )
+        assertEquals(
+            PushMessage.StockLow(tag = null),
+            PushMessages.parse(mapOf("type" to "stock_low"), notificationTag = "  "),
+        )
     }
 
     @Test

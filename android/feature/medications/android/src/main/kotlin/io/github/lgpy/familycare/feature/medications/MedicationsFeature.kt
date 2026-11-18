@@ -26,6 +26,13 @@ object MedicationsFeature {
  */
 object MedicationsRoutes {
 
+    /**
+     * The app's Shopping tab. The module exposes the route instead of naming the
+     * shell's `Destination`, so a card or a notification can open the shopping
+     * list without either side importing the other (D5).
+     */
+    const val SHOPPING: String = "shopping"
+
     /** Navigation argument holding the patient a medication belongs to. */
     const val PATIENT_ID_ARG: String = "patientId"
 

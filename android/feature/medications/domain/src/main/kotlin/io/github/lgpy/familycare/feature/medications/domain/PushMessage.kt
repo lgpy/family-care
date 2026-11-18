@@ -15,6 +15,7 @@ import java.time.format.DateTimeFormatter
  * |---|---|---|
  * | `escalation` | `type=escalation, patient_id, scheduled_local` | title "Family Care", localized body, `android.notification.tag` |
  * | `clear` | `type=clear, regimen_id, scheduled_local` | none (data-only, high priority) |
+ * | `stock_low` | `type=stock_low` | title "Family Care", localized body, `android.notification.tag` (channel `stock_alerts`) |
  *
  * Payloads carry ids and a wall-clock time only — no medication, patient or
  * health data (D4) — and nothing here logs them.
@@ -43,6 +44,19 @@ sealed interface PushMessage {
         val scheduledLocal: LocalDateTime,
     ) : PushMessage
 
+    /**
+     * A medication fell to its low-stock threshold (M5/D28): the notification
+     * sends the user to the shopping list.
+     *
+     * The payload carries only the type; the server names the medication only in
+     * the notification tag (`stock-<medication_id>`), so a newer push for the
+     * same medication replaces the earlier one.
+     *
+     * @param tag The notification tag the server used, or null when the message
+     *   arrived without one.
+     */
+    data class StockLow(val tag: String?) : PushMessage
+
     /** Not a message this build knows (another type, or a malformed payload). */
     data object Unknown : PushMessage
 }
@@ -63,6 +77,7 @@ object PushMessages {
 
     const val TYPE_ESCALATION: String = "escalation"
     const val TYPE_CLEAR: String = "clear"
+    const val TYPE_STOCK_LOW: String = "stock_low"
 
     const val KEY_TYPE = "type"
     const val KEY_PATIENT_ID = "patient_id"
@@ -75,12 +90,15 @@ object PushMessages {
      * @param notificationTag The notification tag the message carried, when the
      *   transport exposes it (`RemoteMessage.notification?.tag`). An escalation
      *   without it falls back to the tag derived from the data, so a message is
-     *   still replaceable and cancellable.
+     *   still replaceable and cancellable; a stock-low message keeps null.
      */
     fun parse(data: Map<String, String>, notificationTag: String? = null): PushMessage =
         when (data[KEY_TYPE]) {
             TYPE_ESCALATION -> parseEscalation(data, notificationTag)
             TYPE_CLEAR -> parseClear(data)
+            TYPE_STOCK_LOW -> PushMessage.StockLow(
+                tag = notificationTag?.takeIf(String::isNotBlank),
+            )
             else -> PushMessage.Unknown
         }
 

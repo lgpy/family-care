@@ -17,6 +17,7 @@ import io.github.lgpy.familycare.core.ui.dashboard.DashboardCards
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
+import io.github.lgpy.familycare.feature.medications.dashboard.LowStockDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.MedicationsDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.ReminderHealthDashboardCard
@@ -130,6 +131,7 @@ val appModule: Module = module {
     // feature module to do it.
     single<DashboardCard> { MedicationsDashboardCard() }
     single<DashboardCard> { NeedsAttentionDashboardCard() }
+    single<DashboardCard> { LowStockDashboardCard() }
     single<DashboardCard> { ReminderHealthDashboardCard() }
     single { DashboardCards(getAll<DashboardCard>()) }
 

@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.feature.medications
 
 import io.github.lgpy.familycare.feature.medications.dashboard.DosesTodayViewModel
+import io.github.lgpy.familycare.feature.medications.dashboard.LowStockViewModel
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionViewModel
 import io.github.lgpy.familycare.feature.medications.dashboard.ReminderHealthViewModel
 import io.github.lgpy.familycare.feature.medications.detail.MedicationDetailViewModel
@@ -42,6 +43,9 @@ val medicationsModule: Module = module {
     }
 
     viewModel { ReminderHealthViewModel(checker = get()) }
+
+    // M5/D28: the Today card that digests the low-stock list.
+    viewModel { LowStockViewModel(stockRepository = get()) }
 
     viewModel { (patientId: String, scheduledLocal: String) ->
         DoseSlotViewModel(

@@ -14,7 +14,8 @@ import io.github.lgpy.familycare.feature.medications.domain.PushMessage
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderContract
 
 /**
- * Server escalation notifications (M4; D4/D26/D27).
+ * Server escalation notifications (M4; D4/D26/D27), and the low-stock alerts of
+ * M5 (D28) on their own `stock_alerts` channel.
  *
  * The server (`escalate/index.ts`) sends a `notification` message on the
  * `escalations` channel with a generic title and a body localized from the
@@ -47,6 +48,9 @@ object PushNotifications {
     /** The server's channel id for escalations (`android.notification.channel_id`). */
     const val CHANNEL_ID: String = "escalations"
 
+    /** The server's channel id for low-stock alerts (`android.notification.channel_id`). */
+    const val STOCK_CHANNEL_ID: String = "stock_alerts"
+
     /** The id Play services pairs with a tag; see the class comment. */
     const val NOTIFICATION_ID: Int = 0
 
@@ -71,6 +75,29 @@ object PushNotifications {
         ).apply {
             description = context.getString(R.string.escalation_channel_description)
             enableVibration(true)
+            lockscreenVisibility = NotificationCompat.VISIBILITY_PRIVATE
+        }
+        manager.createNotificationChannel(channel)
+    }
+
+    /**
+     * Creates the `stock_alerts` channel (M5/D28: "Low stock" / "Stock baixo").
+     * Called when a low-stock push is drawn; re-creating an existing channel
+     * never changes the user's settings.
+     *
+     * Default importance, unlike escalations: running low is something to act on
+     * when shopping, not an alarm about a dose that is due now.
+     */
+    fun ensureStockChannel(context: Context) {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        if (manager.getNotificationChannel(STOCK_CHANNEL_ID) != null) return
+
+        val channel = NotificationChannel(
+            STOCK_CHANNEL_ID,
+            context.getString(R.string.stock_channel_name),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            description = context.getString(R.string.stock_channel_description)
             lockscreenVisibility = NotificationCompat.VISIBILITY_PRIVATE
         }
         manager.createNotificationChannel(channel)
@@ -124,6 +151,50 @@ object PushNotifications {
         NotificationManagerCompat.from(context).cancel(tag, NOTIFICATION_ID)
     }
 
+    /**
+     * Shows a low-stock alert received while the app is in the foreground; returns
+     * false when notifications are disabled.
+     *
+     * The text is generic (D4): it names neither the medication nor the patient,
+     * and the public version says the same thing (D26), because the unlocked text
+     * is already safe to show on the lock screen. Tapping opens the shopping list.
+     */
+    @SuppressLint("MissingPermission")
+    fun postStockLow(context: Context, message: PushMessage.StockLow): Boolean {
+        val manager = NotificationManagerCompat.from(context)
+        if (!manager.areNotificationsEnabled()) return false
+        ensureStockChannel(context)
+
+        val body = context.getString(R.string.stock_notification_body)
+        val publicVersion = NotificationCompat.Builder(context, STOCK_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle(context.getString(R.string.stock_notification_title))
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+
+        val notification = NotificationCompat.Builder(context, STOCK_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle(context.getString(R.string.stock_notification_title))
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publicVersion)
+            // A newer alert for the same medication replaces this one: the server
+            // tags it `stock-<medication_id>`.
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(false)
+            .setContentIntent(shoppingIntent(context, message))
+            .build()
+
+        if (message.tag == null) {
+            manager.notify(NOTIFICATION_ID, notification)
+        } else {
+            manager.notify(message.tag, NOTIFICATION_ID, notification)
+        }
+        return true
+    }
+
     /** Tapping opens the app on this slot's dose screen (or Today, if it is gone). */
     private fun contentIntent(
         context: Context,
@@ -139,6 +210,27 @@ object PushNotifications {
         return PendingIntent.getActivity(
             context,
             message.tag.hashCode() and 0x7fffffff,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    /**
+     * Tapping a low-stock alert opens the app on the shopping list. The module
+     * owns the route constant; the app maps it to its Shopping destination, so
+     * this file names no app class (D5).
+     */
+    private fun shoppingIntent(
+        context: Context,
+        message: PushMessage.StockLow,
+    ): PendingIntent {
+        val intent = Intent()
+            .setClassName(context, MAIN_ACTIVITY)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra(ReminderContract.EXTRA_ROUTE, MedicationsRoutes.SHOPPING)
+        return PendingIntent.getActivity(
+            context,
+            (message.tag?.hashCode() ?: 0) and 0x7fffffff,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
