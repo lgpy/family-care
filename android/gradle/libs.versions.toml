@@ -60,6 +60,10 @@ supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt" }
 # The `android` engine (HttpURLConnection) rather than OkHttp: Ktor 3.6.0's
 # OkHttp engine pulls okhttp-android 5.5.0, which requires compileSdk 37.
 ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
+# JVM engine and core used by the data layer's JVM integration tests only: the
+# app itself always ships the Android engine above.
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 
 # PowerSync Kotlin SDK (M1 sync). `:common` instead of `:core` is what the
 # encryption guide requires: `:core` bundles a SQLite driver and a Ktor engine,

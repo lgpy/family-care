@@ -33,6 +33,9 @@ include(":app")
 
 include(":core:domain")
 include(":core:data")
+// The data layer's JVM integration tests: real PowerSync database, real
+// PostgREST uploads (see the module's build file).
+include(":core:data:jvmtests")
 include(":core:notifications")
 include(":core:ui")
 
