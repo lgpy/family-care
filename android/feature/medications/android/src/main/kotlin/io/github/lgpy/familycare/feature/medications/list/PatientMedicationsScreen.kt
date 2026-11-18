@@ -2,6 +2,7 @@ package io.github.lgpy.familycare.feature.medications.list
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,6 +42,10 @@ import org.koin.core.parameter.parametersOf
  *
  * "Add medication" exists for owners and caregivers only, the same rule the
  * repository enforces.
+ *
+ * The list itself ([PatientMedicationsSection]) is also the content of the
+ * Medications tab of the patient profile (D29), which embeds it without this
+ * screen's Scaffold, back arrow or floating button.
  */
 @Composable
 fun PatientMedicationsScreen(
@@ -68,14 +73,14 @@ fun PatientMedicationsScreen(
             }
         },
     ) { padding ->
-        LazyColumn(
+        PatientMedicationsList(
+            uiState = uiState,
+            onToggleStopped = viewModel::toggleStopped,
+            onOpenMedication = onOpenMedication,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            item {
+            header = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -93,53 +98,110 @@ fun PatientMedicationsScreen(
                         }
                     }
                 }
-            }
+            },
+        )
+    }
+}
 
-            if (!uiState.loaded) {
-                item { CircularProgressIndicator() }
-            } else if (uiState.patientMissing) {
+/**
+ * The Medications tab of the patient profile (D29): the same list, embedded
+ * below the profile's own header and tabs.
+ *
+ * It has no Scaffold of its own: the profile owns the screen. "Add medication"
+ * is a row at the top of the list instead of a floating button, because a
+ * floating button would hover over the whole profile rather than this tab.
+ */
+@Composable
+fun PatientMedicationsSection(
+    patientId: String,
+    onAdd: () -> Unit,
+    onOpenMedication: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val viewModel = koinViewModel<PatientMedicationsViewModel>(
+        parameters = { parametersOf(patientId) },
+    )
+    val uiState by viewModel.uiState.collectAsState()
+
+    PatientMedicationsList(
+        uiState = uiState,
+        onToggleStopped = viewModel::toggleStopped,
+        onOpenMedication = onOpenMedication,
+        modifier = modifier.fillMaxSize(),
+        onAdd = onAdd.takeIf { uiState.canWrite && !uiState.patientMissing },
+    )
+}
+
+@Composable
+private fun PatientMedicationsList(
+    uiState: PatientMedicationsUiState,
+    onToggleStopped: () -> Unit,
+    onOpenMedication: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    header: (@Composable () -> Unit)? = null,
+    onAdd: (() -> Unit)? = null,
+) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(24.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        if (header != null) {
+            item { header() }
+        }
+
+        if (onAdd != null) {
+            item {
+                TextButton(onClick = onAdd) {
+                    Text(text = stringResource(R.string.meds_list_add))
+                }
+            }
+        }
+
+        if (!uiState.loaded) {
+            item { CircularProgressIndicator() }
+        } else if (uiState.patientMissing) {
+            item {
+                Text(
+                    text = stringResource(R.string.meds_patient_not_available),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+        } else {
+            if (uiState.isEmpty) {
                 item {
                     Text(
-                        text = stringResource(R.string.meds_patient_not_available),
+                        text = stringResource(R.string.meds_list_empty),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
-            } else {
-                if (uiState.isEmpty) {
-                    item {
+            }
+            items(uiState.active, key = { it.medication.id.value }) { item ->
+                MedicationRow(
+                    item = item,
+                    onClick = { onOpenMedication(item.medication.id.value) },
+                )
+                HorizontalDivider()
+            }
+            if (uiState.stopped.isNotEmpty()) {
+                item {
+                    TextButton(onClick = onToggleStopped) {
                         Text(
-                            text = stringResource(R.string.meds_list_empty),
-                            style = MaterialTheme.typography.bodyLarge,
+                            text = stringResource(
+                                R.string.meds_list_stopped,
+                                uiState.stopped.size,
+                            ),
                         )
                     }
                 }
-                items(uiState.active, key = { it.medication.id.value }) { item ->
+            }
+            if (uiState.stoppedExpanded) {
+                items(uiState.stopped, key = { it.medication.id.value }) { item ->
                     MedicationRow(
                         item = item,
                         onClick = { onOpenMedication(item.medication.id.value) },
                     )
                     HorizontalDivider()
-                }
-                if (uiState.stopped.isNotEmpty()) {
-                    item {
-                        TextButton(onClick = viewModel::toggleStopped) {
-                            Text(
-                                text = stringResource(
-                                    R.string.meds_list_stopped,
-                                    uiState.stopped.size,
-                                ),
-                            )
-                        }
-                    }
-                }
-                if (uiState.stoppedExpanded) {
-                    items(uiState.stopped, key = { it.medication.id.value }) { item ->
-                        MedicationRow(
-                            item = item,
-                            onClick = { onOpenMedication(item.medication.id.value) },
-                        )
-                        HorizontalDivider()
-                    }
                 }
             }
         }

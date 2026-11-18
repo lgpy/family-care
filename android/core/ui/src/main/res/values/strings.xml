@@ -102,6 +102,19 @@
     <string name="patient_error_note">Keep the note to 2000 characters or fewer.</string>
     <string name="patient_needs_primary">Needs a primary caregiver — choose who gets the reminders.</string>
 
+    <!-- M6/D29: the patient profile with its contributed tabs and History. -->
+    <string name="patient_profile_edit">Edit patient</string>
+    <string name="patient_profile_actions">Patient actions</string>
+    <string name="patient_tab_history">History</string>
+    <string name="patient_history_empty">Nothing here yet. Changes to this person’s care will appear here.</string>
+    <string name="patient_history_today">Today</string>
+    <string name="patient_history_yesterday">Yesterday</string>
+    <string name="patient_history_month">%1$s %2$d</string>
+    <string name="patient_timeline_medication_started">Started %1$s</string>
+    <string name="patient_timeline_medication_changed">Changed %1$s</string>
+    <string name="patient_timeline_medication_changed_detail">New dose or schedule</string>
+    <string name="patient_timeline_medication_stopped">Stopped %1$s</string>
+
     <!-- M2: More. -->
     <string name="more_title">More</string>
     <string name="more_family_circle">Family circle</string>
@@ -216,6 +229,7 @@
 
     <!-- M3: a patient's medications. -->
     <string name="meds_list_title">Medications</string>
+    <string name="meds_tab_title">Medications</string>
     <string name="meds_list_empty">No medications yet. Add the first one.</string>
     <string name="meds_list_stopped">Stopped (%1$d)</string>
     <string name="meds_list_add">Add medication</string>

@@ -39,6 +39,7 @@ import io.github.lgpy.familycare.ui.MoreScreen
 import io.github.lgpy.familycare.ui.TodayScreen
 import io.github.lgpy.familycare.ui.circle.FamilyCircleScreen
 import io.github.lgpy.familycare.ui.patients.PatientFormScreen
+import io.github.lgpy.familycare.ui.patients.PatientProfileScreen
 import io.github.lgpy.familycare.ui.patients.PatientsScreen
 import io.github.lgpy.familycare.ui.profile.YourNameScreen
 import io.github.lgpy.familycare.ui.reminders.RemindersScreen
@@ -114,12 +115,7 @@ fun FamilyCareApp(
                 PatientsScreen(
                     onAddPatient = { navController.navigate(Destination.PatientNew.route) },
                     onOpenPatient = { patientId ->
-                        navController.navigate(Destination.patientEditRoute(patientId))
-                    },
-                    onOpenMedications = { patientId ->
-                        navController.navigate(
-                            Destination.patientMedicationsRoute(patientId),
-                        )
+                        navController.navigate(Destination.patientProfileRoute(patientId))
                     },
                 )
             }
@@ -136,6 +132,19 @@ fun FamilyCareApp(
                 PatientFormScreen(
                     patientId = null,
                     onBack = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = Destination.PatientProfile.route,
+                arguments = listOf(navArgument(PATIENT_ID_ARG) { type = NavType.StringType }),
+            ) { entry ->
+                PatientProfileScreen(
+                    patientId = entry.arguments?.getString(PATIENT_ID_ARG).orEmpty(),
+                    onBack = { navController.popBackStack() },
+                    onEdit = { patientId ->
+                        navController.navigate(Destination.patientEditRoute(patientId))
+                    },
+                    onNavigate = { route -> navController.navigate(route) },
                 )
             }
             composable(
