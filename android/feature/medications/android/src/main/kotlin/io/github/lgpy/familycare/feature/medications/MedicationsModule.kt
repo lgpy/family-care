@@ -67,6 +67,7 @@ val medicationsModule: Module = module {
             patientId = patientId,
             medicationId = medicationId.ifBlank { null },
             medicationRepository = get(),
+            stockRepository = get(),
             patientRepository = get(),
             careCircleRepository = get(),
         )
@@ -85,6 +86,7 @@ val medicationsModule: Module = module {
             medicationId = medicationId,
             medicationRepository = get(),
             doseLogRepository = get(),
+            stockRepository = get(),
             careCircleRepository = get(),
         )
     }

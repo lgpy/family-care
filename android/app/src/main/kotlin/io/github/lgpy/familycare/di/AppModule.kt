@@ -23,6 +23,7 @@ import io.github.lgpy.familycare.feature.medications.dashboard.ReminderHealthDas
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationsData
+import io.github.lgpy.familycare.feature.medications.data.StockRepository
 import io.github.lgpy.familycare.feature.medications.medicationsModule
 import io.github.lgpy.familycare.feature.medications.push.FcmTokenSource
 import io.github.lgpy.familycare.feature.medications.push.FirebaseTokenSource
@@ -111,6 +112,17 @@ val appModule: Module = module {
     single<DoseLogRepository> {
         val data = get<DataLayer>()
         MedicationsData.doseLogRepository(data.database, data.authState)
+    }
+    // M5/D28: the stock ledger derives its summaries from the medication and the
+    // dose log, so it reuses the two repositories above.
+    single<StockRepository> {
+        val data = get<DataLayer>()
+        MedicationsData.stockRepository(
+            database = data.database,
+            authState = data.authState,
+            medicationRepository = get(),
+            doseLogRepository = get(),
+        )
     }
 
     // The dashboard extension point (architecture.md §5): a feature contributes a

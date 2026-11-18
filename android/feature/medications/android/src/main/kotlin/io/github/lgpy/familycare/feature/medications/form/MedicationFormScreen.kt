@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
@@ -43,10 +45,11 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * The add-medication flow, three steps (stock is M5):
- * what → when and how much → who is reminded. In edit mode ([medicationId] not
- * null) it is the "Edit details" screen: one step, saving with
- * `MedicationRepository.update`, which leaves the regimen untouched.
+ * The add-medication flow, four steps: what → when and how much → stock → who is
+ * reminded. In edit mode ([medicationId] not null) it is the "Edit details"
+ * screen: one step with the low-stock threshold and an optional recount, saving
+ * with `MedicationRepository.update` (which leaves the regimen untouched) and, if
+ * the recount is filled, a stock count after it.
  */
 @Composable
 fun MedicationFormScreen(
@@ -118,6 +121,7 @@ fun MedicationFormScreen(
                     uiState.isEdit -> DetailsStep(viewModel, uiState)
                     uiState.step == 0 -> DetailsStep(viewModel, uiState)
                     uiState.step == 1 -> ScheduleStep(viewModel, uiState)
+                    uiState.step == 2 -> StockStep(viewModel, uiState)
                     else -> RemindersStep(viewModel, uiState)
                 }
 
@@ -167,6 +171,7 @@ fun MedicationFormScreen(
 private fun MedicationFormUiState.stepTitleRes(): Int = when (step) {
     0 -> R.string.meds_step_what
     1 -> R.string.meds_step_when
+    2 -> R.string.meds_step_stock
     else -> R.string.meds_step_who
 }
 
@@ -298,6 +303,39 @@ private fun DetailsStep(viewModel: MedicationFormViewModel, state: MedicationFor
         modifier = Modifier.fillMaxWidth(),
     )
     FieldError(MedicationField.MEDICATION_INSTRUCTIONS in errors, R.string.meds_error_instructions)
+
+    if (state.isEdit) {
+        // M5/D28: stock is its own step when adding, and part of "Edit details"
+        // afterwards: the threshold moves here, and a recount is optional
+        // because it is a separate ledger entry, not a column.
+        HorizontalDivider()
+        OutlinedTextField(
+            value = state.lowStockThresholdDays,
+            onValueChange = viewModel::onLowStockThresholdChanged,
+            label = { Text(text = stringResource(R.string.meds_stock_threshold_label)) },
+            enabled = enabled,
+            isError = MedicationField.MEDICATION_LOW_STOCK_THRESHOLD in errors,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        FieldError(
+            MedicationField.MEDICATION_LOW_STOCK_THRESHOLD in errors,
+            R.string.meds_error_low_stock,
+        )
+
+        OutlinedTextField(
+            value = state.recountQuantity,
+            onValueChange = viewModel::onRecountQuantityChanged,
+            label = { Text(text = stringResource(R.string.meds_stock_recount_label)) },
+            enabled = enabled,
+            isError = MedicationField.STOCK_QUANTITY in errors,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        FieldError(MedicationField.STOCK_QUANTITY in errors, R.string.meds_error_stock_quantity)
+    }
 }
 
 @Composable
@@ -315,6 +353,43 @@ private fun ScheduleStep(viewModel: MedicationFormViewModel, state: MedicationFo
         onRemoveTime = viewModel::onRemoveTime,
         onStartDateChanged = viewModel::onStartDateChanged,
         onEndDateChanged = viewModel::onEndDateChanged,
+    )
+}
+
+@Composable
+private fun StockStep(viewModel: MedicationFormViewModel, state: MedicationFormUiState) {
+    val enabled = state.canWrite
+
+    Text(
+        text = stringResource(R.string.meds_step_stock),
+        style = MaterialTheme.typography.titleSmall,
+    )
+
+    OutlinedTextField(
+        value = state.stockQuantity,
+        onValueChange = viewModel::onStockQuantityChanged,
+        label = { Text(text = stringResource(R.string.meds_stock_count_label, state.stockUnit)) },
+        enabled = enabled,
+        isError = MedicationField.STOCK_QUANTITY in state.errors,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    FieldError(MedicationField.STOCK_QUANTITY in state.errors, R.string.meds_error_stock_quantity)
+
+    OutlinedTextField(
+        value = state.lowStockThresholdDays,
+        onValueChange = viewModel::onLowStockThresholdChanged,
+        label = { Text(text = stringResource(R.string.meds_stock_threshold_label)) },
+        enabled = enabled,
+        isError = MedicationField.MEDICATION_LOW_STOCK_THRESHOLD in state.errors,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    FieldError(
+        MedicationField.MEDICATION_LOW_STOCK_THRESHOLD in state.errors,
+        R.string.meds_error_low_stock,
     )
 }
 

@@ -235,6 +235,7 @@
     <string name="meds_step_of">Passo %1$d de %2$d</string>
     <string name="meds_step_what">O que é</string>
     <string name="meds_step_when">Quando e quanto</string>
+    <string name="meds_step_stock">Stock</string>
     <string name="meds_step_who">Quem é lembrado</string>
     <string name="meds_next">Seguinte</string>
     <string name="meds_previous">Voltar</string>
@@ -254,6 +255,9 @@
     <string name="meds_form_other">Outra</string>
     <string name="meds_stock_unit_label">Unidade de stock</string>
     <string name="meds_stock_unit_helper">Como o stock é contado, por exemplo comprimido ou ml.</string>
+    <string name="meds_stock_count_label">Quantidade atual (%1$s)</string>
+    <string name="meds_stock_threshold_label">Avise-me quando restarem estes dias ou menos</string>
+    <string name="meds_stock_recount_label">Recontagem (opcional)</string>
     <string name="meds_prescription_label">Exige receita</string>
     <string name="meds_prescription_valid_label">Receita válida até (opcional)</string>
     <string name="meds_date_helper">AAAA-MM-DD</string>
@@ -297,6 +301,9 @@
     <string name="meds_error_end">A data de fim tem de ser igual ou posterior à data de início.</string>
     <string name="meds_error_times">Adicione pelo menos uma hora com quantidade, no formato HH:MM.</string>
     <string name="meds_error_overlap">Estas datas sobrepõem-se a outro esquema desta medicação.</string>
+    <string name="meds_error_stock_quantity">Indique uma quantidade entre 0 e 100000, com até três casas decimais.</string>
+    <string name="meds_error_stock_quantity_positive">Indique uma quantidade superior a 0, com até três casas decimais.</string>
+    <string name="meds_error_stock_reason">Indique porque está a deitar fora o stock.</string>
 
     <!-- M3: detalhe da medicação. -->
     <string name="meds_detail_title">Medicação</string>
@@ -328,6 +335,30 @@
     <string name="meds_change_effective">A partir de</string>
     <string name="meds_change_effective_helper">O novo esquema começa nesta data; o anterior termina no dia anterior.</string>
     <string name="meds_not_found">Esta medicação não está disponível.</string>
+
+    <!-- M5: stock (D28). A secção, as ações e os respetivos erros. -->
+    <string name="meds_stock_left">%1$s %2$s em stock</string>
+    <plurals name="meds_stock_days_left">
+        <item quantity="one">Cerca de %1$d dia para acabar</item>
+        <item quantity="other">Cerca de %1$d dias para acabar</item>
+    </plurals>
+    <string name="meds_stock_no_schedule">Sem esquema ativo</string>
+    <string name="meds_stock_low_badge">Stock baixo</string>
+    <string name="meds_stock_needs_prescription">Precisa primeiro de uma nova receita</string>
+    <string name="meds_stock_ready_to_buy">Pronto a comprar</string>
+    <string name="meds_stock_refill">Registar reabastecimento</string>
+    <string name="meds_stock_recount">Recontar</string>
+    <string name="meds_stock_discard">Deitar fora</string>
+    <string name="meds_stock_refill_title">Registar reabastecimento</string>
+    <string name="meds_stock_refill_body">Adicione o stock que entrou, por exemplo uma caixa nova.</string>
+    <string name="meds_stock_recount_title">Recontar</string>
+    <string name="meds_stock_discard_title">Deitar stock fora</string>
+    <string name="meds_stock_discard_body">Retire o stock que já não pode ser usado. Fica no histórico.</string>
+    <string name="meds_stock_quantity_label">Quantidade</string>
+    <string name="meds_stock_reason_label">Porque está a ser deitado fora?</string>
+    <string name="meds_stock_refill_action">Registar reabastecimento</string>
+    <string name="meds_stock_recount_action">Guardar contagem</string>
+    <string name="meds_stock_discard_action">Deitar fora</string>
 
     <string name="lock_title">Bloqueado</string>
     <string name="lock_body">Desbloqueie para ver a informação de saúde da sua família.</string>

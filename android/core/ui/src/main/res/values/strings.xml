@@ -235,6 +235,7 @@
     <string name="meds_step_of">Step %1$d of %2$d</string>
     <string name="meds_step_what">What</string>
     <string name="meds_step_when">When and how much</string>
+    <string name="meds_step_stock">Stock</string>
     <string name="meds_step_who">Who is reminded</string>
     <string name="meds_next">Next</string>
     <string name="meds_previous">Back</string>
@@ -254,6 +255,9 @@
     <string name="meds_form_other">Other</string>
     <string name="meds_stock_unit_label">Stock unit</string>
     <string name="meds_stock_unit_helper">What stock is counted in, for example tablet or ml.</string>
+    <string name="meds_stock_count_label">How many %1$s are there now?</string>
+    <string name="meds_stock_threshold_label">Warn me when this many days or fewer remain</string>
+    <string name="meds_stock_recount_label">Recount (optional)</string>
     <string name="meds_prescription_label">Requires a prescription</string>
     <string name="meds_prescription_valid_label">Prescription valid until (optional)</string>
     <string name="meds_date_helper">YYYY-MM-DD</string>
@@ -297,6 +301,9 @@
     <string name="meds_error_end">The end date must be on or after the start date.</string>
     <string name="meds_error_times">Add at least one time with an amount, as HH:MM.</string>
     <string name="meds_error_overlap">These dates overlap another schedule of this medication.</string>
+    <string name="meds_error_stock_quantity">Enter a quantity between 0 and 100000, with up to three decimals.</string>
+    <string name="meds_error_stock_quantity_positive">Enter a quantity greater than 0, with up to three decimals.</string>
+    <string name="meds_error_stock_reason">Say why the stock is being discarded.</string>
 
     <!-- M3: medication detail. -->
     <string name="meds_detail_title">Medication</string>
@@ -328,6 +335,30 @@
     <string name="meds_change_effective">Effective from</string>
     <string name="meds_change_effective_helper">The new schedule starts on this date; the previous one ends the day before.</string>
     <string name="meds_not_found">This medication is not available.</string>
+
+    <!-- M5: stock (D28). The section, its actions and their errors. -->
+    <string name="meds_stock_left">%1$s %2$s left</string>
+    <plurals name="meds_stock_days_left">
+        <item quantity="one">About %1$d day left</item>
+        <item quantity="other">About %1$d days left</item>
+    </plurals>
+    <string name="meds_stock_no_schedule">No active schedule</string>
+    <string name="meds_stock_low_badge">Low stock</string>
+    <string name="meds_stock_needs_prescription">Needs a new prescription first</string>
+    <string name="meds_stock_ready_to_buy">Ready to buy</string>
+    <string name="meds_stock_refill">Record refill</string>
+    <string name="meds_stock_recount">Recount</string>
+    <string name="meds_stock_discard">Discard</string>
+    <string name="meds_stock_refill_title">Record refill</string>
+    <string name="meds_stock_refill_body">Add the stock that came in, for example a new box.</string>
+    <string name="meds_stock_recount_title">Recount</string>
+    <string name="meds_stock_discard_title">Discard stock</string>
+    <string name="meds_stock_discard_body">Remove stock that can no longer be used. It stays in the history.</string>
+    <string name="meds_stock_quantity_label">Quantity</string>
+    <string name="meds_stock_reason_label">Why is it being discarded?</string>
+    <string name="meds_stock_refill_action">Record refill</string>
+    <string name="meds_stock_recount_action">Save count</string>
+    <string name="meds_stock_discard_action">Discard</string>
 
     <string name="lock_title">Locked</string>
     <string name="lock_body">Unlock to see your family’s health information.</string>

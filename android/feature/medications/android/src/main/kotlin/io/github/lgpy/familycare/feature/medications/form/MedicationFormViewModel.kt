@@ -12,18 +12,23 @@ import io.github.lgpy.familycare.feature.medications.data.MedsError
 import io.github.lgpy.familycare.feature.medications.data.MedsResult
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationWithRegimens
+import io.github.lgpy.familycare.feature.medications.data.StockRepository
 import io.github.lgpy.familycare.feature.medications.domain.Medication
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
 import io.github.lgpy.familycare.feature.medications.domain.MedicationId
 import io.github.lgpy.familycare.feature.medications.domain.MedicationRules
 import io.github.lgpy.familycare.feature.medications.domain.RegimenId
+import io.github.lgpy.familycare.feature.medications.domain.StockMovementKind
 import io.github.lgpy.familycare.feature.medications.ui.DoseTimeEntry
 import io.github.lgpy.familycare.feature.medications.ui.MedsUiError
 import io.github.lgpy.familycare.feature.medications.ui.MemberOrder
 import io.github.lgpy.familycare.feature.medications.ui.ScheduleFormState
+import io.github.lgpy.familycare.feature.medications.ui.parseStockQuantity
+import io.github.lgpy.familycare.feature.medications.ui.parseThresholdDays
 import io.github.lgpy.familycare.feature.medications.ui.parseTime
 import io.github.lgpy.familycare.feature.medications.ui.steppedQuantity
+import io.github.lgpy.familycare.feature.medications.ui.stockErrors
 import io.github.lgpy.familycare.feature.medications.ui.uiError
 import java.math.BigDecimal
 import java.time.DayOfWeek
@@ -38,8 +43,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * The add-medication flow (docs/ux/screens.md §4, three steps in M3 because stock
- * is M5) and, in edit mode, the "Edit details" screen.
+ * The add-medication flow (docs/ux/screens.md §4, four steps in M5: what, when,
+ * stock, who) and, in edit mode, the "Edit details" screen.
  *
  * **Step 1 — What:** name, active ingredient, strength, form, stock unit,
  * prescription, instructions. The stock unit starts from a sensible default per
@@ -52,7 +57,13 @@ import kotlinx.coroutines.launch
  * ([Medication.validate], [Regimen.validate]) own the final word and their
  * [MedicationField]s mark the inputs inline.
  *
- * **Step 3 — Who is reminded:** inherit the patient (both overrides null) or
+ * **Step 3 — Stock:** how many there are now (the opening count, written with
+ * the medication in one transaction by [MedicationRepository.create]) and the
+ * low-stock threshold in days. The quantity is validated by
+ * [io.github.lgpy.familycare.feature.medications.domain.StockRules.validate], the
+ * same rule the ledger applies (D28).
+ *
+ * **Step 4 — Who is reminded:** inherit the patient (both overrides null) or
  * override the policy and primary caregiver. Reminders are M4; the screen says
  * so, and nothing is scheduled here.
  *
@@ -63,6 +74,7 @@ class MedicationFormViewModel(
     private val patientId: String,
     private val medicationId: String?,
     private val medicationRepository: MedicationRepository,
+    private val stockRepository: StockRepository,
     private val patientRepository: PatientRepository,
     private val careCircleRepository: CareCircleRepository,
     private val newId: () -> String = { UUID.randomUUID().toString() },
@@ -106,6 +118,7 @@ class MedicationFormViewModel(
                     requiresPrescription = medication.requiresPrescription,
                     prescriptionValidUntil = medication.prescriptionValidUntil?.toString().orEmpty(),
                     instructions = medication.instructions.orEmpty(),
+                    lowStockThresholdDays = medication.lowStockThresholdDays.toString(),
                     schedule = ScheduleFormState.of(loaded.currentRegimen),
                     inheritReminders =
                         medication.reminderPolicy == null && medication.primaryCaregiverId == null,
@@ -203,7 +216,25 @@ class MedicationFormViewModel(
 
     fun onEndDateChanged(value: String) = updateSchedule { it.copy(endDate = value) }
 
-    // --- Step 3 --------------------------------------------------------------
+    // --- Step 3: stock -------------------------------------------------------
+
+    /** "How many <stock unit> are there now?" — the opening count. */
+    fun onStockQuantityChanged(value: String) =
+        _uiState.update { it.copy(stockQuantity = value, errors = it.errors - MedicationField.STOCK_QUANTITY) }
+
+    fun onLowStockThresholdChanged(value: String) =
+        _uiState.update {
+            it.copy(
+                lowStockThresholdDays = value,
+                errors = it.errors - MedicationField.MEDICATION_LOW_STOCK_THRESHOLD,
+            )
+        }
+
+    /** Edit mode's optional count, written after a successful update. */
+    fun onRecountQuantityChanged(value: String) =
+        _uiState.update { it.copy(recountQuantity = value, errors = it.errors - MedicationField.STOCK_QUANTITY) }
+
+    // --- Step 4 --------------------------------------------------------------
 
     fun onInheritRemindersChanged(inherit: Boolean) =
         _uiState.update { it.copy(inheritReminders = inherit, errors = it.errors - MedicationField.MEDICATION_REMINDER_POLICY) }
@@ -223,13 +254,14 @@ class MedicationFormViewModel(
 
     fun clearError() = _uiState.update { it.copy(error = null) }
 
-    /** Step 1 → 2 → 3, validating the step being left. */
+    /** Step 1 → 2 → 3 → 4, validating the step being left. */
     fun next() {
         val state = _uiState.value
         if (state.isEdit) return
         val fields = when (state.step) {
-            0 -> detailsValidation(state)
-            else -> state.schedule.parse(RegimenId(newId()), MedicationId(newId())).fields
+            0 -> detailsValidation(state) - STOCK_STEP_FIELDS
+            1 -> state.schedule.parse(RegimenId(newId()), MedicationId(newId())).fields
+            else -> stockStepValidation(state)
         }
         if (fields.isNotEmpty()) {
             _uiState.update { it.copy(errors = fields) }
@@ -244,8 +276,9 @@ class MedicationFormViewModel(
 
     /**
      * Validates everything and writes. Add: [MedicationRepository.create] with
-     * the first regimen; edit: [MedicationRepository.update], which never touches
-     * the regimen.
+     * the first regimen and the opening count in one transaction (D28); edit:
+     * [MedicationRepository.update], which never touches the regimen, followed by
+     * a count when the form's optional recount is filled.
      */
     fun save() {
         val state = _uiState.value
@@ -254,6 +287,7 @@ class MedicationFormViewModel(
         val id = existing?.id ?: MedicationId(newId())
         val draft = state.toMedication(id, PatientId(patientId), existing)
         val fields = draft.second.toMutableSet()
+        fields += thresholdValidation(state.lowStockThresholdDays)
 
         if (!state.isEdit) {
             val parsed = state.schedule.parse(
@@ -262,22 +296,39 @@ class MedicationFormViewModel(
                 timeZone = timeZone,
             )
             fields += parsed.fields
+            val quantity = parseStockQuantity(state.stockQuantity)
+            fields += stockErrors(quantity, StockMovementKind.COUNT)
             val regimen = parsed.regimen
             val medication = draft.first
             if (fields.isNotEmpty() || regimen == null || medication == null) {
                 _uiState.update { it.copy(errors = fields) }
                 return
             }
-            submit { medicationRepository.create(medication, regimen) }
+            submit { medicationRepository.create(medication, regimen, openingQuantity = quantity) }
             return
         }
 
         val medication = draft.first
+        val recountText = state.recountQuantity.trim()
+        val recount = recountText.takeIf { it.isNotEmpty() }?.let(::parseStockQuantity)
+        if (recountText.isNotEmpty()) {
+            fields += stockErrors(recount, StockMovementKind.COUNT)
+        }
         if (fields.isNotEmpty() || medication == null) {
             _uiState.update { it.copy(errors = fields) }
             return
         }
-        submit { medicationRepository.update(medication) }
+        submit {
+            when (val updated = medicationRepository.update(medication)) {
+                is MedsResult.Failure -> updated
+                is MedsResult.Success -> {
+                    // D28: a recount after an edit is a second write; the edit's
+                    // own columns are already stored, so a refusal here only
+                    // leaves the count out.
+                    if (recount == null) updated else stockRepository.recordCount(medication.id, recount)
+                }
+            }
+        }
     }
 
     private fun submit(call: suspend () -> MedsResult<*>) {
@@ -305,6 +356,20 @@ class MedicationFormViewModel(
     private fun updateSchedule(block: (ScheduleFormState) -> ScheduleFormState) =
         _uiState.update { it.copy(schedule = block(it.schedule), errors = emptySet()) }
 
+    /** The stock step's own inputs: the opening count and the threshold. */
+    private fun stockStepValidation(state: MedicationFormUiState): Set<MedicationField> =
+        stockErrors(parseStockQuantity(state.stockQuantity), StockMovementKind.COUNT) +
+            thresholdValidation(state.lowStockThresholdDays)
+
+    /** The threshold days must be a whole number within the medication's range. */
+    private fun thresholdValidation(text: String): Set<MedicationField> {
+        val days = parseThresholdDays(text)
+        val inRange = days != null &&
+            days in MedicationRules.MIN_LOW_STOCK_THRESHOLD_DAYS..MedicationRules.MAX_LOW_STOCK_THRESHOLD_DAYS
+        return if (inRange) emptySet() else setOf(MedicationField.MEDICATION_LOW_STOCK_THRESHOLD)
+    }
+
+    /** The "What" step's fields, without the stock step's own inputs. */
     private fun detailsValidation(state: MedicationFormUiState): Set<MedicationField> {
         val (_, fields) = state.toMedication(
             MedicationId(existing?.id?.value ?: "draft"),
@@ -315,7 +380,13 @@ class MedicationFormViewModel(
     }
 }
 
-/** What the three steps hold, what is wrong, and whether it is saving. */
+/** The fields the stock step owns, so the "What" step does not flag them. */
+private val STOCK_STEP_FIELDS: Set<MedicationField> = setOf(
+    MedicationField.STOCK_QUANTITY,
+    MedicationField.MEDICATION_LOW_STOCK_THRESHOLD,
+)
+
+/** What the four steps hold, what is wrong, and whether it is saving. */
 data class MedicationFormUiState(
     val loaded: Boolean = false,
     val isEdit: Boolean = false,
@@ -330,6 +401,12 @@ data class MedicationFormUiState(
     val form: MedicationForm = MedicationForm.TABLET,
     val stockUnit: String = defaultStockUnit(MedicationForm.TABLET),
     val stockUnitEdited: Boolean = false,
+    /** The opening count, as typed: "how many <stock unit> are there now?". */
+    val stockQuantity: String = "",
+    /** The days of stock that count as low, as typed. */
+    val lowStockThresholdDays: String = MedicationRules.DEFAULT_LOW_STOCK_THRESHOLD_DAYS.toString(),
+    /** Edit mode's optional count, written after a successful update. */
+    val recountQuantity: String = "",
     val requiresPrescription: Boolean = false,
     val prescriptionValidUntil: String = "",
     val instructions: String = "",
@@ -346,7 +423,7 @@ data class MedicationFormUiState(
     val stepNumber: Int get() = step + 1
 
     companion object {
-        const val STEP_COUNT: Int = 3
+        const val STEP_COUNT: Int = 4
     }
 }
 
@@ -355,8 +432,8 @@ private const val LAST_STEP = MedicationFormUiState.STEP_COUNT - 1
 /**
  * The medication this form describes, and the fields the domain rejected.
  *
- * [existing] keeps the columns the form does not edit: id, patient, the M5
- * low-stock threshold and the stopped timestamp.
+ * [existing] keeps the columns the form does not edit: id, patient, the stopped
+ * timestamp and (when the threshold text does not parse) the stored threshold.
  */
 private fun MedicationFormUiState.toMedication(
     id: MedicationId,
@@ -383,7 +460,8 @@ private fun MedicationFormUiState.toMedication(
         instructions = instructions,
         requiresPrescription = requiresPrescription,
         prescriptionValidUntil = validUntil,
-        lowStockThresholdDays = existing?.lowStockThresholdDays
+        lowStockThresholdDays = parseThresholdDays(lowStockThresholdDays)
+            ?: existing?.lowStockThresholdDays
             ?: MedicationRules.DEFAULT_LOW_STOCK_THRESHOLD_DAYS,
         reminderPolicy = if (inheritReminders) null else reminderPolicy,
         primaryCaregiverId = if (inheritReminders) null else primaryCaregiverId,
