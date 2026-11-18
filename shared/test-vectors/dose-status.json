@@ -1,0 +1,328 @@
+{
+  "description": "Dose-status vectors shared by the Kotlin app (M3) and the TypeScript server (M4). One slot, many clocks and entries. Boundary rules are in README.md.",
+  "escalation_delay_minutes": 30,
+  "missed_window_minutes": 120,
+  "cases": [
+    {
+      "name": "upcoming-one-minute-before",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [],
+      "now": "2026-11-16T07:59:00Z",
+      "expected": { "state": "upcoming", "confirmation_count": 0, "confirmed_twice": false }
+    },
+    {
+      "name": "due-exactly-at-scheduled-time",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [],
+      "now": "2026-11-16T08:00:00Z",
+      "expected": { "state": "due", "confirmation_count": 0, "confirmed_twice": false }
+    },
+    {
+      "name": "due-at-escalation-boundary-inclusive",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [],
+      "now": "2026-11-16T08:30:00Z",
+      "expected": { "state": "due", "confirmation_count": 0, "confirmed_twice": false }
+    },
+    {
+      "name": "overdue-one-second-after-escalation",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [],
+      "now": "2026-11-16T08:30:01Z",
+      "expected": { "state": "overdue", "confirmation_count": 0, "confirmed_twice": false }
+    },
+    {
+      "name": "overdue-at-missed-window-boundary-inclusive",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [],
+      "now": "2026-11-16T10:00:00Z",
+      "expected": { "state": "overdue", "confirmation_count": 0, "confirmed_twice": false }
+    },
+    {
+      "name": "missed-one-second-after-window",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [],
+      "now": "2026-11-16T10:00:01Z",
+      "expected": { "state": "missed", "confirmation_count": 0, "confirmed_twice": false }
+    },
+    {
+      "name": "taken-late-still-taken-not-missed",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [
+        {
+          "id": "entry-taken-late",
+          "regimen_id": "reg-status",
+          "medication_id": "med-status",
+          "scheduled_local": "2026-11-16T08:00",
+          "outcome": "taken",
+          "skip_reason": null,
+          "note": null,
+          "actual_at": "2026-11-16T10:30:00Z",
+          "actual_quantity": 1,
+          "confirmed_by": "user-me",
+          "given_by_user_id": "user-me",
+          "given_by_other": false,
+          "given_by_name": null,
+          "corrects_entry_id": null
+        }
+      ],
+      "now": "2026-11-16T11:00:00Z",
+      "expected": { "state": "taken", "confirmation_count": 1, "confirmed_twice": false }
+    },
+    {
+      "name": "skipped-refused",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [
+        {
+          "id": "entry-skipped",
+          "regimen_id": "reg-status",
+          "medication_id": "med-status",
+          "scheduled_local": "2026-11-16T08:00",
+          "outcome": "skipped",
+          "skip_reason": "refused",
+          "note": "Refused after breakfast",
+          "actual_at": "2026-11-16T08:05:00Z",
+          "actual_quantity": null,
+          "confirmed_by": "user-me",
+          "given_by_user_id": "user-me",
+          "given_by_other": false,
+          "given_by_name": null,
+          "corrects_entry_id": null
+        }
+      ],
+      "now": "2026-11-16T12:00:00Z",
+      "expected": { "state": "skipped", "confirmation_count": 1, "confirmed_twice": false }
+    },
+    {
+      "name": "double-confirmation-two-taken-entries",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [
+        {
+          "id": "entry-mom",
+          "regimen_id": "reg-status",
+          "medication_id": "med-status",
+          "scheduled_local": "2026-11-16T08:00",
+          "outcome": "taken",
+          "skip_reason": null,
+          "note": null,
+          "actual_at": "2026-11-16T08:04:00Z",
+          "actual_quantity": 1,
+          "confirmed_by": "user-mom",
+          "given_by_user_id": "user-mom",
+          "given_by_other": false,
+          "given_by_name": null,
+          "corrects_entry_id": null
+        },
+        {
+          "id": "entry-me",
+          "regimen_id": "reg-status",
+          "medication_id": "med-status",
+          "scheduled_local": "2026-11-16T08:00",
+          "outcome": "taken",
+          "skip_reason": null,
+          "note": null,
+          "actual_at": "2026-11-16T08:06:00Z",
+          "actual_quantity": 1,
+          "confirmed_by": "user-me",
+          "given_by_user_id": "user-me",
+          "given_by_other": false,
+          "given_by_name": null,
+          "corrects_entry_id": null
+        }
+      ],
+      "now": "2026-11-16T08:10:00Z",
+      "expected": { "state": "taken", "confirmation_count": 2, "confirmed_twice": true }
+    },
+    {
+      "name": "correction-voids-taken-and-becomes-skipped",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [
+        {
+          "id": "entry-wrong-taken",
+          "regimen_id": "reg-status",
+          "medication_id": "med-status",
+          "scheduled_local": "2026-11-16T08:00",
+          "outcome": "taken",
+          "skip_reason": null,
+          "note": null,
+          "actual_at": "2026-11-16T08:04:00Z",
+          "actual_quantity": 1,
+          "confirmed_by": "user-me",
+          "given_by_user_id": null,
+          "given_by_other": false,
+          "given_by_name": null,
+          "corrects_entry_id": null
+        },
+        {
+          "id": "entry-fix-skipped",
+          "regimen_id": "reg-status",
+          "medication_id": "med-status",
+          "scheduled_local": "2026-11-16T08:00",
+          "outcome": "skipped",
+          "skip_reason": "other",
+          "note": "Recorded as taken by mistake",
+          "actual_at": "2026-11-16T08:10:00Z",
+          "actual_quantity": null,
+          "confirmed_by": "user-me",
+          "given_by_user_id": null,
+          "given_by_other": false,
+          "given_by_name": null,
+          "corrects_entry_id": "entry-wrong-taken"
+        }
+      ],
+      "now": "2026-11-16T09:00:00Z",
+      "expected": { "state": "skipped", "confirmation_count": 1, "confirmed_twice": false }
+    },
+    {
+      "name": "correction-voids-skipped-and-becomes-taken",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [
+        {
+          "id": "entry-wrong-skipped",
+          "regimen_id": "reg-status",
+          "medication_id": "med-status",
+          "scheduled_local": "2026-11-16T08:00",
+          "outcome": "skipped",
+          "skip_reason": "refused",
+          "note": null,
+          "actual_at": "2026-11-16T08:02:00Z",
+          "actual_quantity": null,
+          "confirmed_by": "user-mom",
+          "given_by_user_id": "user-mom",
+          "given_by_other": false,
+          "given_by_name": null,
+          "corrects_entry_id": null
+        },
+        {
+          "id": "entry-fix-taken",
+          "regimen_id": "reg-status",
+          "medication_id": "med-status",
+          "scheduled_local": "2026-11-16T08:00",
+          "outcome": "taken",
+          "skip_reason": null,
+          "note": null,
+          "actual_at": "2026-11-16T08:25:00Z",
+          "actual_quantity": 0.5,
+          "confirmed_by": "user-me",
+          "given_by_user_id": null,
+          "given_by_other": true,
+          "given_by_name": "Neighbour",
+          "corrects_entry_id": "entry-wrong-skipped"
+        }
+      ],
+      "now": "2026-11-16T11:00:00Z",
+      "expected": { "state": "taken", "confirmation_count": 1, "confirmed_twice": false }
+    },
+    {
+      "name": "entry-for-another-slot-is-ignored",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "entries": [
+        {
+          "id": "entry-next-day",
+          "regimen_id": "reg-status",
+          "medication_id": "med-status",
+          "scheduled_local": "2026-11-17T08:00",
+          "outcome": "taken",
+          "skip_reason": null,
+          "note": null,
+          "actual_at": "2026-11-17T08:03:00Z",
+          "actual_quantity": 1,
+          "confirmed_by": "user-me",
+          "given_by_user_id": null,
+          "given_by_other": false,
+          "given_by_name": null,
+          "corrects_entry_id": null
+        }
+      ],
+      "now": "2026-11-16T10:00:01Z",
+      "expected": { "state": "missed", "confirmation_count": 0, "confirmed_twice": false }
+    },
+    {
+      "name": "missed-window-shorter-than-escalation-still-missed",
+      "slot": {
+        "regimen_id": "reg-status",
+        "medication_id": "med-status",
+        "scheduled_local": "2026-11-16T08:00",
+        "instant": "2026-11-16T08:00:00Z",
+        "quantity": 1
+      },
+      "escalation_delay_minutes": 300,
+      "missed_window_minutes": 60,
+      "entries": [],
+      "now": "2026-11-16T09:30:00Z",
+      "expected": { "state": "missed", "confirmation_count": 0, "confirmed_twice": false }
+    }
+  ]
+}

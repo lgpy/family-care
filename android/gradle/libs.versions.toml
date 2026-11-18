@@ -17,6 +17,7 @@ supabase = "3.8.0"
 # later declare minCompileSdk=37 (the build's compileSdk is fixed at 36).
 powersync = "1.14.1"
 kotlinx-coroutines = "1.11.0"
+kotlinx-serialization = "1.11.0"
 junit4 = "4.13.2"
 junitJupiter = "5.14.4"
 junitPlatform = "1.14.4"
@@ -85,6 +86,9 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "jun
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitPlatform" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+# Shared test vectors (shared/test-vectors) are JSON; the medications domain
+# tests parse them with the JSON reader only (no compiler plugin).
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 
 [plugins]
