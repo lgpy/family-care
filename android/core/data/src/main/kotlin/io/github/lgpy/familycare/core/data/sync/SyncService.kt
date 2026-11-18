@@ -6,7 +6,6 @@ import com.powersync.sync.SyncOptions
 import com.powersync.sync.SyncStatusData
 import io.github.jan.supabase.SupabaseClient
 import io.github.lgpy.familycare.core.domain.auth.AuthState
-import io.github.lgpy.familycare.core.domain.sync.SyncProbeRepository
 import io.github.lgpy.familycare.core.domain.sync.SyncState
 import io.ktor.client.HttpClient
 import kotlin.coroutines.cancellation.CancellationException
@@ -23,18 +22,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * The sync layer as the rest of the app sees it: local notes, sync state, and
- * one call to start following the session. No PowerSync type appears here, the
- * same way [io.github.lgpy.familycare.core.data.auth.AuthRepository] hides
- * Supabase.
+ * The sync layer as the rest of the app sees it: connection state and one call
+ * to start following the session. No PowerSync type appears here, the same way
+ * [io.github.lgpy.familycare.core.data.auth.AuthRepository] hides Supabase.
  */
 interface SyncService {
 
     /** Connection state for a sync indicator. */
     val state: StateFlow<SyncState>
-
-    /** The M1 probe notes, readable and writable offline. */
-    val probeNotes: SyncProbeRepository
 
     /**
      * Starts following the Supabase session: connect when signed in, clear
@@ -54,7 +49,6 @@ internal class PowerSyncSyncService(
     private val connector: SupabaseSyncConnector,
     private val httpClient: HttpClient,
     private val authState: StateFlow<AuthState>,
-    override val probeNotes: SyncProbeRepository,
     private val uploadFailure: MutableStateFlow<Boolean>,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : SyncService, SyncSession {
@@ -82,7 +76,7 @@ internal class PowerSyncSyncService(
 
     /**
      * The user id is not sent anywhere: PowerSync authenticates with a
-     * short-lived token, and the rows carry `owner_id` themselves.
+     * short-lived token, and the rows carry their own ownership columns.
      */
     override suspend fun connect(userId: String) {
         database.connect(

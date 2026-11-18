@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.github.lgpy.familycare.core.domain.CareCircleId
+import io.github.lgpy.familycare.core.domain.circle.CareCircleId
 import io.github.lgpy.familycare.core.ui.R
 import org.koin.compose.koinInject
 

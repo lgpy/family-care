@@ -1,4 +1,4 @@
-package io.github.lgpy.familycare.core.domain
+package io.github.lgpy.familycare.core.domain.circle
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows

@@ -5,8 +5,7 @@
 -- Three kinds of assertion live here:
 --
 -- 1. RLS (writes and reads as the `authenticated` role, the way PostgREST does
---    it): set local role authenticated + request.jwt.claims, exactly like
---    core_sync_probe_test.sql.
+--    it): set local role authenticated + request.jwt.claims.
 -- 2. Sync rules: the *exact* queries from backend/powersync/sync-config.yaml,
 --    with `auth.user_id()` replaced by `(select auth.uid())`, executed as each
 --    test user. They run as the migration role (which bypasses RLS, as the

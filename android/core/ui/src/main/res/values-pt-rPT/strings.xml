@@ -27,25 +27,6 @@
     <string name="settings_app_lock_title">Bloqueio da aplicação</string>
     <string name="settings_app_lock_body">Sempre ativo. É necessário um bloqueio do ecrã para abrir a aplicação Family Care.</string>
 
-    <!-- M1 probe: the "Sync test" screen (delete in M2 with core.sync_probe). -->
-    <string name="settings_diagnostics_title">Diagnóstico</string>
-    <string name="settings_diagnostics_body">Ferramentas de programação. O teste de sincronização é uma sonda do M1 e será removido no M2.</string>
-    <string name="sync_test_title">Teste de sincronização</string>
-    <string name="sync_test_body">Uma tabela de teste sincronizada através do PowerSync. Adicione uma nota em modo de avião e verifique se aparece no outro telemóvel depois de restabelecer a ligação.</string>
-    <string name="sync_test_status_connected">Ligado</string>
-    <string name="sync_test_status_connecting">A ligar</string>
-    <string name="sync_test_status_offline">Sem ligação</string>
-    <string name="sync_test_uploading">A enviar…</string>
-    <string name="sync_test_downloading">A transferir…</string>
-    <string name="sync_test_synced_at">Sincronizado às %1$s</string>
-    <string name="sync_test_not_synced">Ainda não sincronizado</string>
-    <string name="sync_test_error">Algumas alterações foram rejeitadas pelo servidor</string>
-    <string name="sync_test_note_hint">Nota</string>
-    <string name="sync_test_max_length">No máximo %1$d caracteres</string>
-    <string name="sync_test_add">Adicionar</string>
-    <string name="sync_test_delete">Eliminar</string>
-    <string name="sync_test_empty">Sem notas</string>
-
     <string name="lock_title">Bloqueado</string>
     <string name="lock_body">Desbloqueie para ver a informação de saúde da sua família.</string>
     <string name="lock_unlock">Desbloquear</string>

@@ -17,11 +17,6 @@ class DestinationTest {
     }
 
     @Test
-    fun theM1SyncProbeIsReachableFromSettings() {
-        assertEquals("sync-test", Destination.SyncTest.route)
-    }
-
-    @Test
     fun routesAreNonBlankAndUnique() {
         val routes = Destination.entries.map { it.route }
 

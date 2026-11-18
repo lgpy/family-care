@@ -61,9 +61,12 @@ M1 (walking skeleton):
 
 - One schema per module, starting with `core` (identity, care circle, access —
   `docs/domain/care-circle.md`).
-- `core.sync_probe`: a throwaway table that proves the sign-in → Supabase →
-  PowerSync path and carries the first isolation tests. The Android app still
-  uses it; the M2 Android step drops it.
+- `core.sync_probe` (M1, removed): a throwaway table that proved the
+  sign-in → Supabase → PowerSync path and carried the first isolation tests. The
+  M2 Android step stopped using it, so
+  `migrations/20261118130000_core_drop_sync_probe.sql` takes it out of the
+  `powersync` publication and drops it; the schema-wide security checks it
+  introduced live on in `tests/core_security_test.sql`.
 - The `powersync` publication and the Sync Streams config in `../powersync/`.
 - `core` is listed in `api.schemas` in `config.toml` so PostgREST can serve it;
   access is still governed by the grants and RLS above. Because `core` is not
@@ -100,9 +103,11 @@ M2 (care circle) — `migrations/20261118120000_core_care_circle.sql`:
   table, nothing granted to `anon` or `PUBLIC`, policies scoped
   `to authenticated`. The tests check this generically over `pg_class`, so a
   table added later is covered automatically.
-- The `powersync` publication covers the four synced tables
-  (`care_circles`, `memberships`, `profiles`, `patients`); invitations,
-  overrides and the audit log are server-only.
+- The `powersync` publication covers the four synced tables (`care_circles`,
+  `memberships`, `profiles`, `patients`); invitations, overrides and the audit
+  log are server-only. `migrations/20261118130000_core_drop_sync_probe.sql`
+  removes the M1 probe from the publication and drops the table, keeping
+  `core.set_updated_at()` (the M2 tables use it).
 
 ## Tests
 
@@ -118,6 +123,13 @@ invitations), plus invitations (wrong email, expired, reused, revoked, hashed
 only, unreadable `token_hash`), the last-owner rule, patient linked/primary
 membership rules, and the audit log (rows written with actor and before/after;
 append-only against clients and the table owner).
+
+`core_security_test.sql` holds the schema-wide guarantees instead of one table
+at a time, iterating `pg_class`: at least one table exists, RLS is enabled
+**and forced** on every `core` table, nothing is granted to `PUBLIC` or `anon`,
+`authenticated` may use the schema, the `powersync` publication contains
+exactly the four synced tables, and the M1 `sync_probe` table is gone while
+`core.set_updated_at()` remains.
 
 The same file also runs the **exact Sync Streams queries** from
 `../powersync/sync-config.yaml` as each test user, so the read half and the

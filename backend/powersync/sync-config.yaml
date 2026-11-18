@@ -21,17 +21,6 @@ config:
   edition: 3
 
 streams:
-  # M1 probe (still used by the M2 Android step, dropped there): each signed-in
-  # user downloads only their own rows.
-  # `auth.user_id()` is the `sub` claim of the Supabase JWT, i.e. auth.users.id,
-  # which is what core.sync_probe.owner_id stores.
-  #
-  # The client-side table is `sync_probe` (no schema prefix); the quoted
-  # "core" prefix is only how the source database is addressed.
-  sync_probe:
-    auto_subscribe: true
-    query: SELECT * FROM "core"."sync_probe" WHERE owner_id = auth.user_id()
-
   # M2 care circle: everything in the circles the user belongs to. The access
   # rule is `core.memberships` itself, mirroring core.circle_role()/core.can()
   # in the database. Subquery form (`IN (SELECT ...)`) as documented for Sync

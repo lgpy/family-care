@@ -23,8 +23,8 @@ object SupabaseClientFactory {
             supabaseKey = publishableKey,
         ) {
             install(Auth)
-            // Installed although M1 does not read tables yet, so the PowerSync
-            // task extends this client instead of replacing it.
+            // Installed so sync uploads and the core repositories can use this
+            // client instead of building a second one.
             install(Postgrest)
         }
     }

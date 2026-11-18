@@ -43,7 +43,7 @@ fi
 
 # Collapse all whitespace once: line wrapping is not a behavioural difference.
 # Every test file is searched, so a stream may be covered where it fits best
-# (core_sync_probe_test.sql for the M1 probe, core_care_circle_test.sql for M2).
+# (core_care_circle_test.sql holds the M2 stream queries).
 test_sql="$(cat "${test_files[@]}" | tr -s '[:space:]' ' ')"
 
 count=0

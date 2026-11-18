@@ -7,9 +7,9 @@ android {
 }
 
 dependencies {
-    // AuthState, ProbeNote and SyncState are part of this module's public API,
-    // so the domain module is an api dependency rather than an implementation
-    // detail.
+    // AuthState, SyncState and the M2 core types are part of this module's
+    // public API, so the domain module is an api dependency rather than an
+    // implementation detail.
     api(project(":core:domain"))
 
     // Supabase client (build-plan: "PowerSync + Supabase setup"): auth for the

@@ -23,8 +23,6 @@ so nothing here uses it.
 The streams, in `sync-config.yaml`:
 
 ```
-sync_probe:   SELECT * FROM "core"."sync_probe" WHERE owner_id = auth.user_id()
-
 care_circles: SELECT * FROM "core"."care_circles"
               WHERE id IN (SELECT circle_id FROM "core"."memberships"
                            WHERE user_id = auth.user_id())
@@ -44,8 +42,8 @@ patients:     SELECT * FROM "core"."patients"
 (Shown wrapped for reading; each `query:` is one line in the file.)
 
 - `auth.user_id()` is the `sub` claim of the Supabase JWT — the signed-in
-  `auth.users.id`, which is what the `user_id`/`owner_id` columns store. It is a
-  *signed* auth parameter, so a client cannot ask for someone else's bucket.
+  `auth.users.id`, which is what the `user_id` columns store. It is a *signed*
+  auth parameter, so a client cannot ask for someone else's bucket.
 - The access rule is `core.memberships`, mirroring `core.circle_role()` /
   `core.can()` in the database (D13): a user downloads exactly the circles they
   belong to, all memberships and patient rows of those circles, and the profiles
@@ -99,14 +97,17 @@ Self-hosted PowerSync instead reads the same file through its instance config:
 `sync_config: path: sync-config.yaml`.
 
 Client-side use (Android): auto-subscribed streams need no explicit subscribe;
-read the local tables (`sync_probe` until the M2 Android step replaces it, then
-`care_circles`, `memberships`, `profiles`, `patients`). Every synced table has a
-primary key named `id` (uuid) because PowerSync requires that name.
+read the local tables `care_circles`, `memberships`, `profiles` and `patients`.
+Every synced table has a primary key named `id` (uuid) because PowerSync
+requires that name.
 
 ## Manual setup: replication role (a secret, so not a migration)
 
-The `powersync` publication is created by the migration
-(`backend/supabase/migrations/*_core_sync_probe.sql`). The replication **role**
+The `powersync` publication is created by the M1 migration
+(`backend/supabase/migrations/20261117120000_core_sync_probe.sql`) and extended
+by the migrations that add synced tables; the M1 probe table itself was dropped
+in M2 (`20261118130000_core_drop_sync_probe.sql`), the publication stays. The
+replication **role**
 is not: it carries a password, and secrets never live in the repository
 (security-and-privacy §4). Run this by hand, once, against **dev** and later
 **prod**, with the password taken from the password manager:

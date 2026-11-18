@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 internal class SupabaseSyncConnector(
     private val supabase: SupabaseClient,
     private val endpoint: String,
-    private val uploader: ProbeUploader,
+    private val uploader: CrudUploader,
     private val uploadFailure: MutableStateFlow<Boolean>,
     private val now: () -> Instant = { Clock.System.now() },
 ) : PowerSyncBackendConnector() {
@@ -64,9 +64,10 @@ internal class SupabaseSyncConnector(
         while (true) {
             val transaction = database.getNextCrudTransaction() ?: return
             try {
-                // M1 has a single synced table; changes to any other local table
-                // are not uploaded and the transaction is completed below.
-                uploadProbeWrites(transaction.probeWrites(), uploader)
+                // Only the tables this app owns are sent; anything else in the
+                // transaction (a local-only table, or a stray memberships write)
+                // is completed below without reaching the server.
+                uploadWrites(transaction.crudWrites(), uploader)
                 uploadFailure.value = false
                 transaction.complete(null)
             } catch (cancellation: CancellationException) {

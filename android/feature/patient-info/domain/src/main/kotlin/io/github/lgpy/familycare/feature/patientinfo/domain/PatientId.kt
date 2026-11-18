@@ -1,8 +1,10 @@
 package io.github.lgpy.familycare.feature.patientinfo.domain
 
 /**
- * Placeholder identity type for the patient-info feature. Pure Kotlin so it can
- * be shared with a future Kotlin Multiplatform client (D22).
+ * Patients are identified by the core type
+ * [io.github.lgpy.familycare.core.domain.circle.PatientId]: feature modules
+ * reference patients by id only (D5), so the app has exactly one patient
+ * identity. This alias keeps the feature's imports short without introducing a
+ * second, incompatible type.
  */
-@JvmInline
-value class PatientId(val value: String)
+typealias PatientId = io.github.lgpy.familycare.core.domain.circle.PatientId
