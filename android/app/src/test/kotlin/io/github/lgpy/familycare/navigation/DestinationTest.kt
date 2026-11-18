@@ -12,12 +12,19 @@ class DestinationTest {
     }
 
     @Test
-    fun theBottomBarIsTodayPatientsShoppingAndMore() {
+    fun theBottomBarIsTodayPatientsAgendaShoppingAndMore() {
         assertEquals(
-            listOf(Destination.Today, Destination.Patients, Destination.Shopping, Destination.More),
+            listOf(
+                Destination.Today,
+                Destination.Patients,
+                Destination.Agenda,
+                Destination.Shopping,
+                Destination.More,
+            ),
             Destination.topLevel,
         )
         assertEquals("patients", Destination.Patients.route)
+        assertEquals("agenda", Destination.Agenda.route)
         assertEquals("shopping", Destination.Shopping.route)
     }
 
@@ -55,6 +62,6 @@ class DestinationTest {
     @Test
     fun everyTopLevelDestinationIsPartOfTheShell() {
         assertTrue(Destination.topLevel.all { it in Destination.entries })
-        assertEquals(4, Destination.topLevel.size)
+        assertEquals(5, Destination.topLevel.size)
     }
 }

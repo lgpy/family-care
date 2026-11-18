@@ -47,6 +47,10 @@ include(":feature:medications:data")
 include(":feature:medications:data:jvmtests")
 include(":feature:medications:android")
 include(":feature:appointments:domain")
+// The module's data layer (its repository and its synced table), plus the JVM
+// integration tests that drive it against a real PowerSync database.
+include(":feature:appointments:data")
+include(":feature:appointments:data:jvmtests")
 include(":feature:appointments:android")
 include(":feature:patient-info:domain")
 include(":feature:patient-info:android")

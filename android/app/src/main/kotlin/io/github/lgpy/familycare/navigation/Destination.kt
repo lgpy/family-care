@@ -1,28 +1,30 @@
 package io.github.lgpy.familycare.navigation
 
+import io.github.lgpy.familycare.feature.appointments.AppointmentsRoutes
 import io.github.lgpy.familycare.feature.medications.MedicationsRoutes
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderRoutes
 
 /**
- * The routes of the app shell (M2, M3).
+ * The routes of the app shell (M2, M3, M6).
  *
- * [topLevel] are the four bottom-bar destinations — Today, Patients, Shopping
- * and More. The others are pushed screens: More opens the family circle and the
- * user's name; Patients opens a patient's profile (D29) and the add and edit
- * forms; from the profile's Medications tab, the patient's medications with
+ * [topLevel] are the five bottom-bar destinations — Today, Patients, Agenda,
+ * Shopping and More. The others are pushed screens: More opens the family circle
+ * and the user's name; Patients opens a patient's profile (D29) and the add and
+ * edit forms; from the profile's Medications tab, the patient's medications with
  * their add, detail, edit and schedule screens and the dose slot. Shopping is
  * the M5 list of low medications (D28). The medication routes come from
  * [MedicationsRoutes] so the module owns them and the shell just composes them.
+ * The Agenda is the appointments module's list; its add, detail, edit and
+ * follow-up screens are addressed by [AppointmentsRoutes] and wired in
+ * `FamilyCareApp`.
  *
  * Editing a patient is a menu action on the profile (D29), so the edit form has
  * its own route below the profile's: `patients/{patientId}/edit`.
- *
- * Agenda arrives in a later milestone; it is deliberately absent rather than
- * present as a placeholder.
  */
 enum class Destination(val route: String) {
     Today("today"),
     Patients("patients"),
+    Agenda(AppointmentsRoutes.AGENDA),
     Shopping(MedicationsRoutes.SHOPPING),
     More("more"),
     FamilyCircle("more/family-circle"),
@@ -43,7 +45,7 @@ enum class Destination(val route: String) {
     companion object {
 
         /** The bottom-bar destinations, in display order. */
-        val topLevel: List<Destination> = listOf(Today, Patients, Shopping, More)
+        val topLevel: List<Destination> = listOf(Today, Patients, Agenda, Shopping, More)
 
         /** The route of the profile screen for [patientId]. */
         fun patientProfileRoute(patientId: String): String = "patients/$patientId"

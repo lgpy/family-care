@@ -33,6 +33,10 @@ import io.github.lgpy.familycare.core.ui.patient.ResourcesTimelineText
 import io.github.lgpy.familycare.core.ui.patient.TimelineSource
 import io.github.lgpy.familycare.core.ui.patient.TimelineSources
 import io.github.lgpy.familycare.core.ui.patient.TimelineText
+import io.github.lgpy.familycare.feature.appointments.appointmentsModule
+import io.github.lgpy.familycare.feature.appointments.data.AppointmentRepository
+import io.github.lgpy.familycare.feature.appointments.data.AppointmentsData
+import io.github.lgpy.familycare.feature.appointments.profile.AppointmentsPatientTab
 import io.github.lgpy.familycare.feature.medications.dashboard.LowStockDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.MedicationsDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionDashboardCard
@@ -99,7 +103,7 @@ val appModule: Module = module {
             supabaseUrl = BuildConfig.SUPABASE_URL,
             publishableKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY,
             powerSyncUrl = BuildConfig.POWERSYNC_URL,
-            featureTables = listOf(MedicationsData.syncedTables),
+            featureTables = listOf(MedicationsData.syncedTables, AppointmentsData.syncedTables),
         )
     }
     single<AuthRepository> {
@@ -140,6 +144,12 @@ val appModule: Module = module {
         )
     }
 
+    // M6 appointments (D29): its repository over the same local database.
+    single<AppointmentRepository> {
+        val data = get<DataLayer>()
+        AppointmentsData.appointmentRepository(data.database, data.authState)
+    }
+
     // The dashboard extension point (architecture.md §5): a feature contributes a
     // card, the shell renders whatever was registered, in order. Today imports no
     // feature module to do it.
@@ -157,6 +167,7 @@ val appModule: Module = module {
     // feature module (D5).
     single<TimelineText> { ResourcesTimelineText(androidContext()) }
     single<PatientTab> { MedicationsPatientTab() }
+    single<PatientTab> { AppointmentsPatientTab() }
     single<TimelineSource> {
         MedicationsTimelineSource(medicationRepository = get(), text = get())
     }
@@ -202,6 +213,7 @@ val appModule: Module = module {
     // The medications module's view models. Included here so the app stays the
     // only place that knows which modules exist.
     includes(medicationsModule)
+    includes(appointmentsModule)
 
     // M4 push (D4/D27, D29): the device registration that makes pushes reach
     // this phone. The types and the jobs live in :core:notifications. The token

@@ -3,6 +3,7 @@ package io.github.lgpy.familycare.navigation
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
@@ -27,6 +28,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.feature.appointments.AppointmentsRoutes
+import io.github.lgpy.familycare.feature.appointments.agenda.AgendaScreen
+import io.github.lgpy.familycare.feature.appointments.detail.AppointmentDetailScreen
+import io.github.lgpy.familycare.feature.appointments.form.AppointmentFormScreen
 import io.github.lgpy.familycare.feature.medications.MedicationsRoutes
 import io.github.lgpy.familycare.feature.medications.detail.MedicationDetailScreen
 import io.github.lgpy.familycare.feature.medications.doses.DoseSlotScreen
@@ -47,13 +52,14 @@ import io.github.lgpy.familycare.ui.sync.UploadRejectionBanner
 
 /**
  * The app shell once the user belongs to a circle: a bottom bar with Today,
- * Patients, Shopping and More, and the screens those open.
+ * Patients, Agenda, Shopping and More, and the screens those open.
  *
  * The top bar is the persistent message about a change the server refused and
  * the queue discarded (see `UploadRejectionBanner`); it is empty while there is
  * no such change, including during offline or transient sync trouble.
  *
- * Agenda is a later milestone and is deliberately not shown as a placeholder.
+ * The Agenda and the appointments screens belong to the appointments module: the
+ * shell only composes them and uses [AppointmentsRoutes] for their routes.
  * The care-circle gate lives outside this composable (see `CircleGate`), so
  * removing the last membership takes the user back there without the shell
  * needing to know.
@@ -125,6 +131,16 @@ fun FamilyCareApp(
                         navController.navigate(
                             MedicationsRoutes.medicationDetail(patientId, medicationId),
                         )
+                    },
+                )
+            }
+            composable(Destination.Agenda.route) {
+                AgendaScreen(
+                    onOpenAppointment = { appointmentId ->
+                        navController.navigate(AppointmentsRoutes.appointmentDetail(appointmentId))
+                    },
+                    onNewAppointment = {
+                        navController.navigate(AppointmentsRoutes.newAppointment())
                     },
                 )
             }
@@ -277,6 +293,77 @@ fun FamilyCareApp(
                     )
                 }
             }
+            composable(
+                route = AppointmentsRoutes.APPOINTMENT_NEW,
+                arguments = listOf(
+                    navArgument(AppointmentsRoutes.PATIENT_ID_ARG) {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                ),
+            ) { entry ->
+                AppointmentFormScreen(
+                    patientId = entry.arguments
+                        ?.getString(AppointmentsRoutes.PATIENT_ID_ARG)
+                        ?.takeIf { it.isNotBlank() },
+                    appointmentId = null,
+                    followUpOf = null,
+                    onBack = { navController.popBackStack() },
+                    onSaved = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = AppointmentsRoutes.APPOINTMENT_DETAIL,
+                arguments = listOf(
+                    navArgument(AppointmentsRoutes.APPOINTMENT_ID_ARG) { type = NavType.StringType },
+                ),
+            ) { entry ->
+                AppointmentDetailScreen(
+                    appointmentId = entry.arguments
+                        ?.getString(AppointmentsRoutes.APPOINTMENT_ID_ARG)
+                        .orEmpty(),
+                    onBack = { navController.popBackStack() },
+                    onEdit = { appointmentId ->
+                        navController.navigate(AppointmentsRoutes.editAppointment(appointmentId))
+                    },
+                    onFollowUp = { appointmentId ->
+                        navController.navigate(AppointmentsRoutes.followUp(appointmentId))
+                    },
+                    onDeleted = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = AppointmentsRoutes.APPOINTMENT_EDIT,
+                arguments = listOf(
+                    navArgument(AppointmentsRoutes.APPOINTMENT_ID_ARG) { type = NavType.StringType },
+                ),
+            ) { entry ->
+                AppointmentFormScreen(
+                    patientId = null,
+                    appointmentId = entry.arguments
+                        ?.getString(AppointmentsRoutes.APPOINTMENT_ID_ARG)
+                        .orEmpty(),
+                    followUpOf = null,
+                    onBack = { navController.popBackStack() },
+                    onSaved = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = AppointmentsRoutes.APPOINTMENT_FOLLOW_UP,
+                arguments = listOf(
+                    navArgument(AppointmentsRoutes.APPOINTMENT_ID_ARG) { type = NavType.StringType },
+                ),
+            ) { entry ->
+                AppointmentFormScreen(
+                    patientId = null,
+                    appointmentId = null,
+                    followUpOf = entry.arguments
+                        ?.getString(AppointmentsRoutes.APPOINTMENT_ID_ARG)
+                        .orEmpty(),
+                    onBack = { navController.popBackStack() },
+                    onSaved = { navController.popBackStack() },
+                )
+            }
         }
     }
 }
@@ -293,6 +380,7 @@ private fun NavHostController.navigateToTopLevel(destination: Destination) {
 private fun Destination.icon(): ImageVector = when (this) {
     Destination.Today -> Icons.Filled.Home
     Destination.Patients -> Icons.Filled.Person
+    Destination.Agenda -> Icons.Filled.DateRange
     Destination.Shopping -> Icons.Filled.ShoppingCart
     Destination.More -> Icons.Filled.MoreVert
     else -> Icons.Filled.MoreVert
@@ -302,6 +390,7 @@ private fun Destination.icon(): ImageVector = when (this) {
 private fun Destination.labelRes(): Int = when (this) {
     Destination.Today -> R.string.nav_today
     Destination.Patients -> R.string.nav_patients
+    Destination.Agenda -> R.string.nav_agenda
     Destination.Shopping -> R.string.nav_shopping
     Destination.More -> R.string.nav_more
     else -> R.string.nav_more
