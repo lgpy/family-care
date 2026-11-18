@@ -66,6 +66,29 @@
             </intent-filter>
         </receiver>
 
+        <!-- M6 appointment reminders (docs/domain/appointments.md "Reminders"):
+             the alarm that posts one reminder's notification. Explicit intents
+             only. -->
+        <receiver
+            android:name=".feature.appointments.reminders.AppointmentReminderReceiver"
+            android:exported="false" />
+
+        <!-- Reschedule triggers for appointments: boot, clock/zone changes, app
+             update and the daily safety alarm. LOCKED_BOOT_COMPLETED is absent
+             for the same reason as the dose reminders: the encrypted database
+             and Keystore key need the first unlock. -->
+        <receiver
+            android:name=".feature.appointments.reminders.AppointmentRescheduleReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="io.github.lgpy.familycare.action.RESCHEDULE_APPOINTMENT_REMINDERS" />
+            </intent-filter>
+        </receiver>
+
         <!-- M4 push (D4/D27, D29): the app's single FCM service is declared by
              :core:notifications and merged from its manifest. It calls the core
              for new tokens and data-only messages (the clear); the system draws

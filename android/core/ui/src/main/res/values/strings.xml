@@ -587,4 +587,18 @@
     <string name="appointments_error_notes">The notes are too long.</string>
     <string name="appointments_error_companion">The companion must be an owner or caregiver of the circle.</string>
     <string name="appointments_error_follow_up">The follow-up must be another appointment of the same patient.</string>
+
+    <!-- M6 appointments, chunk 2: reminders, change push, Today card and History. -->
+    <string name="appointments_reminder_channel_name">Appointment reminders</string>
+    <string name="appointments_reminder_channel_description">Reminders for upcoming appointments.</string>
+    <string name="appointments_reminder_public_title">Appointment reminder</string>
+    <string name="appointments_reminder_text_tomorrow">%1$s: %2$s — tomorrow at %3$s</string>
+    <string name="appointments_reminder_text_tomorrow_place">%1$s: %2$s — tomorrow at %3$s, %4$s</string>
+    <string name="appointments_reminder_text_in_hour">%1$s: %2$s — in 1 hour</string>
+    <string name="appointments_reminder_text_in_hour_place">%1$s: %2$s — in 1 hour, %3$s</string>
+    <string name="appointments_updates_channel_name">Appointment changes</string>
+    <string name="appointments_updates_channel_description">Changes to appointments in your family circle.</string>
+    <string name="appointments_push_body">An appointment was added or changed</string>
+    <string name="appointments_card_title">Next 7 days</string>
+    <string name="appointments_card_more">+%1$d more</string>
 </resources>

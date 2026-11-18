@@ -586,4 +586,18 @@
     <string name="appointments_error_notes">As notas são demasiado longas.</string>
     <string name="appointments_error_companion">O acompanhante tem de ser dono ou cuidador do círculo.</string>
     <string name="appointments_error_follow_up">O seguimento tem de ser outra consulta do mesmo doente.</string>
+
+    <!-- M6 appointments, chunk 2: reminders, change push, Today card and History. -->
+    <string name="appointments_reminder_channel_name">Lembretes de consultas</string>
+    <string name="appointments_reminder_channel_description">Lembretes para as próximas consultas.</string>
+    <string name="appointments_reminder_public_title">Lembrete de consulta</string>
+    <string name="appointments_reminder_text_tomorrow">%1$s: %2$s — amanhã às %3$s</string>
+    <string name="appointments_reminder_text_tomorrow_place">%1$s: %2$s — amanhã às %3$s, %4$s</string>
+    <string name="appointments_reminder_text_in_hour">%1$s: %2$s — daqui a 1 hora</string>
+    <string name="appointments_reminder_text_in_hour_place">%1$s: %2$s — daqui a 1 hora, %3$s</string>
+    <string name="appointments_updates_channel_name">Alterações de consultas</string>
+    <string name="appointments_updates_channel_description">Alterações às consultas do seu círculo familiar.</string>
+    <string name="appointments_push_body">Uma consulta foi marcada ou alterada</string>
+    <string name="appointments_card_title">Próximos 7 dias</string>
+    <string name="appointments_card_more">+%1$d mais</string>
 </resources>
