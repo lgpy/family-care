@@ -56,7 +56,7 @@ Nothing in this repository links to a remote project: linking and `db push` are
 done by hand, on purpose, so a stray command cannot touch prod. Dev holds
 invented test data only — never real health data.
 
-## What exists so far (M1–M5)
+## What exists so far (M1–M6)
 
 M1 (walking skeleton):
 
@@ -70,8 +70,10 @@ M1 (walking skeleton):
   introduced live on in `tests/core_security_test.sql`.
 - The `powersync` publication and the Sync Streams config in `../powersync/`.
 - `core` and `meds` are listed in `api.schemas` in `config.toml` so PostgREST
-  can serve them; access is still governed by the grants and RLS. That file
-  only configures the local stack: on a **hosted** project add both under
+  can serve them; access is still governed by the grants and RLS. From M6 the
+  same list also has `appointments` and `info`. That file
+  only configures the local stack: on a **hosted** project add `core`, `meds`,
+  `appointments` and `info` under
   Dashboard → Integrations → Data API → Settings → *Exposed schemas* (done on
   dev and prod), or the app and edge functions get `PGRST106 Invalid schema`. Because they
   are not `public`, a REST client must name the schema in `Accept-Profile`
@@ -400,6 +402,59 @@ Do this on **dev** first, never against prod without the build-plan §5 gate.
    select * from meds.stock_alerts;
    ```
 
+## M6 (appointments and patient info)
+
+Database — `migrations/20261122120000_appointments_and_info.sql`. Two
+independent modules in their own schemas (D5), each with its own grants, policies,
+audit trigger and publication membership. The appointment **change push**
+(D27/D29) is a separate migration (task 2): nothing here posts to pg_net.
+
+- `appointments.appointments`: one row per appointment. `kind` is
+  `appointments.appointment_kind` (`consultation`, `blood_test`, `exam`,
+  `checkup`, `other`); `starts_local` is a whole-minute wall-clock timestamp and
+  `time_zone` an IANA zone (the `meds.regimens` convention, so a DST change or a
+  trip abroad never moves an appointment). Optional `title`, `duration_minutes`
+  (1..1440), `place`, `doctor`, `preparation`, `notes`, `companion_user_id`,
+  `follow_up_of` and `cancelled_at`; text lengths follow the table in
+  `docs/domain/appointments.md`.
+- Appointment rules live in `appointments.check_appointment()` (BEFORE
+  INSERT/UPDATE): the time zone must exist in `pg_timezone_names`; `created_by`
+  is the caller on insert when authenticated (no spoofing); `patient_id` never
+  changes; on update `updated_at = now()` and `updated_by = auth.uid()`;
+  `companion_user_id` must be an owner or caregiver of the patient's circle (a
+  viewer or an outsider is refused, null means everyone is reminded);
+  `follow_up_of` must be another appointment of the same patient.
+- Cancelling is `cancelled_at`, not a delete (the history keeps cancelled
+  appointments). A cancelled row can still be edited; the audit log keeps every
+  change.
+- `info.patient_info`: one row per patient, `id = patient_id` (deterministic, so
+  two offline creates converge), `patient_id` unique and cascading with the
+  patient. `allergies` and `conditions` are jsonb arrays (0..30 entries, 1..100 /
+  1..200 characters), `emergency_contacts` is a jsonb array of 0..5
+  `{name, relationship, phone}`, `sns_number` is exactly 9 digits,
+  `health_centre_phone` allows digits, spaces, `+`, `-`, `(`, `)`. The jsonb
+  rules are immutable functions (`info.text_list_is_valid`, `info.contacts_are_valid`)
+  used by CHECK constraints, like `meds.times_are_valid`. `info.check_patient_info()`
+  keeps `id`/`patient_id` immutable and sets `updated_at`/`updated_by` on update.
+- RLS mirrors the other modules through `core.can(patient_id, action)`: any
+  member reads, owner/caregiver inserts and updates, only an owner deletes
+  (appointments too — the app cancels instead). RLS is enabled **and forced**;
+  nothing is granted to `anon`/`PUBLIC`; `authenticated` gets
+  `select/insert/update/delete`. `service_role` gets `USAGE` on the schema and
+  `SELECT` on `appointments.appointments` for the M6 change push.
+- Audit (D14): `appointments.audit_row_change()` and `info.audit_row_change()`
+  write `core.audit_log` with the actor and the patient/circle derived from
+  `patient_id`. They live in their own schemas (not `core`) for the module rule.
+- The `powersync` publication adds `appointments.appointments` and
+  `info.patient_info`; the streams `appointments` and `patient_info` in
+  `../powersync/sync-config.yaml` walk patient → circle → membership exactly like
+  `patients`, auto-subscribed, so every member (viewers included) has them
+  offline.
+- `appointments` and `info` are in `api.schemas` in `config.toml`. On the
+  **hosted** projects they must also be added under
+  Dashboard → Integrations → Data API → Settings → *Exposed schemas*, or every
+  request gets `PGRST106 Invalid schema`.
+
 ## Tests
 
 `npx supabase@latest test db` runs every `*.sql` file in `supabase/tests/` inside
@@ -419,7 +474,7 @@ append-only against clients and the table owner).
 at a time, iterating `pg_class`: at least one table exists, RLS is enabled
 **and forced** on every `core` table, nothing is granted to `PUBLIC` or `anon`,
 `authenticated` may use the schema, the `powersync` publication contains
-exactly the seven synced tables, and the M1 `sync_probe` table is gone while
+exactly the ten synced tables, and the M1 `sync_probe` table is gone while
 `core.set_updated_at()` remains.
 
 `core_m2_fixes_test.sql` covers the follow-up migration: removed-member cleanup
@@ -457,6 +512,20 @@ unreadable for every API role, the exact sync-stream query as each user, the
 audit row's derived patient/circle/actor, the Vault no-op and queued request,
 and the `stock_low_daily` cron job.
 
+`appointments_test.sql` covers M6 appointments: the enum values, forced RLS and
+privileges, the text/minutes/duration/time-zone checks, `patient_id`
+immutability, `created_by` spoofing, the companion (viewer and outsider refused)
+and follow-up (self and other patient refused) rules, `updated_by` on update,
+RLS per role (delete only for an owner), the exact sync-stream query as each
+user, and the audit rows for insert/update/delete.
+
+`info_test.sql` covers M6 patient info: forced RLS and privileges, `id =
+patient_id` and the one-row-per-patient rule, both immutability rules, every
+validator (allergy/condition counts and lengths, the SNS number, the phone
+charset, the emergency contacts), the defaults, `updated_by` on update, RLS per
+role (delete only for an owner), the exact sync-stream query as each user, and
+the audit rows for insert/update/delete.
+
 The Deno suite in `supabase/functions/` is the D22 guard: every case in
 `shared/test-vectors/dose-slots.json`, `dose-status.json` and `stock.json` is
 asserted against the TypeScript port, plus the pure escalation selection
@@ -467,8 +536,9 @@ viewers excluded, language per recipient, zero devices), the error-log helper an
 the FCM sender against a mocked `fetch` (JWT signature, token cache, dead-token
 and retry classification).
 
-`core_care_circle_test.sql` and `meds_test.sql` also run the **exact Sync
-Streams queries** from `../powersync/sync-config.yaml` as each test user, so the
+`core_care_circle_test.sql`, `meds_test.sql`, `stock_test.sql` and (M6)
+`appointments_test.sql` / `info_test.sql` also run the **exact Sync Streams
+queries** from `../powersync/sync-config.yaml` as each test user, so the
 read half and the write half are tested against the same scenarios.
 `../powersync/check-sync-tests.sh` extracts every `query:` from the YAML and
 fails if any of them (with `auth.user_id()` replaced by `(select auth.uid())`)

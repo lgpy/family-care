@@ -92,9 +92,10 @@ select is(
   (select string_agg(schemaname || '.' || tablename, ',' order by schemaname, tablename)
      from pg_publication_tables
     where pubname = 'powersync'),
-  'core.care_circles,core.memberships,core.patients,core.profiles,'
-  'meds.dose_log,meds.medications,meds.regimens,meds.stock_movements',
-  'publication powersync contains exactly the four M2 core tables and four meds tables'
+  'appointments.appointments,core.care_circles,core.memberships,core.patients,'
+  'core.profiles,info.patient_info,meds.dose_log,meds.medications,'
+  'meds.regimens,meds.stock_movements',
+  'publication powersync contains exactly the M2 core tables, the M3-M5 meds tables and the M6 appointments/info tables'
 );
 
 -- --- The M1 sync probe is gone ----------------------------------------------
