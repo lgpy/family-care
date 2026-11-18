@@ -124,7 +124,18 @@ Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
 
 ---
 
-## Open questions
+### D27 — M4 push plumbing: owner-only tokens, a server-side ledger, Vault for webhooks
+- **Decision:** Server escalation (D4) is built from four small pieces rather than a job embedded in the app:
+  - `core.push_devices` stores FCM tokens, one row per install, owner-only under RLS and **not** synced. Registration goes through `core.register_push_device(token)`, which reassigns a token that moved between accounts (a token identifies an install, not a person). Registrations are audited as security events **without the token** — device tokens are personal data and a bearer credential for that install.
+  - `meds.escalations` is the server's "this slot was escalated" ledger, unique on `(regimen_id, scheduled_local)`. No API role has a privilege on it: the app derives "needs attention" from the dose log, and the ledger carries no information the phones need.
+  - The two function URLs and the shared cron secret live in **Vault** (`escalate_url`, `dose_confirmed_url`, `push_cron_secret`), read by `security definer` helpers. `app.settings` would need a database restart and is not editable from SQL on hosted Supabase. A missing secret makes the trigger and the cron tick no-ops instead of failures, so local/CI never needs the edge runtime or network.
+  - The clear broadcast is a pg_net `AFTER INSERT` trigger on `meds.dose_log` (versioned in the migration, not a dashboard webhook), and the five-minute tick is pg_cron. Both post only the minimum: the new dose-log id, or nothing at all.
+- **Why:** Escalation must work when the primary's phone is off, which rules out anything the app schedules. Versioning the trigger and the cron job keeps them reviewable and reproducible; Vault keeps the secret out of the repo and out of migration history. A dead FCM token is deleted by the function rather than retried forever.
+- **Trade-off accepted:** the functions are deployed with `verify_jwt = false` (pg_net cannot send a Supabase JWT), so they authenticate with a shared secret header and must reject everything else; the secret never appears in payloads, logs or audit rows. Until Vault is configured on a project, escalation and clear pushes are silently off — the README documents the setup as a human deploy step.
+- **Consequence for D8:** notification text is generated per recipient from `core.profiles.preferred_language`, and payloads carry ids and wall-clock times only (no medication or patient names, D4).
+
+---
+
 
 - ~~**Q1 — Default policy for caregiver-patients.**~~ Resolved by D11: self-managed.
 - **Q2 — Security and GDPR deep-dive.** Drafted in [security-and-privacy.md](security-and-privacy.md) D12–D17 accepted. Only S2 (grandparents' agreement) remains open, non-blocking.

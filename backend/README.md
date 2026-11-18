@@ -9,6 +9,7 @@ backend/
 ├─ supabase/
 │  ├─ config.toml         local stack config (project_id "family-care")
 │  ├─ migrations/         versioned schema, one schema per module
+│  ├─ functions/          edge functions (escalate, dose-confirmed) + Deno tests
 │  └─ tests/              pgTAP database tests (access isolation, ...)
 └─ powersync/
    ├─ sync-config.yaml    what each phone downloads (Sync Streams)
@@ -55,7 +56,7 @@ Nothing in this repository links to a remote project: linking and `db push` are
 done by hand, on purpose, so a stray command cannot touch prod. Dev holds
 invented test data only — never real health data.
 
-## What exists so far (M1–M3)
+## What exists so far (M1–M4)
 
 M1 (walking skeleton):
 
@@ -173,6 +174,134 @@ applied file):
   API role, and is the only code path the append-only guard lets delete; pg_cron
   runs it daily (`core_purge_audit_log`, 03:23 UTC).
 
+## M4 (push and escalation)
+
+Database — `migrations/20261120120000_push_and_escalation.sql`:
+
+- `core.push_devices`: one row per app install (`fcm_token` unique, `platform`
+  `android`, optional `app_language`, `last_seen_at`). Device tokens are
+  personal data: RLS is owner-only (`user_id = auth.uid()`), a co-member — even
+  the circle owner — sees nothing, and the table is **not** synced. Clients
+  register through `core.register_push_device(token)` (upsert by token; a token
+  that moved between accounts is reassigned, because a token identifies an
+  install) and remove it with `core.unregister_push_device(token)` (own rows
+  only). Registration is audited as `event_kind = 'security'` with
+  `circle_id = null`, and **the token is redacted from both JSON documents**
+  (`core.audit_push_device()`); only the device row id, user id, platform and
+  language reach the log.
+- `meds.escalations`: the ledger that makes the job idempotent, unique on
+  `(regimen_id, scheduled_local)`, with `patient_id`, `escalated_at` and
+  `recipients` (users notified, possibly 0). Server-only: no privilege for
+  `authenticated`/`anon`, no RLS policies, not synced.
+- `meds.effective_reminder` (view, `security_invoker`): active medications with
+  `coalesce(medication override, patient policy)` and
+  `coalesce(medication primary, patient primary)`, plus the patient's
+  `escalation_delay_minutes` / `missed_window_minutes`. Stopped medications are
+  excluded. Granted to `service_role` only.
+- Webhook plumbing, versioned rather than clicked together: `core.push_setting`
+  reads a Vault secret, `core.post_to_function` posts JSON with
+  `X-Cron-Secret`, and both no-op (never raise) when Vault, the secret or
+  `pg_net` is missing — the local/CI default. `meds.dose_log` gets an `AFTER
+  INSERT` trigger that posts only the new row id to `dose-confirmed`; pg_cron
+  runs `select core.enqueue_escalation_push()` every five minutes.
+- `service_role` is granted exactly what the two functions read (schema usage,
+  `push_devices`, `memberships`, `profiles`, `patients`, `medications`,
+  `regimens`, `dose_log`, the view, and read/insert/update on the ledger).
+
+Edge functions — `supabase/functions/`:
+
+- `_shared/doseSlots.ts` + `_shared/doseStatus.ts`: the TypeScript port of the
+  M3 dose-slot and dose-status rules, including Lisbon DST (gap → shift forward
+  by the gap; overlap → earlier offset) and the inclusive boundaries. They are
+  the M4 half of D22 and are asserted against **every** fixture in
+  `shared/test-vectors/` by `_shared/vectors_test.ts`.
+- `_shared/escalation.ts`: the pure selection logic (policy/primary coalescing,
+  overdue-only, ledger skip, owners/caregivers minus the primary, viewer never
+  notified, null primary → all caregivers per D24, per-recipient language).
+- `_shared/fcm.ts`: FCM HTTP v1 sender. Signs the OAuth assertion with WebCrypto
+  RS256, caches the access token, and classifies responses: `UNREGISTERED` /
+  `INVALID_ARGUMENT` are dead tokens (the caller deletes the device row), 429/5xx
+  and transport errors are retries. It never logs a token, a message body or a
+  response body.
+- `escalate/index.ts`: the cron entry point. Requires `X-Cron-Secret` ==
+  `ESCALATION_CRON_SECRET`, uses the service role, reads a bounded look-back
+  (widest missed window + 15 minutes), sends generic localized notifications
+  (title "Family Care"; body "A dose needs attention" / "Uma toma precisa de
+  atenção"; channel `escalations`, tag per patient + slot instant) with only
+  `type=escalation, patient_id, scheduled_local` in `data`, then writes the
+  ledger rows.
+- `dose-confirmed/index.ts`: on a dose-log insert, sends a **data-only**
+  high-priority `type=clear, regimen_id, scheduled_local` to every device of the
+  circle's owners/caregivers except the confirmer's own, so the other phones
+  cancel the local reminder and the escalation.
+
+### Deploying the M4 push functions (human steps)
+
+Firebase and Supabase hold the credentials; nothing here is committed. Do this
+on **dev** first, never against prod without the build-plan §5 gate.
+
+1. Firebase console → Project settings → **Service accounts** → *Generate new
+   private key*. That JSON is the FCM credential.
+2. Create the shared secret and store both in the function environment:
+
+   ```bash
+   # from backend/
+   npx supabase@latest secrets set \
+     --project-ref <dev-ref> \
+     FCM_SERVICE_ACCOUNT_JSON="$(cat /path/to/service-account.json)" \
+     ESCALATION_CRON_SECRET="$(openssl rand -hex 32)"
+   ```
+
+   `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by the edge
+   runtime; do not set them by hand.
+
+3. Store the function URLs and the **same** cron secret in Vault (SQL editor on
+   dev). The trigger and the cron job read these names; absent secrets are a
+   no-op, which is the local default:
+
+   ```sql
+   select vault.create_secret('https://<dev-ref>.supabase.co/functions/v1/escalate', 'escalate_url');
+   select vault.create_secret('https://<dev-ref>.supabase.co/functions/v1/dose-confirmed', 'dose_confirmed_url');
+   select vault.create_secret('<the ESCALATION_CRON_SECRET value>', 'push_cron_secret');
+   ```
+
+4. Enable the **pg_net** and **pg_cron** extensions (Dashboard → Database →
+   Extensions) if the project does not have them. The migration creates both
+   when it can and catches the failure otherwise; without `pg_net` the
+   webhooks do nothing.
+5. Deploy both functions. `verify_jwt = false` is set for them in `config.toml`
+   on purpose: pg_net cannot send a Supabase JWT, so they authenticate with the
+   shared secret header instead.
+
+   ```bash
+   npx supabase@latest functions deploy escalate dose-confirmed --project-ref <dev-ref>
+   ```
+
+6. Smoke test on dev: insert a dose row for a slot and watch
+   `select * from net._http_response order by id desc limit 5;` (pg_net records
+   the response), and check the function logs in the dashboard. The cron tick
+   runs at `*/5`; `select * from cron.job_run_details order by start_time desc
+   limit 5;` shows it.
+
+### Running the M4 tests locally
+
+Deno is not required system-wide; `npx deno` fetches it. From `backend/`:
+
+```bash
+npx supabase@latest db reset          # applies the push migration
+npx supabase@latest test db           # pgTAP incl. supabase/tests/push_test.sql
+bash powersync/check-sync-tests.sh    # stream/test drift (unchanged by M4)
+
+cd supabase/functions
+npx --yes deno test --allow-read      # shared vectors + escalation + FCM
+npx --yes deno check escalate/index.ts dose-confirmed/index.ts
+```
+
+`--allow-read` is only for reading `shared/test-vectors/` outside the function
+directory. `npx supabase@latest functions serve` is optional: the database side
+of the webhooks is exercised by `push_test.sql` with Vault configured inside the
+rolled-back transaction, so nothing needs the edge runtime to pass.
+
 ## Tests
 
 `npx supabase@latest test db` runs every `*.sql` file in `supabase/tests/` inside
@@ -210,6 +339,23 @@ schedule shape and `times` validation, the append-only dose log (no
 update/delete, confirmation spoofing, medication/regimen mismatch, skip-reason
 and given-by rules, correction slots) and the audit rows' actor/patient/circle.
 
+`push_test.sql` covers M4: push devices are owner-only (a co-member sees none and
+cannot insert/update/delete another's row), re-registering a token reassigns it
+instead of duplicating it, unregistering only touches the caller's rows, the
+token key and value never reach `core.audit_log` (and registrations are security
+events), the escalation ledger is unreadable and unwritable for `authenticated`,
+its slot key and patient/regimen checks fire, the effective-settings view
+coalesces overrides and hides stopped medications, and the webhooks are a no-op
+without Vault and queue exactly one pg_net request (URL, secret header) with it.
+The cron job's schedule and command are asserted too.
+
+The Deno suite in `supabase/functions/` is the D22 guard: every case in
+`shared/test-vectors/dose-slots.json` and `dose-status.json` is asserted against
+the TypeScript port, plus the pure escalation selection (overdue once, ledger
+skip, confirmed/missed/due skipped, `all_caregivers` local-only, medication
+override, null primary, viewer excluded, DST slot) and the FCM sender against a
+mocked `fetch` (JWT signature, token cache, dead-token and retry classification).
+
 `core_care_circle_test.sql` and `meds_test.sql` also run the **exact Sync
 Streams queries** from `../powersync/sync-config.yaml` as each test user, so the
 read half and the write half are tested against the same scenarios.
@@ -220,4 +366,6 @@ editing one side without the other fails the pull request.
 
 CI runs the same commands (the drift check, `supabase test db` and `db lint`) in
 the `database` job of `.github/workflows/ci.yml`, so a broken schema change or a
-stream/test mismatch fails the pull request.
+stream/test mismatch fails the pull request. The `functions` job installs Deno,
+runs `deno test --allow-read` (the shared vectors, escalation selection and FCM
+sender) and type-checks the two deployable functions.
