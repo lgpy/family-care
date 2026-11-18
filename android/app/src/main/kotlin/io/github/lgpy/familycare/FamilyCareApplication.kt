@@ -2,10 +2,11 @@ package io.github.lgpy.familycare
 
 import android.app.Application
 import io.github.lgpy.familycare.core.data.sync.SyncService
+import io.github.lgpy.familycare.core.notifications.PushHandlers
+import io.github.lgpy.familycare.core.notifications.PushSession
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.di.appModule
 import io.github.lgpy.familycare.feature.medications.push.PushNotifications
-import io.github.lgpy.familycare.feature.medications.push.PushSession
 import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderSchedulerCoordinator
 import org.koin.android.ext.koin.androidContext
@@ -37,13 +38,15 @@ class FamilyCareApplication : Application() {
         koin.get<DoseReminderScheduler>().ensureChannel()
         koin.get<ReminderSchedulerCoordinator>().start()
 
-        // M4 push (D4/D27): the escalation channel Android's settings show, plus
-        // token registration. Registration follows the session, so a start while
-        // signed in registers (or retries) without any screen being opened. M5
-        // adds the low-stock channel beside it so a background alert has somewhere
-        // to land (D28).
+        // M4 push (D4/D27, D29): the escalation channel Android's settings show,
+        // plus token registration. Registration follows the session, so a start
+        // while signed in registers (or retries) without any screen being opened.
+        // M5 adds the low-stock channel beside it so a background alert has
+        // somewhere to land (D28). The route table is built here too, so two
+        // handlers claiming the same push type fail at start-up, not at delivery.
         PushNotifications.ensureChannel(this)
         PushNotifications.ensureStockChannel(this)
+        koin.get<PushHandlers>()
         koin.get<PushSession>().start()
     }
 }

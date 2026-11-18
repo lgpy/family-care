@@ -1,8 +1,9 @@
 package io.github.lgpy.familycare.auth
 
 import io.github.lgpy.familycare.core.data.auth.AuthRepository
+import io.github.lgpy.familycare.core.data.sync.SyncService
 import io.github.lgpy.familycare.core.domain.auth.AuthState
-import io.github.lgpy.familycare.feature.medications.push.PushSession
+import io.github.lgpy.familycare.core.notifications.PushSession
 import kotlinx.coroutines.flow.StateFlow
 
 /**

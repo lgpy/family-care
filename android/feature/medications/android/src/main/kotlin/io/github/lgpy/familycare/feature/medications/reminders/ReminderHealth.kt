@@ -5,7 +5,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.PowerManager
 import androidx.core.app.NotificationManagerCompat
-import io.github.lgpy.familycare.feature.medications.push.PushRegistrationStore
+import io.github.lgpy.familycare.core.notifications.PushRegistrationStore
 import java.time.Instant
 
 /** One thing the reminder health check found wanting. */

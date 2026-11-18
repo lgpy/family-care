@@ -66,16 +66,10 @@
             </intent-filter>
         </receiver>
 
-        <!-- M4 push (D4/D27): escalation and clear messages from the two edge
-             functions. FCM calls it for new tokens and for data-only messages
-             (the clear); the system draws background escalations itself. -->
-        <service
-            android:name="io.github.lgpy.familycare.feature.medications.push.PushMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
+        <!-- M4 push (D4/D27, D29): the app's single FCM service is declared by
+             :core:notifications and merged from its manifest. It calls the core
+             for new tokens and data-only messages (the clear); the system draws
+             background escalations itself. -->
     </application>
 
 </manifest>
