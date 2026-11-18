@@ -134,6 +134,13 @@ Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
 - **Trade-off accepted:** the functions are deployed with `verify_jwt = false` (pg_net cannot send a Supabase JWT), so they authenticate with a shared secret header and must reject everything else; the secret never appears in payloads, logs or audit rows. Until Vault is configured on a project, escalation and clear pushes are silently off — the README documents the setup as a human deploy step.
 - **Consequence for D8:** notification text is generated per recipient from `core.profiles.preferred_language`, and payloads carry ids and wall-clock times only (no medication or patient names, D4).
 
+### D28 — M5 stock: counts, refills and discards in a ledger; doses come from the dose log
+- **Decision:** `meds.stock_movements` is an append-only ledger with three kinds: `count` (a stocktake — "there are N now", also the opening balance entered in the medication form), `refill` (+N) and `discard` (−N, reason). There is **no "dose" movement row**: current stock = the latest count + refills − discards after it − the effective `taken` quantities in `meds.dose_log` after it. A manual "adjustment" is a recount. The exact rules (baseline, corrections, null quantities, daily consumption per schedule type, days remaining with multiply-before-divide, low stock, shopping status) are in `shared/test-vectors/README.md` and `stock.json`, implemented in Kotlin and TypeScript (D22).
+- **Shopping list** is derived (low-stock, not stopped medications), not stored. "Needs prescription first" when a prescription is required and its validity date is missing or before today; ticking an item records a `refill`.
+- **Low-stock push** (D4): a daily server job sends one generic push per **low episode** to the circle's owners and caregivers (not viewers, not routed by reminder policy — stock is everyone's errand). `meds.stock_alerts` (server-only ledger, one row per medication while low) prevents repeats; the row is removed when the medication is no longer low, which re-arms the alert. Same Vault/shared-secret/pg_cron pattern as D27; payload carries only `type=stock_low`.
+- **Why:** Deriving dose consumption from the dose log keeps one source of truth, works offline the moment a dose is confirmed, and needs no trigger to keep two ledgers consistent (a late-syncing or corrected dose simply changes the sum). Counts instead of signed adjustments match what a caregiver actually does: count the box.
+- **Trade-off accepted:** two phones recording a count at the same time — the later `occurred_at` wins. Doses recorded before any count make stock negative; the UI shows 0 and the medication is low, which is the safe direction.
+
 ---
 
 

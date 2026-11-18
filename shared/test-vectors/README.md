@@ -19,6 +19,7 @@ implementation is stable, not that it is right.
 |---|---|
 | `dose-slots.json` | regimen versions → the slots due in a date range |
 | `dose-status.json` | one slot + its log entries + a clock → the derived status |
+| `stock.json` | ledger + dose log + regimens + a date → stock, days remaining, low stock, shopping status (M5) |
 
 ## Encoding
 
@@ -141,6 +142,52 @@ When several effective entries exist, the state is the outcome of the **latest**
 by `actual_at` (ties by `id`); `confirmation_count` counts all of them and
 `confirmed_twice` is `confirmation_count > 1`. The UI shows one dose, plus
 "Already given by …" / "confirmed twice".
+
+## `stock.json` (M5)
+
+A case has `name`, `today` (local date), `medication`
+(`low_stock_threshold_days`, `requires_prescription`,
+`prescription_valid_until`), `regimens[]` (as above), `movements[]`
+(`meds.stock_movements` shape: `id`, `kind`, `quantity`, `occurred_at`),
+`dose_log[]` (the `meds.dose_log` shape above) and
+`expected { stock, daily_consumption, days_remaining, low, shopping_status }`.
+Compare numbers with a tolerance of `1e-9`.
+
+### Rules
+
+- **Movement kinds:** `count` (a stocktake: "there are N now", also the opening
+  balance), `refill` (+N), `discard` (−N). Quantities are positive except a
+  `count`, which may be `0`. There is no "dose" movement row: doses come from
+  the dose log (D6 — the dose log already *is* an append-only ledger).
+- **Baseline:** the `count` with the latest `occurred_at` (ties by `id`, the
+  greater wins). Without any count the baseline is `0` at the beginning of time.
+- **Stock** = baseline + Σ refills − Σ discards with `occurred_at` **after** the
+  baseline − Σ taken quantities of the **effective** dose-log entries with
+  `actual_at` **after** the baseline. Movements/doses at or before the baseline
+  instant are already reflected in the count.
+- **Effective entries:** as in `dose-status.json` — an entry named by another
+  entry's `corrects_entry_id` is void. Every non-void `taken` entry deducts, so
+  a double confirmation deducts twice (the dose was really given twice).
+  `skipped` never deducts. A `taken` entry with `actual_quantity = null`
+  deducts its slot's quantity: the regimen's `times[]` entry whose `time`
+  equals the time part of `scheduled_local` (0 if none).
+- Stock is **not** clamped; it can go negative (doses recorded without a
+  count). The UI shows `max(stock, 0)`.
+- **Active regimen:** the regimen with `start_date ≤ today ≤ end_date` (or no
+  end date); if several, the latest `start_date`. None ⇒ consumption `0`.
+- **Daily consumption** of the active regimen, with `Q = Σ times[].quantity`:
+  `daily` → `Q`; `weekdays` → `Q × popcount(weekdays) / 7`;
+  `every_n_days` → `Q / interval_days`.
+- **Days remaining:** `null` when consumption is `0`; `0` when stock `≤ 0`;
+  otherwise `floor(stock × P / (Q × K))` with `P` the period in days and `K`
+  the occurrences per period (`daily`: P=1, K=1; `weekdays`: P=7,
+  K=popcount; `every_n_days`: P=interval_days, K=1). **Multiply before
+  dividing**: `18 × 7 / 3` is exactly 42, whereas `18 / (3/7)` in floating
+  point can floor to 41.
+- **Low** when `days_remaining` is not `null` and `≤ low_stock_threshold_days`.
+- **Shopping status** (only when low, else `null`): `needs_prescription` when
+  `requires_prescription` and the validity date is `null` or **before** `today`
+  (valid through the date itself); otherwise `ready_to_buy`.
 
 ## Adding a vector
 

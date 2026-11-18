@@ -60,18 +60,18 @@ Rules:
 | taken / skipped | log entry exists |
 
 ## Stock — a ledger
-Current stock = sum of movements:
+Current stock = the latest stocktake + what came in − what went out since (D28):
 
-| Movement | Sign | Source |
+| Movement | Effect | Source |
 |---|---|---|
+| count | sets the baseline ("there are N now") | Opening balance in the medication form, or a recount |
 | refill | + | Shopping list purchase or manual entry |
-| dose | − | Automatic from a `taken` dose log entry |
-| adjustment | ± | Manual count correction (reason required) |
-| discard | − | Expired / lost |
+| discard | − | Expired / lost (reason) |
+| dose | − | **Not a row:** the effective `taken` quantities in the dose log after the latest count |
 
 - Never a single number overwritten by two phones.
-- **Days remaining** = current stock ÷ scheduled daily consumption from the active regimen.
-- **Low stock** when days remaining ≤ threshold → `StockLow` event → dashboard + push to caregivers + shopping list entry.
+- **Days remaining** = current stock ÷ scheduled daily consumption from the active regimen (exact rules: `shared/test-vectors/README.md`).
+- **Low stock** when days remaining ≤ threshold → dashboard card + shopping list entry + one push per low episode to owners and caregivers.
 
 ## Refills and shopping list
 - A low-stock medication appears on the shopping list:
