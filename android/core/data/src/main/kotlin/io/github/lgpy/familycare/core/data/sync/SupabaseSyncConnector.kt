@@ -24,6 +24,8 @@ internal class SupabaseSyncConnector(
     private val endpoint: String,
     private val uploader: CrudUploader,
     private val rejections: UploadRejections,
+    /** The synced tables and their policies: what may leave the queue. */
+    private val tables: TableCatalog,
     private val now: () -> Instant = { Clock.System.now() },
 ) : PowerSyncBackendConnector() {
 
@@ -63,10 +65,11 @@ internal class SupabaseSyncConnector(
         while (true) {
             val transaction = database.getNextCrudTransaction() ?: return
             uploadTransaction(
-                // Only the tables this app owns are sent; anything else in the
-                // transaction (a local-only table, or a stray memberships write)
-                // is completed without reaching the server.
-                writes = transaction.crudWrites(),
+                // Only the tables this app may write are sent; anything else in
+                // the transaction (a local-only table, a stray memberships write,
+                // an UPDATE of an append-only row) is completed without reaching
+                // the server.
+                writes = transaction.crudWrites(tables),
                 uploader = uploader,
                 rejections = rejections,
                 complete = { transaction.complete(null) },

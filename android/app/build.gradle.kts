@@ -79,6 +79,11 @@ dependencies {
     implementation(project(":core:notifications"))
     implementation(project(":core:ui"))
 
+    // The medications module's data layer: its synced tables are composed into
+    // the PowerSync schema, and its repositories are exposed to the screens (D5:
+    // the app wires modules; the core never names one).
+    implementation(project(":feature:medications:data"))
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)

@@ -4,9 +4,12 @@ import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.lgpy.familycare.core.data.circle.PowerSyncPatientRepository
 import io.github.lgpy.familycare.core.data.sync.CORE_SCHEMA
+import io.github.lgpy.familycare.core.data.sync.CoreSyncedTables
+import io.github.lgpy.familycare.core.data.sync.DuplicateInsert
 import io.github.lgpy.familycare.core.data.sync.PATIENTS_TABLE
 import io.github.lgpy.familycare.core.data.sync.SupabaseCrudUploader
 import io.github.lgpy.familycare.core.data.sync.SupabaseSyncConnector
+import io.github.lgpy.familycare.core.data.sync.TableCatalog
 import io.github.lgpy.familycare.core.data.sync.UploadFailure
 import io.github.lgpy.familycare.core.data.sync.UploadRejections
 import io.github.lgpy.familycare.core.domain.auth.AuthState
@@ -85,7 +88,7 @@ class LocalSupabaseUploadTest {
     fun `a new patient is inserted on the server`() = runBlocking {
         val patientId = newPatientId()
 
-        uploader(owner).upsert(PATIENTS_TABLE, patientId, patientValues("Grandma"))
+        uploader(owner).insert(CORE_SCHEMA, PATIENTS_TABLE, patientId, patientValues("Grandma"), DuplicateInsert.UPDATE_EXISTING)
 
         assertEquals("Grandma", stack.patientName(owner, patientId))
     }
@@ -93,9 +96,9 @@ class LocalSupabaseUploadTest {
     @Test
     fun `an edited patient is updated on the server`() = runBlocking {
         val patientId = newPatientId()
-        uploader(owner).upsert(PATIENTS_TABLE, patientId, patientValues("Grandma"))
+        uploader(owner).insert(CORE_SCHEMA, PATIENTS_TABLE, patientId, patientValues("Grandma"), DuplicateInsert.UPDATE_EXISTING)
 
-        uploader(owner).update(PATIENTS_TABLE, patientId, mapOf("display_name" to JsonPrimitive("Grandma Maria")))
+        uploader(owner).update(CORE_SCHEMA, PATIENTS_TABLE, patientId, mapOf("display_name" to JsonPrimitive("Grandma Maria")))
 
         assertEquals("Grandma Maria", stack.patientName(owner, patientId))
     }
@@ -103,7 +106,7 @@ class LocalSupabaseUploadTest {
     @Test
     fun `re-sending an already inserted patient updates it instead of failing`() = runBlocking {
         val patientId = newPatientId()
-        uploader(owner).upsert(PATIENTS_TABLE, patientId, patientValues("Grandma"))
+        uploader(owner).insert(CORE_SCHEMA, PATIENTS_TABLE, patientId, patientValues("Grandma"), DuplicateInsert.UPDATE_EXISTING)
 
         // The precondition of the fallback: a second plain INSERT is a unique
         // violation, which is what makes the uploader switch to an UPDATE.
@@ -115,7 +118,7 @@ class LocalSupabaseUploadTest {
         assertEquals(UNIQUE_VIOLATION, duplicate.code)
 
         // The retry a lost response (or a local INSERT OR REPLACE) produces.
-        uploader(owner).upsert(PATIENTS_TABLE, patientId, patientValues("Grandma Maria"))
+        uploader(owner).insert(CORE_SCHEMA, PATIENTS_TABLE, patientId, patientValues("Grandma Maria"), DuplicateInsert.UPDATE_EXISTING)
 
         assertEquals("Grandma Maria", stack.patientName(owner, patientId))
     }
@@ -124,7 +127,7 @@ class LocalSupabaseUploadTest {
     fun `a viewer's patient is refused as a permanent policy failure`() = runBlocking {
         val patientId = newPatientId()
 
-        val error = refusal { uploader(viewer).upsert(PATIENTS_TABLE, patientId, patientValues("Nope")) }
+        val error = refusal { uploader(viewer).insert(CORE_SCHEMA, PATIENTS_TABLE, patientId, patientValues("Nope"), DuplicateInsert.UPDATE_EXISTING) }
 
         assertEquals(RLS_DENIED, error.code)
         val failure = UploadFailure.of(error)
@@ -183,8 +186,11 @@ class LocalSupabaseUploadTest {
 
     // --- Helpers -------------------------------------------------------------
 
+    /** The core's tables only: this test never touches a feature's schema. */
+    private val tables = TableCatalog(listOf(CoreSyncedTables))
+
     private fun uploader(user: LocalStack.TestUser) =
-        SupabaseCrudUploader(user.client.postgrest)
+        SupabaseCrudUploader(user.client.postgrest, tables)
 
     /**
      * The real connector, with sync downloads nowhere: the test only drives its
@@ -196,6 +202,7 @@ class LocalSupabaseUploadTest {
             endpoint = "http://powersync.invalid",
             uploader = uploader(user),
             rejections = rejections,
+            tables = tables,
         )
 
     private fun repository(local: LocalDatabase, user: LocalStack.TestUser) =

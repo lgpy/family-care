@@ -22,17 +22,23 @@ class UploadTransactionTest {
     private class FailingUploader(private val error: Exception? = null) : CrudUploader {
         val calls = mutableListOf<String>()
 
-        override suspend fun upsert(table: String, id: String, values: Map<String, JsonElement>) {
-            calls += "upsert:$table"
+        override suspend fun insert(
+            schema: String,
+            table: String,
+            id: String,
+            values: Map<String, JsonElement>,
+            duplicate: DuplicateInsert,
+        ) {
+            calls += "insert:$table"
             error?.let { throw it }
         }
 
-        override suspend fun update(table: String, id: String, values: Map<String, JsonElement>) {
+        override suspend fun update(schema: String, table: String, id: String, values: Map<String, JsonElement>) {
             calls += "update:$table"
             error?.let { throw it }
         }
 
-        override suspend fun delete(table: String, id: String) {
+        override suspend fun delete(schema: String, table: String, id: String) {
             calls += "delete:$table"
             error?.let { throw it }
         }
@@ -148,6 +154,7 @@ class UploadTransactionTest {
     }
 
     private fun write(table: String) = CrudWrite(
+        schema = CORE_SCHEMA,
         table = table,
         id = "row-1",
         kind = CrudWriteKind.UPDATE,

@@ -22,7 +22,10 @@ dependencies {
 
     // PowerSync: `common` (no bundled driver/engine) plus the encrypted SQLite
     // driver, so the local file is encrypted at rest (security-and-privacy §4).
-    implementation(libs.powersync.common)
+    // `common` is `api`, not `implementation`: a feature data module contributes
+    // its synced tables (SyncedTables/Table) and runs its own SQL through the
+    // local database, so the SDK types are part of this module's public API.
+    api(libs.powersync.common)
     implementation(libs.powersync.sqlite3multipleciphers)
 
     testImplementation(libs.junit4)

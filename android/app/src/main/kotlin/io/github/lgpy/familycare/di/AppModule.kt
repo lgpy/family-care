@@ -12,6 +12,9 @@ import io.github.lgpy.familycare.core.domain.circle.ProfileRepository
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
+import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
+import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
+import io.github.lgpy.familycare.feature.medications.data.MedicationsData
 import io.github.lgpy.familycare.ui.MoreViewModel
 import io.github.lgpy.familycare.ui.SignInViewModel
 import io.github.lgpy.familycare.ui.TodayViewModel
@@ -49,12 +52,17 @@ val appModule: Module = module {
     // D12: Supabase session, plus the sync layer (one Supabase client and one
     // encrypted PowerSync database for the process). The publishable key is
     // public by design; RLS protects the data (security-and-privacy §3).
+    //
+    // Feature modules contribute their synced tables here (D5): the medications
+    // module adds `medications`, `regimens` and `dose_log` with their upload
+    // rules, and core/data merges them with the core's own tables.
     single {
         DataLayer.create(
             context = androidContext(),
             supabaseUrl = BuildConfig.SUPABASE_URL,
             publishableKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY,
             powerSyncUrl = BuildConfig.POWERSYNC_URL,
+            featureTables = listOf(MedicationsData.syncedTables),
         )
     }
     single<AuthRepository> { get<DataLayer>().authRepository }
@@ -65,6 +73,18 @@ val appModule: Module = module {
     single<CareCircleRepository> { get<DataLayer>().careCircleRepository }
     single<PatientRepository> { get<DataLayer>().patientRepository }
     single<ProfileRepository> { get<DataLayer>().profileRepository }
+
+    // M3 medications. The module builds its repositories from the same local
+    // database; screens inject only the interfaces. Not used by a screen yet,
+    // so they are created on first injection rather than at start-up.
+    single<MedicationRepository> {
+        val data = get<DataLayer>()
+        MedicationsData.medicationRepository(data.database, data.authState)
+    }
+    single<DoseLogRepository> {
+        val data = get<DataLayer>()
+        MedicationsData.doseLogRepository(data.database, data.authState)
+    }
 
     // Needs an Activity at call time, so it is a plain collaborator rather than
     // a singleton holding one.

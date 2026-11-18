@@ -11,14 +11,18 @@ plugins {
 /**
  * D5: modules depend on the core, never on each other.
  *
- * A project under `:feature:<a>:*` may depend on `:core:*` and on
- * `:feature:<a>:domain`, but on no other feature module. This is enforced by
- * walking the declared project dependencies of every feature module, including
- * the ones reached transitively through `api`/`implementation` of other
- * projects, so `:feature:medications:android` also fails when it pulls in
+ * A project under `:feature:<a>:*` may depend on `:core:*`, on its own domain
+ * and on its own data module, but on no other feature module. This is enforced
+ * by walking the declared project dependencies of every feature module,
+ * including the ones reached transitively through `api`/`implementation` of
+ * other projects, so `:feature:medications:android` also fails when it pulls in
  * `:feature:appointments:android` indirectly.
+ *
+ * Every module under a feature counts, however deep: `domain`, `android`,
+ * `data` and `data:jvmtests` are all inspected, so a feature's data layer
+ * cannot quietly import another feature's either.
  */
-val featureModulePath = Regex(""":feature:[^:]+:(?:domain|android)""")
+val featureModulePath = Regex(""":feature:[^:]+:.+""")
 
 val inspectedConfigurations = setOf(
     "api",

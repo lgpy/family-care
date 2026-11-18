@@ -163,8 +163,12 @@ private fun JsonObject.instant(name: String): Instant? = parseServerInstant(text
  * may use a space separator and a short `+00` offset, which the strict parser
  * rejects. Anything else (including an empty string) is null rather than an
  * exception: a display timestamp must never break a screen.
+ *
+ * Public because a feature data module's rows carry the same server timestamps
+ * (`meds.medications.stopped_at`, `meds.dose_log.actual_at`) and must parse them
+ * the same way.
  */
-internal fun parseServerInstant(value: String?): Instant? {
+public fun parseServerInstant(value: String?): Instant? {
     if (value.isNullOrBlank()) return null
 
     val normalized = value

@@ -40,6 +40,11 @@ include(":core:notifications")
 include(":core:ui")
 
 include(":feature:medications:domain")
+// The module's data layer (repositories and its synced tables), plus the JVM
+// integration tests that drive it against a real PowerSync database and, with
+// the local stack up, real PostgREST uploads.
+include(":feature:medications:data")
+include(":feature:medications:data:jvmtests")
 include(":feature:medications:android")
 include(":feature:appointments:domain")
 include(":feature:appointments:android")

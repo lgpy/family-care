@@ -14,15 +14,18 @@ import io.github.lgpy.familycare.core.data.circle.PowerSyncPatientRepository
 import io.github.lgpy.familycare.core.data.circle.PowerSyncProfileRepository
 import io.github.lgpy.familycare.core.data.circle.SupabaseCareCircleRpc
 import io.github.lgpy.familycare.core.data.sync.AndroidKeystoreCipher
-import io.github.lgpy.familycare.core.data.sync.CoreSchema
+import io.github.lgpy.familycare.core.data.sync.CoreSyncedTables
 import io.github.lgpy.familycare.core.data.sync.DATABASE_FILE_NAME
 import io.github.lgpy.familycare.core.data.sync.FileKeyBlobStore
 import io.github.lgpy.familycare.core.data.sync.PowerSyncSyncService
 import io.github.lgpy.familycare.core.data.sync.SupabaseCrudUploader
 import io.github.lgpy.familycare.core.data.sync.SupabaseSyncConnector
 import io.github.lgpy.familycare.core.data.sync.SyncService
+import io.github.lgpy.familycare.core.data.sync.SyncedTables
+import io.github.lgpy.familycare.core.data.sync.TableCatalog
 import io.github.lgpy.familycare.core.data.sync.UploadRejections
 import io.github.lgpy.familycare.core.data.sync.WrappedDatabaseKey
+import io.github.lgpy.familycare.core.domain.auth.AuthState
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.ProfileRepository
@@ -33,14 +36,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * The data layer, built once for the process: one Supabase client, one
  * encrypted PowerSync database, one sync service and the core repositories.
  *
  * The app's Koin module creates this and exposes [authRepository], [sync] and
- * the three repository interfaces, so no module outside `core/data` needs a
- * PowerSync, Ktor or Supabase type.
+ * the three core repository interfaces. Feature modules own their own tables and
+ * repositories: they contribute their synced tables to [create] through
+ * [SyncedTables] and build their repositories from [database] and [authState]
+ * (see the medications module). Nothing outside `core/data` and those feature
+ * data modules needs a PowerSync, Ktor or Supabase type.
  */
 class DataLayer internal constructor(
     val authRepository: AuthRepository,
@@ -48,6 +55,14 @@ class DataLayer internal constructor(
     val careCircleRepository: CareCircleRepository,
     val patientRepository: PatientRepository,
     val profileRepository: ProfileRepository,
+    /**
+     * The local, encrypted database. Feature data modules run their own SQL on
+     * it (D5: a module owns its tables); the app's DI passes it to their
+     * repository factories.
+     */
+    val database: PowerSyncDatabase,
+    /** Who is signed in, so a feature repository can scope its reads and writes. */
+    val authState: StateFlow<AuthState>,
 ) {
 
     companion object {
@@ -61,6 +76,9 @@ class DataLayer internal constructor(
          * @param context Application context: the database file, the wrapped key
          *   and the PowerSync SDK all hang off it.
          * @param powerSyncUrl The instance endpoint from the build environment.
+         * @param featureTables The synced tables feature modules contribute (D5).
+         *   They are merged with the core's own tables into the local schema and
+         *   the upload rules; the core never names a feature.
          */
         @OptIn(ExperimentalPowerSyncAPI::class)
         fun create(
@@ -68,9 +86,14 @@ class DataLayer internal constructor(
             supabaseUrl: String,
             publishableKey: String,
             powerSyncUrl: String,
+            featureTables: List<SyncedTables> = emptyList(),
         ): DataLayer {
             val supabase = SupabaseClientFactory.create(supabaseUrl, publishableKey)
             val authRepository = SupabaseAuthRepository(supabase)
+
+            // The core's tables first, then every feature's contribution. A
+            // duplicate table name fails here, at start-up.
+            val tables = TableCatalog(listOf(CoreSyncedTables) + featureTables)
 
             // The database lives as long as the process; PowerSync wants a scope
             // that outlives individual connections.
@@ -85,7 +108,7 @@ class DataLayer internal constructor(
 
             val database = PowerSyncDatabase(
                 factory = AndroidEncryptedDatabaseFactory(context, Key.Passphrase(passphrase)),
-                schema = CoreSchema,
+                schema = tables.schema,
                 dbFilename = DATABASE_FILE_NAME,
                 scope = scope,
             )
@@ -100,8 +123,9 @@ class DataLayer internal constructor(
             val connector = SupabaseSyncConnector(
                 supabase = supabase,
                 endpoint = powerSyncUrl,
-                uploader = SupabaseCrudUploader(supabase.postgrest),
+                uploader = SupabaseCrudUploader(supabase.postgrest, tables),
                 rejections = rejections,
+                tables = tables,
             )
             val sync = PowerSyncSyncService(
                 database = database,
@@ -134,6 +158,8 @@ class DataLayer internal constructor(
                     database = database,
                     authState = authRepository.state,
                 ),
+                database = database,
+                authState = authRepository.state,
             )
         }
     }
