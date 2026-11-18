@@ -20,6 +20,7 @@ import io.github.lgpy.familycare.feature.medications.data.MEDS_SCHEMA
 import io.github.lgpy.familycare.feature.medications.data.MedicationsSyncedTables
 import io.github.lgpy.familycare.feature.medications.data.PowerSyncMedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.REGIMENS_TABLE
+import io.github.lgpy.familycare.feature.medications.data.STOCK_MOVEMENTS_TABLE
 import io.github.lgpy.familycare.feature.medications.domain.DoseTime
 import io.github.lgpy.familycare.feature.medications.domain.Medication
 import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
@@ -277,7 +278,90 @@ class MedsLocalUploadTest {
         )
     }
 
-    // --- (f) a viewer may not write -----------------------------------------
+    // --- (f) the append-only stock ledger (D28) -----------------------------
+
+    @Test
+    fun `a stock movement is inserted on the server, with the server's creator`() = runBlocking {
+        val fixture = fixture()
+        val movementId = newId()
+
+        uploader(owner).insert(
+            MEDS_SCHEMA,
+            STOCK_MOVEMENTS_TABLE,
+            movementId,
+            stockMovementValues(fixture.medicationId, "count", "30", reason = "opening"),
+            duplicatePolicy(STOCK_MOVEMENTS_TABLE),
+        )
+
+        val movement = stack.row(owner, MEDS_SCHEMA, STOCK_MOVEMENTS_TABLE, movementId)
+        assertNotNull(movement, "The stock movement must exist on the server")
+        assertEquals("count", movement!!.text("kind"))
+        assertEquals(0, BigDecimal(movement.text("quantity")).compareTo(BigDecimal("30")))
+        assertEquals("opening", movement.text("reason"))
+        assertTrue(
+            movement.text("occurred_at")!!.startsWith(OCCURRED_AT.take(19).replace(' ', 'T')),
+            "occurred_at is an instant: ${movement.text("occurred_at")}",
+        )
+        assertEquals(owner.userId, movement.text("created_by"), "The server stamps the creator")
+    }
+
+    @Test
+    fun `re-sending the same stock movement succeeds without an update`() = runBlocking {
+        val fixture = fixture()
+        val movementId = newId()
+
+        uploader(owner).insert(
+            MEDS_SCHEMA,
+            STOCK_MOVEMENTS_TABLE,
+            movementId,
+            stockMovementValues(fixture.medicationId, "refill", "20", reason = "first"),
+            duplicatePolicy(STOCK_MOVEMENTS_TABLE),
+        )
+        uploader(owner).insert(
+            MEDS_SCHEMA,
+            STOCK_MOVEMENTS_TABLE,
+            movementId,
+            stockMovementValues(fixture.medicationId, "refill", "20", reason = "second"),
+            duplicatePolicy(STOCK_MOVEMENTS_TABLE),
+        )
+
+        assertEquals(
+            "first",
+            stack.row(owner, MEDS_SCHEMA, STOCK_MOVEMENTS_TABLE, movementId)?.text("reason"),
+            "An applied duplicate must leave the row untouched",
+        )
+
+        // The ledger is append-only: a stray UPDATE is refused by the server.
+        val refused = refusal {
+            owner.client.postgrest.from(MEDS_SCHEMA, STOCK_MOVEMENTS_TABLE)
+                .update(body = JsonObject(mapOf("quantity" to JsonPrimitive(1)))) {
+                    filter { eq("id", movementId) }
+                }
+        }
+        assertEquals(RLS_DENIED, refused.code)
+    }
+
+    @Test
+    fun `a viewer's stock movement insert is refused as a permanent policy failure`() = runBlocking {
+        val fixture = fixture()
+        val movementId = newId()
+
+        val error = refusal {
+            uploader(viewer).insert(
+                MEDS_SCHEMA,
+                STOCK_MOVEMENTS_TABLE,
+                movementId,
+                stockMovementValues(fixture.medicationId, "refill", "10", reason = "viewer"),
+                duplicatePolicy(STOCK_MOVEMENTS_TABLE),
+            )
+        }
+
+        assertEquals(RLS_DENIED, error.code)
+        assertTrue(UploadFailure.of(error).isPermanent)
+        assertNull(stack.row(owner, MEDS_SCHEMA, STOCK_MOVEMENTS_TABLE, movementId))
+    }
+
+    // --- (g) a viewer may not write -----------------------------------------
 
     @Test
     fun `a viewer's dose log insert is refused as a permanent policy failure`() = runBlocking {
@@ -443,8 +527,7 @@ class MedsLocalUploadTest {
     )
 
     /** The columns a phone PUT carries for a dose-log entry. */
-    private fun doseLogValues(
-        fixture: Fixture,
+    private fun doseLogValues(        fixture: Fixture,
         confirmedBy: String,
         note: String,
     ): Map<String, JsonElement> = mapOf(
@@ -458,6 +541,21 @@ class MedsLocalUploadTest {
         "given_by_other" to JsonPrimitive(false),
         "note" to JsonPrimitive(note),
     )
+
+    /** The columns a phone PUT carries for a stock movement (D28). */
+    private fun stockMovementValues(
+        medicationId: String,
+        kind: String,
+        quantity: String,
+        reason: String?,
+    ): Map<String, JsonElement> = buildMap {
+        put("medication_id", JsonPrimitive(medicationId))
+        put("kind", JsonPrimitive(kind))
+        put("quantity", JsonPrimitive(quantity))
+        reason?.let { put("reason", JsonPrimitive(it)) }
+        // A count carries no reason; the column stays null on the server.
+        put("occurred_at", JsonPrimitive(OCCURRED_AT))
+    }
 
     /** Runs [block] and returns the PostgREST refusal it must produce. */
     private suspend fun refusal(block: suspend () -> Unit): PostgrestRestException {
@@ -521,6 +619,7 @@ class MedsLocalUploadTest {
         const val CHANGED_TIMES = """[{"time":"09:00","quantity":1}]"""
         const val SCHEDULED_LOCAL = "2026-11-19 08:00:00"
         const val ACTUAL_AT = "2026-11-19T08:05:00.000Z"
+        const val OCCURRED_AT = "2026-11-19T10:00:00.000Z"
 
         const val DEFAULT_ESCALATION_DELAY = 30
         const val DEFAULT_MISSED_WINDOW = 120

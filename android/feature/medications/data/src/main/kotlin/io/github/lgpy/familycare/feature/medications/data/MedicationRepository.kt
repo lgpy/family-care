@@ -7,6 +7,7 @@ import io.github.lgpy.familycare.feature.medications.domain.MedicationId
 import io.github.lgpy.familycare.feature.medications.domain.Regimen
 import io.github.lgpy.familycare.feature.medications.domain.RegimenId
 import io.github.lgpy.familycare.feature.medications.domain.ScheduleType
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
@@ -53,14 +54,25 @@ interface MedicationRepository {
      * Stores a new [medication] and its [firstRegimen] in one write transaction,
      * so a medication never exists without the schedule that makes it useful.
      *
+     * When [openingQuantity] is given (the form's stock step, D28) it is written
+     * as the first [io.github.lgpy.familycare.feature.medications.domain.StockMovementKind.COUNT]
+     * in the **same** transaction: a medication with an opening balance can never
+     * exist without it, and the three rows are one upload.
+     *
      * Both are validated with [Medication.validate] / [Regimen.validate] — and
-     * the regimen must belong to [medication]. The patient must be in the
-     * current circle and the signed-in role must be able to write.
+     * the regimen must belong to [medication]; an opening quantity is validated
+     * with [io.github.lgpy.familycare.feature.medications.domain.StockRules.validate].
+     * The patient must be in the current circle and the signed-in role must be
+     * able to write.
      *
      * @return the stored id, or [MedsError.Invalid], [MedsError.NotAllowed],
      *   [MedsError.NoCircle], [MedsError.AlreadyExists].
      */
-    suspend fun create(medication: Medication, firstRegimen: Regimen): MedsResult<MedicationId>
+    suspend fun create(
+        medication: Medication,
+        firstRegimen: Regimen,
+        openingQuantity: BigDecimal? = null,
+    ): MedsResult<MedicationId>
 
     /**
      * Updates the user-editable columns of an existing medication (name, form,
