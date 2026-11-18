@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.core.data.sync
 
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -72,10 +73,25 @@ internal class SupabaseCrudUploader(
     private val postgrest: Postgrest,
 ) : CrudUploader {
 
+    /**
+     * A plain INSERT, falling back to an UPDATE when the row already exists.
+     *
+     * Not a PostgREST upsert (`INSERT ... ON CONFLICT DO UPDATE`): for that
+     * statement Postgres also applies the table's SELECT policy to the new row,
+     * and `patients_select_can_read` calls `core.can(id, 'read')`, which looks
+     * the patient up in `core.patients` where the row being inserted is not yet
+     * visible. Every new patient would then be refused as an RLS violation.
+     *
+     * The duplicate case is a retry whose first INSERT reached the server but
+     * whose response was lost, or a local `INSERT OR REPLACE` of a synced row.
+     */
     override suspend fun upsert(table: String, id: String, values: Map<String, JsonElement>) {
         val body = uploadRow(table, id, values) ?: return
-        postgrest.from(CORE_SCHEMA, table).upsert(body = JsonArray(listOf(body))) {
-            onConflict = "id"
+        try {
+            postgrest.from(CORE_SCHEMA, table).insert(body = JsonArray(listOf(body)))
+        } catch (error: PostgrestRestException) {
+            if (error.code != UNIQUE_VIOLATION) throw error
+            update(table, id, values)
         }
     }
 
@@ -122,3 +138,6 @@ internal fun uploadRow(
 
     return if (body.isEmpty()) null else JsonObject(body)
 }
+
+/** `unique_violation`: the row is already on the server. */
+private const val UNIQUE_VIOLATION = "23505"

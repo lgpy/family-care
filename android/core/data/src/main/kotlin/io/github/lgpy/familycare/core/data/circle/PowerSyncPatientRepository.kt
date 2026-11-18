@@ -117,21 +117,43 @@ internal class PowerSyncPatientRepository(
         }
 
         return try {
-            database.execute(
-                sql = SAVE_PATIENT,
-                parameters = listOf(
-                    normalized.id.value,
-                    normalized.circleId.value,
-                    normalized.displayName,
-                    normalized.linkedUserId,
-                    normalized.reminderPolicy.serverValue,
-                    normalized.primaryCaregiverId,
-                    normalized.escalationDelayMinutes,
-                    normalized.missedWindowMinutes,
-                    normalized.agreementNote,
-                    normalized.archivedAt?.toString(),
-                ),
-            )
+            database.writeTransaction { tx ->
+                val exists = tx.getOptional(SELECT_PATIENT_PRESENT, listOf(normalized.id.value)) { cursor ->
+                    cursor.getString("id")
+                } != null
+                if (exists) {
+                    tx.execute(
+                        sql = UPDATE_PATIENT,
+                        parameters = listOf(
+                            normalized.displayName,
+                            normalized.linkedUserId,
+                            normalized.reminderPolicy.serverValue,
+                            normalized.primaryCaregiverId,
+                            normalized.escalationDelayMinutes,
+                            normalized.missedWindowMinutes,
+                            normalized.agreementNote,
+                            normalized.archivedAt?.toString(),
+                            normalized.id.value,
+                        ),
+                    )
+                } else {
+                    tx.execute(
+                        sql = INSERT_PATIENT,
+                        parameters = listOf(
+                            normalized.id.value,
+                            normalized.circleId.value,
+                            normalized.displayName,
+                            normalized.linkedUserId,
+                            normalized.reminderPolicy.serverValue,
+                            normalized.primaryCaregiverId,
+                            normalized.escalationDelayMinutes,
+                            normalized.missedWindowMinutes,
+                            normalized.agreementNote,
+                            normalized.archivedAt?.toString(),
+                        ),
+                    )
+                }
+            }
             CoreResult.Success(normalized.id)
         } catch (cancellation: CancellationException) {
             throw cancellation

@@ -76,27 +76,42 @@ internal const val SELECT_PATIENT = """
       AND circle_id IN (SELECT circle_id FROM memberships WHERE user_id = ?)
 """
 
-/**
- * Inserts a new patient or updates the existing row with the same id.
+/*
+ * Saving a patient is an existence check plus a plain INSERT or UPDATE in one
+ * write transaction. It cannot be one `INSERT ... ON CONFLICT DO UPDATE`:
+ * PowerSync tables are SQLite views (with INSTEAD OF triggers), and SQLite
+ * refuses to UPSERT a view.
  *
  * `circle_id` is deliberately not updated: a patient never moves between circles
  * (`core.check_patient()` refuses it too). `created_at`/`updated_at` are left
  * alone; the server stamps them and they sync back.
  */
-internal const val SAVE_PATIENT = """
+
+/** Whether the patient row exists locally, whatever its circle. */
+internal const val SELECT_PATIENT_PRESENT = """
+    SELECT id FROM patients WHERE id = ?
+"""
+
+/** Inserts a new patient. */
+internal const val INSERT_PATIENT = """
     INSERT INTO patients (
         id, circle_id, display_name, linked_user_id, reminder_policy, primary_caregiver_id,
         escalation_delay_minutes, missed_window_minutes, agreement_note, archived_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT (id) DO UPDATE SET
-        display_name = excluded.display_name,
-        linked_user_id = excluded.linked_user_id,
-        reminder_policy = excluded.reminder_policy,
-        primary_caregiver_id = excluded.primary_caregiver_id,
-        escalation_delay_minutes = excluded.escalation_delay_minutes,
-        missed_window_minutes = excluded.missed_window_minutes,
-        agreement_note = excluded.agreement_note,
-        archived_at = excluded.archived_at
+"""
+
+/** Updates an existing patient; the last parameter is the id. */
+internal const val UPDATE_PATIENT = """
+    UPDATE patients SET
+        display_name = ?,
+        linked_user_id = ?,
+        reminder_policy = ?,
+        primary_caregiver_id = ?,
+        escalation_delay_minutes = ?,
+        missed_window_minutes = ?,
+        agreement_note = ?,
+        archived_at = ?
+    WHERE id = ?
 """
 
 /** The signed-in user's own profile row. */
