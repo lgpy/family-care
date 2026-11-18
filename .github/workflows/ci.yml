@@ -128,6 +128,34 @@ jobs:
         if: always()
         run: supabase stop --no-backup
 
+  functions:
+    name: Edge function tests (Deno)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/supabase/functions
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # The guard of D22: the TypeScript dose-slot and dose-status port is
+      # asserted against the same shared/test-vectors files as the Kotlin app,
+      # plus the pure escalation selection and the FCM sender (mocked fetch,
+      # no Firebase project). Reading ../../../../shared is why --allow-read is
+      # granted; nothing else is.
+      - name: Run edge-function unit tests and shared vectors
+        run: deno test --allow-read
+
+      # The two deployable functions are not imported by the tests, so check
+      # them explicitly (the supabase-js import is fetched by Deno).
+      - name: Type-check the edge functions
+        run: deno check escalate/index.ts dose-confirmed/index.ts
+
   uploads:
     name: Local upload integration tests
     runs-on: ubuntu-latest
