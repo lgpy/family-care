@@ -93,8 +93,8 @@ select is(
      from pg_publication_tables
     where pubname = 'powersync'),
   'core.care_circles,core.memberships,core.patients,core.profiles,'
-  'meds.dose_log,meds.medications,meds.regimens',
-  'publication powersync contains exactly the four M2 core tables and three M3 meds tables'
+  'meds.dose_log,meds.medications,meds.regimens,meds.stock_movements',
+  'publication powersync contains exactly the four M2 core tables and four meds tables'
 );
 
 -- --- The M1 sync probe is gone ----------------------------------------------

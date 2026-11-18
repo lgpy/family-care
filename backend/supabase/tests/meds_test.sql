@@ -130,8 +130,8 @@ select is((
   select string_agg(schemaname || '.' || tablename, ',' order by tablename)
     from pg_publication_tables
    where pubname = 'powersync' and schemaname = 'meds'),
-  'meds.dose_log,meds.medications,meds.regimens',
-  'the powersync publication covers exactly the three meds tables');
+  'meds.dose_log,meds.medications,meds.regimens,meds.stock_movements',
+  'the powersync publication covers exactly the four meds tables');
 
 select ok(not has_table_privilege('authenticated', 'meds.dose_log', 'update'),
           'authenticated has no UPDATE privilege on the dose log');

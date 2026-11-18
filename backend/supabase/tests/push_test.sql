@@ -114,8 +114,8 @@ select is(
   (select string_agg(schemaname || '.' || tablename, ',' order by schemaname, tablename)
      from pg_publication_tables where pubname = 'powersync'),
   'core.care_circles,core.memberships,core.patients,core.profiles,'
-  'meds.dose_log,meds.medications,meds.regimens',
-  'the powersync publication is unchanged: no device token and no escalation ledger');
+  'meds.dose_log,meds.medications,meds.regimens,meds.stock_movements',
+  'the powersync publication holds exactly the synced tables: no device token and no server ledgers');
 
 select is(
   (select count(*)::int from pg_publication_tables
