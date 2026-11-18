@@ -1,0 +1,173 @@
+package io.github.lgpy.familycare.feature.medications.list
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.feature.medications.data.MedicationWithRegimens
+import io.github.lgpy.familycare.feature.medications.ui.regimenSummary
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
+
+/**
+ * A patient's medications: active ones with their current regimen as a one-line
+ * summary, stopped ones collapsed (docs/ux/screens.md §3).
+ *
+ * "Add medication" exists for owners and caregivers only, the same rule the
+ * repository enforces.
+ */
+@Composable
+fun PatientMedicationsScreen(
+    patientId: String,
+    onBack: () -> Unit,
+    onAdd: () -> Unit,
+    onOpenMedication: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val viewModel = koinViewModel<PatientMedicationsViewModel>(
+        parameters = { parametersOf(patientId) },
+    )
+    val uiState by viewModel.uiState.collectAsState()
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        floatingActionButton = {
+            if (uiState.canWrite && !uiState.patientMissing) {
+                FloatingActionButton(onClick = onAdd) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = stringResource(R.string.meds_list_add),
+                    )
+                }
+            }
+        },
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = stringResource(R.string.meds_list_title),
+                            style = MaterialTheme.typography.headlineMedium,
+                        )
+                        uiState.patientName?.let { name ->
+                            Text(text = name, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            }
+
+            if (!uiState.loaded) {
+                item { CircularProgressIndicator() }
+            } else if (uiState.patientMissing) {
+                item {
+                    Text(
+                        text = stringResource(R.string.meds_patient_not_available),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            } else {
+                if (uiState.isEmpty) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.meds_list_empty),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+                items(uiState.active, key = { it.medication.id.value }) { item ->
+                    MedicationRow(
+                        item = item,
+                        onClick = { onOpenMedication(item.medication.id.value) },
+                    )
+                    HorizontalDivider()
+                }
+                if (uiState.stopped.isNotEmpty()) {
+                    item {
+                        TextButton(onClick = viewModel::toggleStopped) {
+                            Text(
+                                text = stringResource(
+                                    R.string.meds_list_stopped,
+                                    uiState.stopped.size,
+                                ),
+                            )
+                        }
+                    }
+                }
+                if (uiState.stoppedExpanded) {
+                    items(uiState.stopped, key = { it.medication.id.value }) { item ->
+                        MedicationRow(
+                            item = item,
+                            onClick = { onOpenMedication(item.medication.id.value) },
+                        )
+                        HorizontalDivider()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MedicationRow(item: MedicationWithRegimens, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = false,
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .padding(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = item.medication.strength
+                ?.let { item.medication.name + " " + it }
+                ?: item.medication.name,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        val regimen = item.currentRegimen
+        if (regimen != null) {
+            Text(text = regimenSummary(regimen), style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}

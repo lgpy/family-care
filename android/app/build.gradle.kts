@@ -84,6 +84,10 @@ dependencies {
     // the app wires modules; the core never names one).
     implementation(project(":feature:medications:data"))
 
+    // The medications module's screens, view models and dashboard card (M3). The
+    // app wires the module; no feature depends on another (D5).
+    implementation(project(":feature:medications:android"))
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)

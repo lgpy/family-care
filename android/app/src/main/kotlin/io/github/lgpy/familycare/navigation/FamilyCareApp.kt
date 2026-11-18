@@ -25,6 +25,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.feature.medications.MedicationsRoutes
+import io.github.lgpy.familycare.feature.medications.detail.MedicationDetailScreen
+import io.github.lgpy.familycare.feature.medications.doses.DoseSlotScreen
+import io.github.lgpy.familycare.feature.medications.form.MedicationFormScreen
+import io.github.lgpy.familycare.feature.medications.list.PatientMedicationsScreen
+import io.github.lgpy.familycare.feature.medications.regimen.ChangeRegimenScreen
 import io.github.lgpy.familycare.ui.AboutScreen
 import io.github.lgpy.familycare.ui.MoreScreen
 import io.github.lgpy.familycare.ui.TodayScreen
@@ -85,13 +91,20 @@ fun FamilyCareApp(
             modifier = Modifier.padding(padding),
         ) {
             composable(Destination.Today.route) {
-                TodayScreen()
+                TodayScreen(
+                    onOpenRoute = { route -> navController.navigate(route) },
+                )
             }
             composable(Destination.Patients.route) {
                 PatientsScreen(
                     onAddPatient = { navController.navigate(Destination.PatientNew.route) },
                     onOpenPatient = { patientId ->
                         navController.navigate(Destination.patientEditRoute(patientId))
+                    },
+                    onOpenMedications = { patientId ->
+                        navController.navigate(
+                            Destination.patientMedicationsRoute(patientId),
+                        )
                     },
                 )
             }
@@ -127,6 +140,103 @@ fun FamilyCareApp(
             }
             composable(Destination.About.route) {
                 AboutScreen(onBack = { navController.popBackStack() })
+            }
+            composable(
+                route = Destination.PatientMedications.route,
+                arguments = listOf(navArgument(PATIENT_ID_ARG) { type = NavType.StringType }),
+            ) { entry ->
+                val patientId = entry.arguments?.getString(PATIENT_ID_ARG).orEmpty()
+                PatientMedicationsScreen(
+                    patientId = patientId,
+                    onBack = { navController.popBackStack() },
+                    onAdd = {
+                        navController.navigate(MedicationsRoutes.newMedication(patientId))
+                    },
+                    onOpenMedication = { medicationId ->
+                        navController.navigate(
+                            MedicationsRoutes.medicationDetail(patientId, medicationId),
+                        )
+                    },
+                )
+            }
+            composable(
+                route = Destination.MedicationNew.route,
+                arguments = listOf(navArgument(PATIENT_ID_ARG) { type = NavType.StringType }),
+            ) { entry ->
+                MedicationFormScreen(
+                    patientId = entry.arguments?.getString(PATIENT_ID_ARG).orEmpty(),
+                    medicationId = null,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = Destination.MedicationDetail.route,
+                arguments = listOf(
+                    navArgument(PATIENT_ID_ARG) { type = NavType.StringType },
+                    navArgument(MEDICATION_ID_ARG) { type = NavType.StringType },
+                ),
+            ) { entry ->
+                val patientId = entry.arguments?.getString(PATIENT_ID_ARG).orEmpty()
+                val medicationId = entry.arguments?.getString(MEDICATION_ID_ARG).orEmpty()
+                MedicationDetailScreen(
+                    medicationId = medicationId,
+                    onBack = { navController.popBackStack() },
+                    onEdit = {
+                        navController.navigate(
+                            MedicationsRoutes.editMedication(patientId, medicationId),
+                        )
+                    },
+                    onChangeSchedule = {
+                        navController.navigate(
+                            MedicationsRoutes.changeRegimen(patientId, medicationId),
+                        )
+                    },
+                )
+            }
+            composable(
+                route = Destination.MedicationEdit.route,
+                arguments = listOf(
+                    navArgument(PATIENT_ID_ARG) { type = NavType.StringType },
+                    navArgument(MEDICATION_ID_ARG) { type = NavType.StringType },
+                ),
+            ) { entry ->
+                MedicationFormScreen(
+                    patientId = entry.arguments?.getString(PATIENT_ID_ARG).orEmpty(),
+                    medicationId = entry.arguments?.getString(MEDICATION_ID_ARG).orEmpty(),
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = Destination.MedicationSchedule.route,
+                arguments = listOf(
+                    navArgument(PATIENT_ID_ARG) { type = NavType.StringType },
+                    navArgument(MEDICATION_ID_ARG) { type = NavType.StringType },
+                ),
+            ) { entry ->
+                ChangeRegimenScreen(
+                    medicationId = entry.arguments?.getString(MEDICATION_ID_ARG).orEmpty(),
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = Destination.DoseSlot.route,
+                arguments = listOf(
+                    navArgument(PATIENT_ID_ARG) { type = NavType.StringType },
+                    navArgument(SCHEDULED_LOCAL_ARG) { type = NavType.StringType },
+                ),
+            ) { entry ->
+                val scheduledLocal = MedicationsRoutes.decodeScheduledLocal(
+                    entry.arguments?.getString(SCHEDULED_LOCAL_ARG),
+                )
+                if (scheduledLocal == null) {
+                    navController.popBackStack()
+                } else {
+                    DoseSlotScreen(
+                        patientId = entry.arguments?.getString(PATIENT_ID_ARG).orEmpty(),
+                        scheduledLocal = scheduledLocal,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
         }
     }

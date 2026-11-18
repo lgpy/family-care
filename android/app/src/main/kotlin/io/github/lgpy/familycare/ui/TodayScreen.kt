@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,21 +17,32 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.dashboard.DashboardCards
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Today: the start destination. It names the signed-in member and their circle,
- * so it is already correct for the real family; the dashboard cards arrive with
- * the medication module (M3).
+ * Today: the start destination, sorted by urgency rather than by module
+ * (docs/ux/screens.md §1).
+ *
+ * The greeting, the circle and the role come from the core; every card below
+ * comes from a feature module through the dashboard extension point
+ * ([DashboardCards]). Today imports no module: it draws what was registered and
+ * passes [onOpenRoute] so a card can open its own screens.
  */
 @Composable
-fun TodayScreen(modifier: Modifier = Modifier) {
+fun TodayScreen(
+    modifier: Modifier = Modifier,
+    onOpenRoute: (String) -> Unit = {},
+) {
     val viewModel = koinViewModel<TodayViewModel>()
     val uiState by viewModel.uiState.collectAsState()
+    val dashboard = koinInject<DashboardCards>()
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -60,10 +73,10 @@ fun TodayScreen(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-        Text(
-            text = stringResource(R.string.today_placeholder),
-            style = MaterialTheme.typography.bodyMedium,
-        )
+
+        dashboard.ordered.forEach { card ->
+            card.Content(onNavigate = onOpenRoute)
+        }
     }
 }
 
