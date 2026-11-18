@@ -175,16 +175,20 @@ jobs:
 
       # Real PostgREST uploads against the local stack, signed in as real test
       # users: the new-patient insert, the edit, the duplicate fallback, and the
-      # policy refusal the queue must report as permanent.
+      # policy refusal the queue must report as permanent — plus the same path
+      # for the medications module's `meds` tables (versioned regimens, the
+      # append-only dose log, a viewer's refusal).
       - name: Run the JVM upload tests
-        run: ./gradlew :core:data:jvmtests:test --stacktrace
+        run: ./gradlew :core:data:jvmtests:test :feature:medications:data:jvmtests:test --stacktrace
 
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: upload-test-reports
-          path: android/core/data/jvmtests/build/reports/tests/
+          path: |
+            android/core/data/jvmtests/build/reports/tests/
+            android/feature/medications/data/jvmtests/build/reports/tests/
           if-no-files-found: ignore
           retention-days: 7
 

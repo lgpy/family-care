@@ -63,6 +63,11 @@ Estimated running cost: €0/month on free tiers while building; ~€25/month on
 - MVP: `medications`, `appointments`, `patient-info`.
 - Later: `documents`, `measurements`, `symptoms`, `nutrition`, `reports`, …
 
+### Feature data modules
+A feature's persistence lives in its own `data` module (`feature/<name>/data`): repositories, SQL and synced tables, depending only on `core:data`, `core:domain` and the feature's own `domain` — never on another feature. The `feature/<name>/android` module holds the screens and sees only the domain interfaces.
+
+Synced tables are the one extension point that reaches into the core. A module implements `SyncedTables` and contributes its tables with a per-table `UploadPolicy` (which columns an INSERT/UPDATE may carry, whether a DELETE is uploaded, what a duplicate INSERT means, how decimals/JSON/booleans are converted). The app's DI passes every contribution to `DataLayer.create`, which merges them into the one PowerSync schema and uploader; a duplicate table name fails at start-up. The core therefore never depends on a feature: it knows tables and policies, not modules.
+
 ### Rules
 1. Modules depend on the core, **never on each other**.
 2. Modules reference patients (and other core entities) **by ID only**.
