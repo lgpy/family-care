@@ -33,6 +33,10 @@ import io.github.lgpy.familycare.core.ui.patient.ResourcesTimelineText
 import io.github.lgpy.familycare.core.ui.patient.TimelineSource
 import io.github.lgpy.familycare.core.ui.patient.TimelineSources
 import io.github.lgpy.familycare.core.ui.patient.TimelineText
+import io.github.lgpy.familycare.feature.appointments.appointmentsModule
+import io.github.lgpy.familycare.feature.appointments.data.AppointmentRepository
+import io.github.lgpy.familycare.feature.appointments.data.AppointmentsData
+import io.github.lgpy.familycare.feature.appointments.profile.AppointmentsPatientTab
 import io.github.lgpy.familycare.feature.medications.dashboard.LowStockDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.MedicationsDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionDashboardCard
@@ -108,6 +112,7 @@ val appModule: Module = module {
             featureTables = listOf(
                 MedicationsData.syncedTables,
                 PatientInfoData.syncedTables,
+                AppointmentsData.syncedTables,
             ),
         )
     }
@@ -155,6 +160,11 @@ val appModule: Module = module {
         val data = get<DataLayer>()
         PatientInfoData.repository(data.database, data.authState)
     }
+    // M6 appointments (D29): its repository over the same local database.
+    single<AppointmentRepository> {
+        val data = get<DataLayer>()
+        AppointmentsData.appointmentRepository(data.database, data.authState)
+    }
 
     // The dashboard extension point (architecture.md §5): a feature contributes a
     // card, the shell renders whatever was registered, in order. Today imports no
@@ -175,6 +185,7 @@ val appModule: Module = module {
     single<PatientHeader> { AllergiesPatientHeader() }
     single<PatientTab> { MedicationsPatientTab() }
     single<PatientTab> { InfoPatientTab() }
+    single<PatientTab> { AppointmentsPatientTab() }
     single<TimelineSource> {
         MedicationsTimelineSource(medicationRepository = get(), text = get())
     }
@@ -220,6 +231,7 @@ val appModule: Module = module {
     // The medications module's view models. Included here so the app stays the
     // only place that knows which modules exist.
     includes(medicationsModule)
+    includes(appointmentsModule)
 
     // The patient-info module's view models (the profile banner and Info tab,
     // and the edit form).

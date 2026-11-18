@@ -130,6 +130,10 @@ dependencies {
     // (M6/D29: the profile's allergies banner, Info tab and edit form).
     implementation(project(":feature:patient-info:data"))
     implementation(project(":feature:patient-info:android"))
+    // M6 appointments (D29): its synced table joins the PowerSync schema and its
+    // screens are wired into the shell's navigation.
+    implementation(project(":feature:appointments:data"))
+    implementation(project(":feature:appointments:android"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
