@@ -18,7 +18,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,13 +32,13 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The Patients tab: a list of the people in the circle, plus "Add patient" for
- * owners and caregivers (the same rule the server enforces).
+ * owners and caregivers (the same rule the server enforces). A row opens the
+ * person's profile (D29).
  */
 @Composable
 fun PatientsScreen(
     onAddPatient: () -> Unit,
     onOpenPatient: (String) -> Unit,
-    onOpenMedications: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel = koinViewModel<PatientsViewModel>()
@@ -94,7 +93,6 @@ fun PatientsScreen(
                     PatientListRow(
                         row = row,
                         onClick = { onOpenPatient(row.patient.id.value) },
-                        onOpenMedications = { onOpenMedications(row.patient.id.value) },
                     )
                     HorizontalDivider()
                 }
@@ -107,7 +105,6 @@ fun PatientsScreen(
 private fun PatientListRow(
     row: PatientRowUi,
     onClick: () -> Unit,
-    onOpenMedications: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -140,10 +137,6 @@ private fun PatientListRow(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-        }
-        // M3 entry point; the full patient profile with tabs is M6.
-        TextButton(onClick = onOpenMedications) {
-            Text(text = stringResource(R.string.meds_open_medications))
         }
     }
 }

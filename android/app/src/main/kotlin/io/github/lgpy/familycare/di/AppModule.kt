@@ -25,6 +25,14 @@ import io.github.lgpy.familycare.core.ui.dashboard.DashboardCards
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
+import io.github.lgpy.familycare.core.ui.patient.PatientHeader
+import io.github.lgpy.familycare.core.ui.patient.PatientHeaders
+import io.github.lgpy.familycare.core.ui.patient.PatientTab
+import io.github.lgpy.familycare.core.ui.patient.PatientTabs
+import io.github.lgpy.familycare.core.ui.patient.ResourcesTimelineText
+import io.github.lgpy.familycare.core.ui.patient.TimelineSource
+import io.github.lgpy.familycare.core.ui.patient.TimelineSources
+import io.github.lgpy.familycare.core.ui.patient.TimelineText
 import io.github.lgpy.familycare.feature.medications.dashboard.LowStockDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.MedicationsDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionDashboardCard
@@ -34,6 +42,8 @@ import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationsData
 import io.github.lgpy.familycare.feature.medications.data.StockRepository
 import io.github.lgpy.familycare.feature.medications.medicationsModule
+import io.github.lgpy.familycare.feature.medications.profile.MedicationsPatientTab
+import io.github.lgpy.familycare.feature.medications.profile.MedicationsTimelineSource
 import io.github.lgpy.familycare.feature.medications.push.MedicationsPushHandler
 import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealthChecker
@@ -45,6 +55,7 @@ import io.github.lgpy.familycare.ui.TodayViewModel
 import io.github.lgpy.familycare.ui.circle.CircleGateViewModel
 import io.github.lgpy.familycare.ui.circle.FamilyCircleViewModel
 import io.github.lgpy.familycare.ui.patients.PatientFormViewModel
+import io.github.lgpy.familycare.ui.patients.PatientProfileViewModel
 import io.github.lgpy.familycare.ui.patients.PatientsViewModel
 import io.github.lgpy.familycare.ui.profile.YourNameViewModel
 import io.github.lgpy.familycare.ui.sync.UploadRejectionViewModel
@@ -138,6 +149,21 @@ val appModule: Module = module {
     single<DashboardCard> { ReminderHealthDashboardCard() }
     single { DashboardCards(getAll<DashboardCard>()) }
 
+    // The patient profile extension point (D29, docs/ux/screens.md §3). The app
+    // hosts the screen and its History tab; a feature contributes the pieces
+    // inside it, exactly like a DashboardCard. Patient-info will register a
+    // PatientHeader (allergies banner); medications registers its tab and its
+    // timeline source. Registries are built from getAll() so the shell names no
+    // feature module (D5).
+    single<TimelineText> { ResourcesTimelineText(androidContext()) }
+    single<PatientTab> { MedicationsPatientTab() }
+    single<TimelineSource> {
+        MedicationsTimelineSource(medicationRepository = get(), text = get())
+    }
+    single { PatientHeaders(getAll<PatientHeader>()) }
+    single { PatientTabs(getAll<PatientTab>()) }
+    single { TimelineSources(getAll<TimelineSource>()) }
+
     // The push extension point (D29): a feature claims the message `type`s it
     // owns, and the core's single FCM service routes each payload by `type`. The
     // registry rejects a type claimed twice when it is built (at start-up).
@@ -223,6 +249,14 @@ val appModule: Module = module {
             patientId = patientId.ifBlank { null },
             patientRepository = get(),
             careCircleRepository = get(),
+        )
+    }
+    viewModel { (patientId: String) ->
+        PatientProfileViewModel(
+            patientId = patientId,
+            patientRepository = get(),
+            careCircleRepository = get(),
+            timelineSources = get(),
         )
     }
     viewModel { FamilyCircleViewModel(careCircleRepository = get()) }

@@ -102,6 +102,19 @@
     <string name="patient_error_note">Mantenha a nota com 2000 caracteres ou menos.</string>
     <string name="patient_needs_primary">Precisa de um cuidador principal — escolha quem recebe os lembretes.</string>
 
+    <!-- M6/D29: o perfil da pessoa, com os separadores contribuídos e o Histórico. -->
+    <string name="patient_profile_edit">Editar pessoa</string>
+    <string name="patient_profile_actions">Ações da pessoa</string>
+    <string name="patient_tab_history">Histórico</string>
+    <string name="patient_history_empty">Ainda não há nada. As alterações aos cuidados desta pessoa aparecem aqui.</string>
+    <string name="patient_history_today">Hoje</string>
+    <string name="patient_history_yesterday">Ontem</string>
+    <string name="patient_history_month">%1$s de %2$d</string>
+    <string name="patient_timeline_medication_started">Começou a tomar %1$s</string>
+    <string name="patient_timeline_medication_changed">Alterou %1$s</string>
+    <string name="patient_timeline_medication_changed_detail">Nova dose ou horário</string>
+    <string name="patient_timeline_medication_stopped">Parou %1$s</string>
+
     <!-- M2: Mais. -->
     <string name="more_title">Mais</string>
     <string name="more_family_circle">Círculo familiar</string>
@@ -216,6 +229,7 @@
 
     <!-- M3: medicação de uma pessoa. -->
     <string name="meds_list_title">Medicação</string>
+    <string name="meds_tab_title">Medicamentos</string>
     <string name="meds_list_empty">Ainda não há medicação. Adicione a primeira.</string>
     <string name="meds_list_stopped">Suspensa (%1$d)</string>
     <string name="meds_list_add">Adicionar medicação</string>

@@ -35,11 +35,13 @@ class DestinationTest {
     }
 
     @Test
-    fun thePatientEditRouteCarriesThePatientId() {
-        assertEquals("patients/{patientId}", Destination.PatientEdit.route)
+    fun thePatientProfileAndEditRoutesCarryThePatientId() {
+        assertEquals("patients/{patientId}", Destination.PatientProfile.route)
+        assertEquals("patients/{patientId}/edit", Destination.PatientEdit.route)
         assertEquals("patients/new", Destination.PatientNew.route)
         assertEquals("patientId", PATIENT_ID_ARG)
-        assertEquals("patients/patient-1", Destination.patientEditRoute("patient-1"))
+        assertEquals("patients/patient-1", Destination.patientProfileRoute("patient-1"))
+        assertEquals("patients/patient-1/edit", Destination.patientEditRoute("patient-1"))
     }
 
     @Test
