@@ -141,6 +141,14 @@ Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
 - **Why:** Deriving dose consumption from the dose log keeps one source of truth, works offline the moment a dose is confirmed, and needs no trigger to keep two ledgers consistent (a late-syncing or corrected dose simply changes the sum). Counts instead of signed adjustments match what a caregiver actually does: count the box.
 - **Trade-off accepted:** two phones recording a count at the same time — the later `occurred_at` wins. Doses recorded before any count make stock negative; the UI shows 0 and the medication is low, which is the safe direction.
 
+### D29 — M6: push and patient screens move to the core; appointments and patient info are their own modules
+- **Core push routing:** the single `FirebaseMessagingService`, FCM token registration and the message `type` router move from the medications feature into `core/notifications`. Features register `PushHandler`s for their own types (medications: `escalation`, `clear`, `stock_low`; appointments: `appointment_changed`); an unknown type is ignored. One APK can only have one FCM service, so this is the only D5-compliant way for a second feature to receive pushes.
+- **Patient profile:** a real patient screen hosted by the app, filled by contributions from `core/ui` contracts: a `PatientHeader` (patient-info: allergies banner + conditions), `PatientTab`s (medications, appointments, info) and `TimelineSource`s feeding an app-owned **History** tab (medications: regimen started/changed/stopped; appointments: each appointment). Tapping a patient opens the profile; editing the patient moves to a menu action.
+- **Appointments** (`appointments` schema, `docs/domain/appointments.md`): local wall-clock + zone like regimens; edits in place, cancel instead of delete; optional companion; follow-up link. Reminders are local alarm-clock alarms at 20:00 the evening before and 1 h before, on the companion's phone or, without one, every owner's and caregiver's — never a viewer's. A change push (D4) goes to owners and caregivers except the person who made the change, generic text, `type=appointment_changed`. Agenda becomes a bottom-bar tab; Today gets the "Next 7 days" card (order 200).
+- **Patient info** (`info` schema, `docs/domain/patient-info.md`): one row per patient with `id = patient_id`, text and small JSON lists, edited in place, synced to members.
+- **Why:** the alternative to moving push into the core was duplicating it per feature, which Android does not allow for the FCM service. The patient screen is the place the MVP doc always described (tabs + History), and contributions keep the app shell ignorant of features (D5). Separate schemas keep each module's tables, grants and tests together, as M3 did for `meds`.
+- **Trade-off accepted:** both caregivers get reminders for every appointment unless a companion is set; patient info is last-write-wins.
+
 ---
 
 
