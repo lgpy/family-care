@@ -11,11 +11,12 @@ enabled = true
 port = 54321
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
-# `core` is exposed explicitly despite auto_expose_new_tables: the app's writes
-# go through PostgREST (PowerSync's Supabase connector), and `core` is not the
-# `public` schema, so it has to be listed here. Access is still denied by
-# default: the migration grants only what RLS policies allow (see §3, D13).
-schemas = ["public", "graphql_public", "core"]
+# `core` and `meds` are exposed explicitly despite auto_expose_new_tables: the
+# app's writes go through PostgREST (PowerSync's Supabase connector), and they
+# are not the `public` schema, so they have to be listed here. Access is still
+# denied by default: the migrations grant only what RLS policies allow (see §3,
+# D13).
+schemas = ["public", "graphql_public", "core", "meds"]
 # Extra schemas to add to the search_path of every request.
 extra_search_path = ["public", "extensions"]
 # The maximum number of rows returned from a view, table, or stored procedure. Limits payload size
