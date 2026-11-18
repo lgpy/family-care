@@ -20,7 +20,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(135);
+select plan(137);
 
 -- --- Fixtures ---------------------------------------------------------------
 -- Eight users. Alice owns circle A; Bob is a caregiver, Carol a viewer and Erin
@@ -628,8 +628,23 @@ select throws_ok(
   'the last owner cannot demote themselves');
 
 select lives_ok(
-  $$ select core.set_member_role('30000000-0000-4000-8000-000000000003', 'viewer') $$,
-  'the owner can change a role (viewer stays viewer)');
+  $$ select core.set_member_role('30000000-0000-4000-8000-000000000004', 'viewer') $$,
+  'the owner can demote a caregiver to viewer');
+
+select lives_ok(
+  $$ select core.set_member_role('30000000-0000-4000-8000-000000000004', 'caregiver') $$,
+  'the owner can promote a viewer back to caregiver');
+
+select is((
+  select count(*)::int from core.audit_log
+   where table_name = 'memberships'
+     and record_id = '30000000-0000-4000-8000-000000000004'
+     and action = 'update'
+     and old_data ->> 'role' = 'caregiver'
+     and new_data ->> 'role' = 'viewer'
+     and actor_id = '10000000-0000-4000-8000-000000000001'
+     and event_kind = 'security'), 1,
+  'a role change is audited with before/after, actor and the security event kind');
 
 set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}';
 
