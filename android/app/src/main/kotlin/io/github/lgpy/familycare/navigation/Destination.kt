@@ -6,19 +6,21 @@ import io.github.lgpy.familycare.feature.medications.reminders.ReminderRoutes
 /**
  * The routes of the app shell (M2, M3).
  *
- * [topLevel] are the three bottom-bar destinations — Today, Patients and More.
- * The others are pushed screens: More opens the family circle and the user's
- * name; Patients opens the add and edit forms and, from M3, a patient's
+ * [topLevel] are the four bottom-bar destinations — Today, Patients, Shopping
+ * and More. The others are pushed screens: More opens the family circle and the
+ * user's name; Patients opens the add and edit forms and, from M3, a patient's
  * medications with their add, detail, edit and schedule screens and the dose
- * slot. The medication routes come from [MedicationsRoutes] so the module owns
- * them and the shell just composes them.
+ * slot. Shopping is the M5 list of low medications (D28). The medication routes
+ * come from [MedicationsRoutes] so the module owns them and the shell just
+ * composes them.
  *
- * Agenda and Shopping arrive in later milestones; they are deliberately absent
- * rather than present as placeholders.
+ * Agenda arrives in a later milestone; it is deliberately absent rather than
+ * present as a placeholder.
  */
 enum class Destination(val route: String) {
     Today("today"),
     Patients("patients"),
+    Shopping("shopping"),
     More("more"),
     FamilyCircle("more/family-circle"),
     Reminders(ReminderRoutes.SETUP),
@@ -37,7 +39,7 @@ enum class Destination(val route: String) {
     companion object {
 
         /** The bottom-bar destinations, in display order. */
-        val topLevel: List<Destination> = listOf(Today, Patients, More)
+        val topLevel: List<Destination> = listOf(Today, Patients, Shopping, More)
 
         /** The route of the edit screen for [patientId]. */
         fun patientEditRoute(patientId: String): String = "patients/$patientId"

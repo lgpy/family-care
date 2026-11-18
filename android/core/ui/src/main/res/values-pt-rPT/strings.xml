@@ -9,6 +9,7 @@
     <!-- Navegação inferior (M2: Hoje, Pessoas, Mais). -->
     <string name="nav_today">Hoje</string>
     <string name="nav_patients">Pessoas</string>
+    <string name="nav_shopping">Compras</string>
     <string name="nav_more">Mais</string>
 
     <string name="today_title">Hoje</string>
@@ -359,6 +360,19 @@
     <string name="meds_stock_refill_action">Registar reabastecimento</string>
     <string name="meds_stock_recount_action">Guardar contagem</string>
     <string name="meds_stock_discard_action">Deitar fora</string>
+
+    <!-- M5: shopping list (D28). As duas secções, as respetivas linhas e diálogos. -->
+    <string name="shopping_title">Compras</string>
+    <string name="shopping_empty_title">Nada para comprar</string>
+    <string name="shopping_empty_body">Os medicamentos aparecem aqui quando estão a acabar.</string>
+    <string name="shopping_prescription_missing">Falta a receita</string>
+    <string name="shopping_prescription_expired">Receita expirada a %1$s</string>
+    <string name="shopping_bought">Comprado</string>
+    <string name="shopping_buy_title">Quantos %1$s comprou?</string>
+    <string name="shopping_got_prescription">Tenho nova receita</string>
+    <string name="shopping_prescription_title">Nova receita</string>
+    <string name="shopping_prescription_body">Indique até quando é válida a nova receita.</string>
+    <string name="shopping_prescription_save">Guardar data</string>
 
     <string name="lock_title">Bloqueado</string>
     <string name="lock_body">Desbloqueie para ver a informação de saúde da sua família.</string>

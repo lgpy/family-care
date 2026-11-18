@@ -6,9 +6,10 @@
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>
 
-    <!-- Bottom navigation (M2: Today, Patients, More). -->
+    <!-- Bottom navigation (M2: Today, Patients, More; M5: Shopping). -->
     <string name="nav_today">Today</string>
     <string name="nav_patients">Patients</string>
+    <string name="nav_shopping">Shopping</string>
     <string name="nav_more">More</string>
 
     <string name="today_title">Today</string>
@@ -359,6 +360,19 @@
     <string name="meds_stock_refill_action">Record refill</string>
     <string name="meds_stock_recount_action">Save count</string>
     <string name="meds_stock_discard_action">Discard</string>
+
+    <!-- M5: shopping list (D28). The two groups, their lines and their dialogs. -->
+    <string name="shopping_title">Shopping</string>
+    <string name="shopping_empty_title">Nothing to buy</string>
+    <string name="shopping_empty_body">Medications appear here when they are running low.</string>
+    <string name="shopping_prescription_missing">Prescription missing</string>
+    <string name="shopping_prescription_expired">Prescription expired on %1$s</string>
+    <string name="shopping_bought">Bought</string>
+    <string name="shopping_buy_title">How many %1$s did you buy?</string>
+    <string name="shopping_got_prescription">Got a new prescription</string>
+    <string name="shopping_prescription_title">New prescription</string>
+    <string name="shopping_prescription_body">Set the date the new prescription is valid until.</string>
+    <string name="shopping_prescription_save">Save date</string>
 
     <string name="lock_title">Locked</string>
     <string name="lock_body">Unlock to see your family’s health information.</string>

@@ -8,6 +8,7 @@ import io.github.lgpy.familycare.feature.medications.doses.DoseSlotViewModel
 import io.github.lgpy.familycare.feature.medications.form.MedicationFormViewModel
 import io.github.lgpy.familycare.feature.medications.list.PatientMedicationsViewModel
 import io.github.lgpy.familycare.feature.medications.regimen.ChangeRegimenViewModel
+import io.github.lgpy.familycare.feature.medications.shopping.ShoppingViewModel
 import java.time.LocalDateTime
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
@@ -87,6 +88,14 @@ val medicationsModule: Module = module {
             medicationRepository = get(),
             doseLogRepository = get(),
             stockRepository = get(),
+            careCircleRepository = get(),
+        )
+    }
+
+    viewModel {
+        ShoppingViewModel(
+            stockRepository = get(),
+            medicationRepository = get(),
             careCircleRepository = get(),
         )
     }
