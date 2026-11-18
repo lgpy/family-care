@@ -198,3 +198,4 @@ prod; the quarterly test above is the rehearsal.
 
 | Date | Backup file | Environment | Result | Who |
 |---|---|---|---|---|
+| 2026-11-18 | `dev/daily/2026/11/family-care-dev-20261118T154327Z.tar.gz.age` (first nightly-job run; SHA-1 matched B2) | dev | **Passed.** Manifest checksums OK; restored into the scratch stack with no errors; row counts identical to live dev for all 13 tables (auth.users 2, core.patients 4, core.memberships 2, core.audit_log 20, …); row fingerprints (md5 of all rows) identical for auth.users, core.patients, core.memberships, core.audit_log. App not pointed at the scratch stack (local stack has no PowerSync). | Claude + Leonardo |

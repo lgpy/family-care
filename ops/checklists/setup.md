@@ -62,7 +62,7 @@ One project serves both Google sign-in and push notifications.
 ## 7. Backblaze B2 (independent backups)
 - [x] Sign up and choose the **EU Central** region **at signup** (the region is fixed per account).
 - [ ] MFA on.
-- [x] Create a **private** bucket `family-care-backups` with **Object Lock enabled** (can only be turned on at creation). Default retention: *Compliance* mode, 30 days.
+- [x] Create a **private** bucket `family-care-backups` with **Object Lock enabled** (can only be turned on at creation). Default retention: *Compliance* mode, 30 days. **Check it shows "Object Lock: Default 30 Days"** on the bucket card — enabling Object Lock alone sets no retention (found unset on 2026-11-18 and fixed; the first test backups were uploaded unlocked).
 - [x] Create an **application key** limited to that bucket, with *write* and *list* rights only — **no delete**. Save key ID + key. This is what the nightly job will use (D15).
 - [ ] **Lifecycle rules** (bucket → *Lifecycle Settings*), so the job never has to delete anything (it cannot):
   - `dev/daily/` and `prod/daily/`: **keep 31 days** (custom rule: *days till hide* 31, *days till delete* 1).
