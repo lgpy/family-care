@@ -15,6 +15,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { normalizeScheduledLocal } from '../_shared/doseStatus.ts';
 import { createFcmSender, parseServiceAccount } from '../_shared/fcm.ts';
+import { errorText } from '../_shared/log.ts';
 
 function secretsEqual(given: string | null, expected: string): boolean {
   if (given === null) return false;
@@ -170,7 +171,7 @@ Deno.serve(async (request) => {
         .in('fcm_token', [...deadTokens]);
       if (deleteError) {
         console.error(
-          `dose-confirmed: could not delete dead devices: ${deleteError.message}`,
+          `dose-confirmed: could not delete dead devices: ${errorText(deleteError)}`,
         );
       }
     }
@@ -181,11 +182,7 @@ Deno.serve(async (request) => {
       dead_devices: deadTokens.size,
     });
   } catch (error) {
-    console.error(
-      `dose-confirmed failed: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
+    console.error(`dose-confirmed failed: ${errorText(error)}`);
     return json(500, { error: 'clear broadcast failed' });
   }
 });
