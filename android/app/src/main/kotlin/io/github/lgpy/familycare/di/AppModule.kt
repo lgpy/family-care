@@ -34,9 +34,15 @@ import io.github.lgpy.familycare.core.ui.patient.TimelineSource
 import io.github.lgpy.familycare.core.ui.patient.TimelineSources
 import io.github.lgpy.familycare.core.ui.patient.TimelineText
 import io.github.lgpy.familycare.feature.appointments.appointmentsModule
+import io.github.lgpy.familycare.feature.appointments.dashboard.NextSevenDaysDashboardCard
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentRepository
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentsData
 import io.github.lgpy.familycare.feature.appointments.profile.AppointmentsPatientTab
+import io.github.lgpy.familycare.feature.appointments.profile.AppointmentsTimelineSource
+import io.github.lgpy.familycare.feature.appointments.push.AppointmentsPushHandler
+import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentReminderCoordinator
+import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentReminderScheduler
+import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentRemindersStore
 import io.github.lgpy.familycare.feature.medications.dashboard.LowStockDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.MedicationsDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionDashboardCard
@@ -173,6 +179,8 @@ val appModule: Module = module {
     single<DashboardCard> { NeedsAttentionDashboardCard() }
     single<DashboardCard> { LowStockDashboardCard() }
     single<DashboardCard> { ReminderHealthDashboardCard() }
+    // M6: upcoming appointments across patients in the next seven days.
+    single<DashboardCard> { NextSevenDaysDashboardCard() }
     single { DashboardCards(getAll<DashboardCard>()) }
 
     // The patient profile extension point (D29, docs/ux/screens.md §3). The app
@@ -189,6 +197,9 @@ val appModule: Module = module {
     single<TimelineSource> {
         MedicationsTimelineSource(medicationRepository = get(), text = get())
     }
+    single<TimelineSource> {
+        AppointmentsTimelineSource(appointmentRepository = get(), text = get())
+    }
     single { PatientHeaders(getAll<PatientHeader>()) }
     single { PatientTabs(getAll<PatientTab>()) }
     single { TimelineSources(getAll<TimelineSource>()) }
@@ -197,6 +208,9 @@ val appModule: Module = module {
     // owns, and the core's single FCM service routes each payload by `type`. The
     // registry rejects a type claimed twice when it is built (at start-up).
     single<PushHandler> { MedicationsPushHandler() }
+    // M6 appointments (D29): the change push the server sends to owners and
+    // caregivers when an appointment is added or changed.
+    single<PushHandler> { AppointmentsPushHandler() }
     single { PushHandlers(getAll<PushHandler>()) }
 
     // M4 dose reminders (D4/D19/D25). The scheduler, its local alarm index and
@@ -222,6 +236,35 @@ val appModule: Module = module {
             scheduler = get(),
             medicationRepository = get(),
             doseLogRepository = get(),
+            patientRepository = get(),
+            careCircleRepository = get(),
+            authRepository = get(),
+        )
+    }
+
+    // M6 appointment reminders (docs/domain/appointments.md "Reminders"): the
+    // same device-local technique as the dose reminders, written in the
+    // appointments module because D5 forbids importing another feature. The
+    // scheduler, its alarm index and its coordinator are app-wide singletons:
+    // receivers reach them through Koin after `FamilyCareApplication` has
+    // started it.
+    single { AppointmentRemindersStore(androidContext()) }
+    single {
+        AppointmentReminderScheduler(
+            context = androidContext(),
+            appointmentRepository = get(),
+            patientRepository = get(),
+            careCircleRepository = get(),
+            authRepository = get(),
+            store = get(),
+            alarmManager = androidContext().getSystemService(AlarmManager::class.java),
+        )
+    }
+    single {
+        AppointmentReminderCoordinator(
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            scheduler = get(),
+            appointmentRepository = get(),
             patientRepository = get(),
             careCircleRepository = get(),
             authRepository = get(),

@@ -6,6 +6,9 @@ import io.github.lgpy.familycare.core.notifications.PushHandlers
 import io.github.lgpy.familycare.core.notifications.PushSession
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.di.appModule
+import io.github.lgpy.familycare.feature.appointments.push.AppointmentPush
+import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentReminderCoordinator
+import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentReminderScheduler
 import io.github.lgpy.familycare.feature.medications.push.PushNotifications
 import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderSchedulerCoordinator
@@ -37,6 +40,13 @@ class FamilyCareApplication : Application() {
         // step with local/synced changes (D4/D19). Also creates the D26 channel.
         koin.get<DoseReminderScheduler>().ensureChannel()
         koin.get<ReminderSchedulerCoordinator>().start()
+
+        // M6: appointment reminders follow the same rules (D4/D19/D25) on their
+        // own channel, and the appointment-change push gets a channel before the
+        // first message arrives, because the system draws a background one.
+        koin.get<AppointmentReminderScheduler>().ensureChannel()
+        koin.get<AppointmentReminderCoordinator>().start()
+        AppointmentPush.ensureChannel(this)
 
         // M4 push (D4/D27, D29): the escalation channel Android's settings show,
         // plus token registration. Registration follows the session, so a start
