@@ -1,0 +1,273 @@
+{
+  "description": "Dose-slot vectors shared by the Kotlin app (M3) and the TypeScript server (M4). Every instant below was computed by hand from the zone's DST rules; the rules are in README.md.",
+  "cases": [
+    {
+      "name": "daily-multi-time-fractional",
+      "regimens": [
+        {
+          "id": "reg-daily",
+          "medication_id": "med-daily",
+          "schedule_type": "daily",
+          "weekdays": null,
+          "interval_days": null,
+          "start_date": "2026-11-01",
+          "end_date": null,
+          "time_zone": "Europe/Lisbon",
+          "times": [
+            { "time": "08:00", "quantity": 1 },
+            { "time": "13:00", "quantity": 0.5 },
+            { "time": "21:00", "quantity": 0.25 }
+          ]
+        }
+      ],
+      "from": "2026-11-16",
+      "to": "2026-11-17",
+      "expected": [
+        { "regimen_id": "reg-daily", "scheduled_local": "2026-11-16T08:00", "instant": "2026-11-16T08:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-daily", "scheduled_local": "2026-11-16T13:00", "instant": "2026-11-16T13:00:00Z", "quantity": 0.5 },
+        { "regimen_id": "reg-daily", "scheduled_local": "2026-11-16T21:00", "instant": "2026-11-16T21:00:00Z", "quantity": 0.25 },
+        { "regimen_id": "reg-daily", "scheduled_local": "2026-11-17T08:00", "instant": "2026-11-17T08:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-daily", "scheduled_local": "2026-11-17T13:00", "instant": "2026-11-17T13:00:00Z", "quantity": 0.5 },
+        { "regimen_id": "reg-daily", "scheduled_local": "2026-11-17T21:00", "instant": "2026-11-17T21:00:00Z", "quantity": 0.25 }
+      ]
+    },
+    {
+      "name": "weekdays-mask-mon-wed-fri",
+      "regimens": [
+        {
+          "id": "reg-weekdays",
+          "medication_id": "med-weekdays",
+          "schedule_type": "weekdays",
+          "weekdays": 21,
+          "interval_days": null,
+          "start_date": "2026-11-01",
+          "end_date": null,
+          "time_zone": "Europe/Lisbon",
+          "times": [
+            { "time": "10:00", "quantity": 1 }
+          ]
+        }
+      ],
+      "from": "2026-11-16",
+      "to": "2026-11-22",
+      "expected": [
+        { "regimen_id": "reg-weekdays", "scheduled_local": "2026-11-16T10:00", "instant": "2026-11-16T10:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-weekdays", "scheduled_local": "2026-11-18T10:00", "instant": "2026-11-18T10:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-weekdays", "scheduled_local": "2026-11-20T10:00", "instant": "2026-11-20T10:00:00Z", "quantity": 1 }
+      ]
+    },
+    {
+      "name": "every-three-days-anchored-mid-range",
+      "regimens": [
+        {
+          "id": "reg-every3",
+          "medication_id": "med-every3",
+          "schedule_type": "every_n_days",
+          "weekdays": null,
+          "interval_days": 3,
+          "start_date": "2026-11-10",
+          "end_date": null,
+          "time_zone": "Europe/Lisbon",
+          "times": [
+            { "time": "07:30", "quantity": 2 }
+          ]
+        }
+      ],
+      "from": "2026-11-16",
+      "to": "2026-11-25",
+      "expected": [
+        { "regimen_id": "reg-every3", "scheduled_local": "2026-11-16T07:30", "instant": "2026-11-16T07:30:00Z", "quantity": 2 },
+        { "regimen_id": "reg-every3", "scheduled_local": "2026-11-19T07:30", "instant": "2026-11-19T07:30:00Z", "quantity": 2 },
+        { "regimen_id": "reg-every3", "scheduled_local": "2026-11-22T07:30", "instant": "2026-11-22T07:30:00Z", "quantity": 2 },
+        { "regimen_id": "reg-every3", "scheduled_local": "2026-11-25T07:30", "instant": "2026-11-25T07:30:00Z", "quantity": 2 }
+      ]
+    },
+    {
+      "name": "start-and-end-bounds-inclusive",
+      "regimens": [
+        {
+          "id": "reg-bounds",
+          "medication_id": "med-bounds",
+          "schedule_type": "daily",
+          "weekdays": null,
+          "interval_days": null,
+          "start_date": "2026-11-17",
+          "end_date": "2026-11-18",
+          "time_zone": "Europe/Lisbon",
+          "times": [
+            { "time": "09:00", "quantity": 1 }
+          ]
+        }
+      ],
+      "from": "2026-11-16",
+      "to": "2026-11-19",
+      "expected": [
+        { "regimen_id": "reg-bounds", "scheduled_local": "2026-11-17T09:00", "instant": "2026-11-17T09:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-bounds", "scheduled_local": "2026-11-18T09:00", "instant": "2026-11-18T09:00:00Z", "quantity": 1 }
+      ]
+    },
+    {
+      "name": "regimen-change-two-versions-no-gap-no-overlap",
+      "regimens": [
+        {
+          "id": "reg-v1",
+          "medication_id": "med-change",
+          "schedule_type": "daily",
+          "weekdays": null,
+          "interval_days": null,
+          "start_date": "2026-11-01",
+          "end_date": "2026-11-09",
+          "time_zone": "Europe/Lisbon",
+          "times": [
+            { "time": "08:00", "quantity": 1 }
+          ]
+        },
+        {
+          "id": "reg-v2",
+          "medication_id": "med-change",
+          "schedule_type": "daily",
+          "weekdays": null,
+          "interval_days": null,
+          "start_date": "2026-11-10",
+          "end_date": null,
+          "time_zone": "Europe/Lisbon",
+          "times": [
+            { "time": "08:00", "quantity": 2 }
+          ]
+        }
+      ],
+      "from": "2026-11-08",
+      "to": "2026-11-11",
+      "expected": [
+        { "regimen_id": "reg-v1", "scheduled_local": "2026-11-08T08:00", "instant": "2026-11-08T08:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-v1", "scheduled_local": "2026-11-09T08:00", "instant": "2026-11-09T08:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-v2", "scheduled_local": "2026-11-10T08:00", "instant": "2026-11-10T08:00:00Z", "quantity": 2 },
+        { "regimen_id": "reg-v2", "scheduled_local": "2026-11-11T08:00", "instant": "2026-11-11T08:00:00Z", "quantity": 2 }
+      ]
+    },
+    {
+      "name": "spring-forward-lisbon-2026-03-23-to-29",
+      "regimens": [
+        {
+          "id": "reg-spring",
+          "medication_id": "med-spring",
+          "schedule_type": "daily",
+          "weekdays": null,
+          "interval_days": null,
+          "start_date": "2026-03-01",
+          "end_date": null,
+          "time_zone": "Europe/Lisbon",
+          "times": [
+            { "time": "01:30", "quantity": 1 },
+            { "time": "08:00", "quantity": 0.5 }
+          ]
+        }
+      ],
+      "from": "2026-03-23",
+      "to": "2026-03-29",
+      "expected": [
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-23T01:30", "instant": "2026-03-23T01:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-23T08:00", "instant": "2026-03-23T08:00:00Z", "quantity": 0.5 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-24T01:30", "instant": "2026-03-24T01:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-24T08:00", "instant": "2026-03-24T08:00:00Z", "quantity": 0.5 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-25T01:30", "instant": "2026-03-25T01:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-25T08:00", "instant": "2026-03-25T08:00:00Z", "quantity": 0.5 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-26T01:30", "instant": "2026-03-26T01:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-26T08:00", "instant": "2026-03-26T08:00:00Z", "quantity": 0.5 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-27T01:30", "instant": "2026-03-27T01:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-27T08:00", "instant": "2026-03-27T08:00:00Z", "quantity": 0.5 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-28T01:30", "instant": "2026-03-28T01:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-28T08:00", "instant": "2026-03-28T08:00:00Z", "quantity": 0.5 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-29T01:30", "instant": "2026-03-29T01:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-spring", "scheduled_local": "2026-03-29T08:00", "instant": "2026-03-29T07:00:00Z", "quantity": 0.5 }
+      ]
+    },
+    {
+      "name": "autumn-lisbon-2026-10-19-to-25",
+      "regimens": [
+        {
+          "id": "reg-autumn",
+          "medication_id": "med-autumn",
+          "schedule_type": "daily",
+          "weekdays": null,
+          "interval_days": null,
+          "start_date": "2026-10-01",
+          "end_date": null,
+          "time_zone": "Europe/Lisbon",
+          "times": [
+            { "time": "01:30", "quantity": 1 },
+            { "time": "08:00", "quantity": 1 }
+          ]
+        }
+      ],
+      "from": "2026-10-19",
+      "to": "2026-10-25",
+      "expected": [
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-19T01:30", "instant": "2026-10-19T00:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-19T08:00", "instant": "2026-10-19T07:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-20T01:30", "instant": "2026-10-20T00:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-20T08:00", "instant": "2026-10-20T07:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-21T01:30", "instant": "2026-10-21T00:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-21T08:00", "instant": "2026-10-21T07:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-22T01:30", "instant": "2026-10-22T00:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-22T08:00", "instant": "2026-10-22T07:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-23T01:30", "instant": "2026-10-23T00:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-23T08:00", "instant": "2026-10-23T07:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-24T01:30", "instant": "2026-10-24T00:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-24T08:00", "instant": "2026-10-24T07:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-25T01:30", "instant": "2026-10-25T00:30:00Z", "quantity": 1 },
+        { "regimen_id": "reg-autumn", "scheduled_local": "2026-10-25T08:00", "instant": "2026-10-25T08:00:00Z", "quantity": 1 }
+      ]
+    },
+    {
+      "name": "sao-paulo-no-dst",
+      "regimens": [
+        {
+          "id": "reg-sao-paulo",
+          "medication_id": "med-sao-paulo",
+          "schedule_type": "daily",
+          "weekdays": null,
+          "interval_days": null,
+          "start_date": "2026-11-01",
+          "end_date": null,
+          "time_zone": "America/Sao_Paulo",
+          "times": [
+            { "time": "08:00", "quantity": 1 },
+            { "time": "20:00", "quantity": 0.5 }
+          ]
+        }
+      ],
+      "from": "2026-11-16",
+      "to": "2026-11-17",
+      "expected": [
+        { "regimen_id": "reg-sao-paulo", "scheduled_local": "2026-11-16T08:00", "instant": "2026-11-16T11:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-sao-paulo", "scheduled_local": "2026-11-16T20:00", "instant": "2026-11-16T23:00:00Z", "quantity": 0.5 },
+        { "regimen_id": "reg-sao-paulo", "scheduled_local": "2026-11-17T08:00", "instant": "2026-11-17T11:00:00Z", "quantity": 1 },
+        { "regimen_id": "reg-sao-paulo", "scheduled_local": "2026-11-17T20:00", "instant": "2026-11-17T23:00:00Z", "quantity": 0.5 }
+      ]
+    },
+    {
+      "name": "leap-day-2028-every-seven-days",
+      "regimens": [
+        {
+          "id": "reg-leap",
+          "medication_id": "med-leap",
+          "schedule_type": "every_n_days",
+          "weekdays": null,
+          "interval_days": 7,
+          "start_date": "2028-02-01",
+          "end_date": null,
+          "time_zone": "Europe/Lisbon",
+          "times": [
+            { "time": "12:00", "quantity": 1 }
+          ]
+        }
+      ],
+      "from": "2028-02-25",
+      "to": "2028-03-02",
+      "expected": [
+        { "regimen_id": "reg-leap", "scheduled_local": "2028-02-29T12:00", "instant": "2028-02-29T12:00:00Z", "quantity": 1 }
+      ]
+    }
+  ]
+}
