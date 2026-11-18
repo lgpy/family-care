@@ -49,14 +49,14 @@ One project serves both Google sign-in and push notifications.
   - [x] Test users: your Gmail and Mom's Gmail.
 - [ ] OAuth client IDs: **wait until M1** — the Android client ID needs the signing key's fingerprint (§8).
   - [x] Dev: Web client *Family Care – Supabase dev* (secret in the password manager) and Android client *Family Care – Android debug* (debug keystore SHA-1); Google provider enabled in Supabase dev with both IDs.
-  - [ ] Prod: Android client with the **release** key's SHA-1, Web client for Supabase prod.
+  - [x] Prod (2026-11-18): Android client *Family Care – Android release* (release SHA-1 `75:D3:53:96:43:83:94:65:62:FC:1A:90:77:5C:E1:8A:51:B5:48:99`) and Web client *Family Care – Supabase prod* (secret in the password manager); Google provider enabled in Supabase prod with both IDs.
 
 ## 6. PowerSync
 - [x] Account with MFA if offered.
 - [x] Note which **EU region** PowerSync Cloud offers, and make sure the Supabase projects (§4) are in the same or a nearby EU region.
 - [x] Create instances (M1): project *family-care* with *family-care-dev* and *family-care-prod*, both EU.
   - [x] Dev: replication role `powersync_role` (password in the password manager), database connection (verify-full), Supabase Auth + JWKS, `backend/powersync/sync-config.yaml` deployed.
-  - [ ] Prod: same steps against Supabase prod.
+  - [x] Prod (2026-11-18): `powersync_role` on Supabase prod (password in the password manager), connection to `db.geaszeosymsxwuerelyk.supabase.co` (verify-full), Supabase Auth + prod JWKS + audience `authenticated`, `sync-config.yaml` deployed (v3, active).
 - [ ] DPA: usually part of the terms you accept at signup; if there's a separate DPA page, save it as PDF.
 
 ## 7. Backblaze B2 (independent backups)
@@ -82,11 +82,11 @@ One project serves both Google sign-in and push notifications.
 
 ## 8. Development machine (prepares M1)
 - [ ] Install **Android Studio** (latest stable). In its SDK Manager, make sure the latest Android SDK Platform and Build-Tools are installed (D22).
-- [ ] Create the **release signing key** (Android Studio: *Build → Generate Signed App Bundle/APK → Create new*, or `keytool`). Save:
+- [x] Create the **release signing key** (Android Studio: *Build → Generate Signed App Bundle/APK → Create new*, or `keytool`). Save:
   - [ ] the keystore file → password manager (as attachment) **and** offline backup (USB stick in a safe place)
-  - [ ] keystore password, key alias, key password → password manager
-- [ ] Note the key's **SHA-1 fingerprint** (needed for the Google OAuth Android client in M1).
-- [ ] Never put the keystore or its passwords in the repository.
+  - [ ] keystore password, key alias (`family-care`), key password → password manager
+- [x] Note the key's **SHA-1 fingerprint**: `75:D3:53:96:43:83:94:65:62:FC:1A:90:77:5C:E1:8A:51:B5:48:99` (keystore created 2026-11-18 with `keytool`, PKCS12, RSA 4096, alias `family-care`; builds read it through the git-ignored `android/keystore.properties`).
+- [x] Never put the keystore or its passwords in the repository.
 - [ ] **Before your first commit:** install gitleaks (`winget install --id Gitleaks.Gitleaks -e`) and run `scripts/install-hooks.sh` once per clone, so the pre-commit hook scans staged changes for secrets (§3, build-plan M1).
 
 ## 9. Phones
