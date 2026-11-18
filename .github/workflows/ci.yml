@@ -151,10 +151,10 @@ jobs:
       - name: Run edge-function unit tests and shared vectors
         run: deno test --allow-read
 
-      # The two deployable functions are not imported by the tests, so check
+      # The three deployable functions are not imported by the tests, so check
       # them explicitly (the supabase-js import is fetched by Deno).
       - name: Type-check the edge functions
-        run: deno check escalate/index.ts dose-confirmed/index.ts
+        run: deno check escalate/index.ts dose-confirmed/index.ts stock-low/index.ts
 
   uploads:
     name: Local upload integration tests

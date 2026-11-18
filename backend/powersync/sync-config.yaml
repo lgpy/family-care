@@ -67,6 +67,16 @@ streams:
     auto_subscribe: true
     query: SELECT * FROM "meds"."dose_log" WHERE medication_id IN (SELECT id FROM "meds"."medications" WHERE patient_id IN (SELECT id FROM "core"."patients" WHERE circle_id IN (SELECT circle_id FROM "core"."memberships" WHERE user_id = auth.user_id())))
 
+  # The stock ledger of those medications (M5, D28). Counts, refills and
+  # discards sync so every phone derives the same current stock locally; the
+  # doses that also deduct from it are already in the dose_log stream. Same
+  # access path as dose_log: medications -> patients -> memberships.
+  stock_movements:
+    auto_subscribe: true
+    query: SELECT * FROM "meds"."stock_movements" WHERE medication_id IN (SELECT id FROM "meds"."medications" WHERE patient_id IN (SELECT id FROM "core"."patients" WHERE circle_id IN (SELECT circle_id FROM "core"."memberships" WHERE user_id = auth.user_id())))
+
   # Deliberately NOT synced: core.invitations (bearer codes / emails stay on the
-  # server), core.patient_access_overrides (not used in the MVP) and
-  # core.audit_log (server-side, owner-only Activity screen).
+  # server), core.patient_access_overrides (not used in the MVP),
+  # core.audit_log (server-side, owner-only Activity screen), the push tables
+  # (core.push_devices, meds.escalations, meds.stock_alerts: server state, no
+  # API privilege).

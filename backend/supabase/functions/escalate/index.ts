@@ -32,6 +32,7 @@ import {
 import type { DoseLogEntry } from '../_shared/doseStatus.ts';
 import type { Regimen } from '../_shared/doseSlots.ts';
 import { createFcmSender, parseServiceAccount } from '../_shared/fcm.ts';
+import { errorText } from '../_shared/log.ts';
 
 const MS_PER_MINUTE = 60_000;
 const DAY_MS = 24 * 60 * MS_PER_MINUTE;
@@ -240,7 +241,7 @@ Deno.serve(async (request) => {
         .delete()
         .in('fcm_token', [...deadTokens]);
       if (deleteError) {
-        console.error(`escalate: could not delete dead devices: ${deleteError.message}`);
+        console.error(`escalate: could not delete dead devices: ${errorText(deleteError)}`);
       }
     }
 
@@ -267,9 +268,7 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     // The message may name a table or an HTTP status; never a token or body.
-    console.error(
-      `escalate failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    console.error(`escalate failed: ${errorText(error)}`);
     return json(500, { error: 'escalation run failed' });
   }
 });
