@@ -31,5 +31,8 @@ data class Profile(
         /** Whether [name] is acceptable (1..100 characters after trimming). */
         fun isValidDisplayName(name: String): Boolean =
             normalizeDisplayName(name).length in 1..MAX_DISPLAY_NAME_LENGTH
+
+        /** Whether [language] is a value of `profiles_preferred_language`. */
+        fun isValidLanguage(language: String): Boolean = language in LANGUAGES
     }
 }

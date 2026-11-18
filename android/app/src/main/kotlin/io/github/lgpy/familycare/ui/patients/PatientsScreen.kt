@@ -125,6 +125,14 @@ private fun PatientListRow(
                 text = row.hint(),
                 style = MaterialTheme.typography.bodyMedium,
             )
+            if (row.patient.needsPrimaryCaregiver) {
+                // D24: a removed member left this patient with nobody to remind.
+                Text(
+                    text = stringResource(R.string.patient_needs_primary),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }

@@ -36,7 +36,9 @@ Links a user to a circle with a role.
 Optional per-patient grant that restricts or extends a member's access (e.g. "aunt sees only Grandparent 2"). The table exists from the start; the MVP gives every member access to every patient in the circle.
 
 ### Invitation
-Invitation link to join a circle with a given role, bound to the invitee's email address. Shared through any messaging app; accepting requires signing in with that Google account. Expires; single use. No email provider needed.
+One-time invitation code to join a circle with a given role, bound to the invitee's email address. Shared as text through any messaging app (D23); accepting requires signing in with that Google account. Hashed server-side; expires; single use. No email provider needed.
+
+Removing a member (D24) clears them as `primary_caregiver` and `linked_user` of the circle's patients. Affected patients show "needs a primary caregiver" — and refuse to save in the form — until someone chooses a new one. The server side lives in `core.remove_member`.
 
 ## Access control
 
@@ -67,3 +69,14 @@ Notes:
 - Escalation runs on the server, so it works even if the primary's phone is off.
 - A phone that is offline can't have its notification cleared remotely. When opened, it shows who already confirmed the dose.
 - Snooze is local to one phone, not synced, and does not delay escalation.
+
+## Known limitations (M2)
+
+Deliberately deferred; kept here so they are not lost.
+
+- **One circle per user in the app.** All queries use the user's oldest membership (tie-broken by membership id). Accepting a second invitation is not supported in the UI; the server would keep both memberships and the app would keep showing the first circle.
+- **Viewer role and role changes are not exposed in the UI.** The database and RPCs model `viewer` and `core.set_member_role`; the app only displays roles and never offers a change.
+- **Reminder-policy settings live in the patient form**, not under More. The More screen has the family circle, the user's name, account, language, app lock and About.
+- **No leave or delete circle.** Removing the last member is a server-side concern for a later milestone; the app has no "leave circle" action.
+- **Audit rows with no circle are not visible to the owner policy.** Profile changes and security events carry no circle id, so the owner-facing audit view cannot see them. To be resolved with the Activity screen in M7.
+- **Language is a per-account preference with a device half** (D8): More changes the phone's app language and writes `profiles.preferred_language`; without an in-app choice, the phone's language is written to the profile (never the other way round), so notifications use the language the user sees.

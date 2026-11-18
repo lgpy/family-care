@@ -98,7 +98,7 @@ Size: **S** small · **M** medium · **L** large (relative effort, not calendar 
 
 ### M2 — Care circle (M)
 - Circles, memberships, roles, patients (with linked user), reminder policy settings, optional agreement note.
-- **Invitations by link** (sent via WhatsApp or any app). Accepting requires signing in with the invited email's Google account. No email provider needed.
+- **Invitations by one-time code** (sent as text via WhatsApp or any app, D23). Accepting requires signing in with the invited email's Google account. No email provider needed. The app is sent separately (manual APK, D18).
 - The core access function; database policies and sync rules for all core tables.
 - Audit triggers and the append-only audit table.
 - **Done when:** you invite Mom; four patients exist; the isolation test suite covers the scenarios in [security-and-privacy §3](security-and-privacy.md); edits appear in the audit log.

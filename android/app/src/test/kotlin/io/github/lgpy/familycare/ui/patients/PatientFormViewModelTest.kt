@@ -306,6 +306,90 @@ class PatientFormViewModelTest {
     }
 
     @Test
+    fun aNewPatientIsNotFlaggedForAMissingPrimaryCaregiver() {
+        val viewModel = viewModel()
+
+        assertFalse(viewModel.uiState.value.needsPrimaryCaregiver)
+        assertNull(viewModel.uiState.value.primaryCaregiverId)
+    }
+
+    @Test
+    fun anExistingPatientWithoutAPrimaryCaregiverIsFlaggedAndRefusesToSave() {
+        // D24: a removed member left the patient with nobody to remind.
+        patients.setPatient(
+            Patient(
+                id = PatientId("patient-orphan"),
+                circleId = CareCircleId("circle-1"),
+                displayName = "Avó",
+                linkedUserId = null,
+                reminderPolicy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
+                primaryCaregiverId = null,
+            ),
+        )
+
+        val viewModel = viewModel(patientId = "patient-orphan")
+
+        assertTrue(viewModel.uiState.value.loaded)
+        assertFalse(viewModel.uiState.value.isNew)
+        assertTrue(viewModel.uiState.value.needsPrimaryCaregiver)
+        // The form opens without crashing and preselects nothing.
+        assertNull(viewModel.uiState.value.primaryCaregiverId)
+        assertFalse(viewModel.uiState.value.isSelfManaged)
+
+        viewModel.save()
+
+        assertTrue(CoreField.PATIENT_PRIMARY_CAREGIVER in viewModel.uiState.value.errors)
+        assertTrue(patients.saved.isEmpty())
+    }
+
+    @Test
+    fun anExistingPatientWhoseLinkedUserWasClearedLoadsAsANormalPatient() {
+        patients.setPatient(
+            Patient(
+                id = PatientId("patient-1"),
+                circleId = CareCircleId("circle-1"),
+                displayName = "Avó",
+                linkedUserId = null,
+                reminderPolicy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
+                primaryCaregiverId = caregiverMember.userId,
+            ),
+        )
+
+        val viewModel = viewModel(patientId = "patient-1")
+
+        assertNull(viewModel.uiState.value.linkedUserId)
+        assertFalse(viewModel.uiState.value.needsPrimaryCaregiver)
+        assertEquals(caregiverMember.userId, viewModel.uiState.value.primaryCaregiverId)
+
+        viewModel.save()
+
+        val saved = patients.saved.single()
+        assertNull(saved.linkedUserId)
+        assertEquals(caregiverMember.userId, saved.primaryCaregiverId)
+    }
+
+    @Test
+    fun anExistingAllCaregiversPatientWithoutAPrimaryIsNotFlagged() {
+        patients.setPatient(
+            Patient(
+                id = PatientId("patient-1"),
+                circleId = CareCircleId("circle-1"),
+                displayName = "Avó",
+                reminderPolicy = ReminderPolicy.ALL_CAREGIVERS,
+                primaryCaregiverId = null,
+            ),
+        )
+
+        val viewModel = viewModel(patientId = "patient-1")
+
+        assertFalse(viewModel.uiState.value.needsPrimaryCaregiver)
+
+        viewModel.save()
+
+        assertEquals(ReminderPolicy.ALL_CAREGIVERS, patients.saved.single().reminderPolicy)
+    }
+
+    @Test
     fun errorsAreClearedWhenTheFieldChanges() {
         val viewModel = viewModel()
         viewModel.save()

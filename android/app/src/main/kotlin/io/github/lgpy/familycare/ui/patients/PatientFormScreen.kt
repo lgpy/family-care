@@ -119,6 +119,16 @@ private fun PatientFormFields(
         )
     }
 
+    if (uiState.needsPrimaryCaregiver) {
+        // D24: the primary caregiver was removed; the reminder has no target.
+        // Saving is refused below until one is chosen, so say why up front.
+        Text(
+            text = stringResource(R.string.patient_needs_primary),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+
     OutlinedTextField(
         value = uiState.displayName,
         onValueChange = viewModel::onNameChanged,

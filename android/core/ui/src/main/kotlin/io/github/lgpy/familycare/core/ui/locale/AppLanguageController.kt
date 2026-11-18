@@ -12,14 +12,18 @@ import android.os.LocaleList
  * survives process death and appears in Android's per-app language settings
  * (see the generated locale config in the app module).
  *
- * Device-local only for M1.
- * TODO(M2): persist the per-user language on the identity profile server-side
- * once the identity service exists, so every caregiver's phone can follow
- * their own account instead of their phone.
+ * Since D8/D23 the language is also stored on the user's profile
+ * (`core.profiles.preferred_language`) by the More screen. This controller
+ * only owns the *device* half: the platform locale, plus a small flag saying
+ * whether someone chose a language in this app. Until they do, the language
+ * that arrives on the profile is applied (a new phone follows the account); an
+ * explicit choice — including "System default" — is never overridden.
  */
 class AppLanguageController(context: Context) {
     private val localeManager: LocaleManager =
         context.getSystemService(LocaleManager::class.java)
+
+    private val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
     fun current(): AppLanguage {
         val locales = localeManager.applicationLocales ?: LocaleList.getEmptyLocaleList()
@@ -28,10 +32,24 @@ class AppLanguageController(context: Context) {
         )
     }
 
+    /** Whether a language was chosen on this device (in this app). */
+    fun hasExplicitChoice(): Boolean = preferences.getBoolean(KEY_EXPLICIT_CHOICE, false)
+
+    /** Applies a language the user picked in the app; remembers that they did. */
     fun set(language: AppLanguage) {
+        apply(language)
+        preferences.edit().putBoolean(KEY_EXPLICIT_CHOICE, true).apply()
+    }
+
+    private fun apply(language: AppLanguage) {
         localeManager.applicationLocales = when (language) {
             AppLanguage.System -> LocaleList.getEmptyLocaleList()
             else -> LocaleList.forLanguageTags(checkNotNull(language.languageTag))
         }
+    }
+
+    private companion object {
+        const val PREFERENCES = "app_language"
+        const val KEY_EXPLICIT_CHOICE = "explicit_choice"
     }
 }

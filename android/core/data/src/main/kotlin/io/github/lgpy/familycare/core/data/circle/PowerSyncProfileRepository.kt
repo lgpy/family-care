@@ -21,11 +21,12 @@ import kotlinx.coroutines.flow.map
 /**
  * [ProfileRepository] over the local, encrypted PowerSync database.
  *
- * [updateDisplayName] writes the local row, so the change shows immediately and
- * the uploader sends `display_name` with the next sync. The row is created by
- * the server (`core.handle_new_user()`), never by the app: the client has no
- * INSERT grant, so an update of a missing row would be a permanent error. The
- * repository therefore reports [CoreError.NotFound] instead.
+ * [updateDisplayName] and [updatePreferredLanguage] write the local row, so the
+ * change shows immediately and the uploader sends the changed column with the
+ * next sync. The row is created by the server (`core.handle_new_user()`), never
+ * by the app: the client has no INSERT grant, so an update of a missing row
+ * would be a permanent error. The repository therefore reports
+ * [CoreError.NotFound] instead.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PowerSyncProfileRepository(
@@ -56,7 +57,24 @@ internal class PowerSyncProfileRepository(
         if (!Profile.isValidDisplayName(normalized)) {
             return CoreResult.Failure(CoreError.Invalid(setOf(CoreField.PROFILE_DISPLAY_NAME)))
         }
+        return updateProfile(UPDATE_PROFILE_DISPLAY_NAME, normalized)
+    }
 
+    override suspend fun updatePreferredLanguage(preferredLanguage: String): CoreResult<Unit> {
+        if (!Profile.isValidLanguage(preferredLanguage)) {
+            return CoreResult.Failure(
+                CoreError.Invalid(setOf(CoreField.PROFILE_PREFERRED_LANGUAGE)),
+            )
+        }
+        return updateProfile(UPDATE_PROFILE_PREFERRED_LANGUAGE, preferredLanguage)
+    }
+
+    /**
+     * Updates one column of the signed-in user's profile row, locally. The row
+     * is never inserted here: the client has no INSERT grant (the server
+     * creates it), so a missing row would only become a permanent upload error.
+     */
+    private suspend fun updateProfile(sql: String, value: String): CoreResult<Unit> {
         val userId = signedInUserId.first()
             ?: return CoreResult.Failure(CoreError.NotAllowed)
 
@@ -68,7 +86,7 @@ internal class PowerSyncProfileRepository(
         }
 
         return try {
-            database.execute(UPDATE_PROFILE_DISPLAY_NAME, listOf(normalized, userId))
+            database.execute(sql, listOf(value, userId))
             CoreResult.Success(Unit)
         } catch (cancellation: CancellationException) {
             throw cancellation

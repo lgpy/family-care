@@ -12,6 +12,7 @@ import io.github.lgpy.familycare.core.domain.circle.ProfileRepository
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
+import io.github.lgpy.familycare.ui.MoreViewModel
 import io.github.lgpy.familycare.ui.SignInViewModel
 import io.github.lgpy.familycare.ui.TodayViewModel
 import io.github.lgpy.familycare.ui.circle.CircleGateViewModel
@@ -91,6 +92,7 @@ val appModule: Module = module {
     }
     viewModel { FamilyCircleViewModel(careCircleRepository = get()) }
     viewModel { YourNameViewModel(profileRepository = get()) }
+    viewModel { MoreViewModel(profileRepository = get()) }
 
     // App shell: the message about a change the server refused. It only needs
     // the sync state, which is a domain type.

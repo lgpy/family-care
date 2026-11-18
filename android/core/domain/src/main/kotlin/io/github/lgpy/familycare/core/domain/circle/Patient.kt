@@ -83,6 +83,16 @@ data class Patient(
     val isArchived: Boolean get() = archivedAt != null
 
     /**
+     * Whether the patient is set to primary-with-escalation but has nobody to
+     * remind. Possible since D24: removing a member clears them as primary
+     * caregiver and linked user of the circle's patients. The UI flags such a
+     * patient (Patients list, patient form) and the form refuses to save one
+     * until a primary is chosen.
+     */
+    val needsPrimaryCaregiver: Boolean
+        get() = PatientRules.needsPrimaryCaregiver(reminderPolicy, primaryCaregiverId)
+
+    /**
      * The values as they should be stored: the name trimmed, a blank agreement
      * note turned into null. Everything else is passed through.
      */
@@ -145,6 +155,14 @@ object PatientRules {
         linkedUserId: String?,
         chosenPrimaryCaregiverId: String?,
     ): String? = linkedUserId ?: chosenPrimaryCaregiverId
+
+    /**
+     * Whether a patient with [policy] and [primaryCaregiverId] has nobody to
+     * remind: primary-with-escalation needs a primary caregiver; the other
+     * policies route to everyone and therefore need none.
+     */
+    fun needsPrimaryCaregiver(policy: ReminderPolicy, primaryCaregiverId: String?): Boolean =
+        policy == ReminderPolicy.PRIMARY_WITH_ESCALATION && primaryCaregiverId == null
 
     /**
      * A patient that has never been stored, with the documented defaults.

@@ -283,6 +283,13 @@ data class PatientFormUiState(
 ) {
     /** A patient with a linked user is reminded first, so the picker is not shown. */
     val isSelfManaged: Boolean get() = linkedUserId != null
+
+    /**
+     * An existing patient nobody would be reminded for (D24: a removed member
+     * left it without a primary caregiver). The form flags it at the top.
+     */
+    val needsPrimaryCaregiver: Boolean
+        get() = !isNew && PatientRules.needsPrimaryCaregiver(reminderPolicy, primaryCaregiverId)
 }
 
 /** The [CoreError] to [PatientFormError] mapping for a save that failed. */

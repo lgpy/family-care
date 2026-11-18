@@ -126,7 +126,12 @@ internal const val SELECT_PROFILE_PRESENT = """
     SELECT id FROM profiles WHERE id = ?
 """
 
-/** The only writable profile column the M2 app changes. */
+/** The user's visible name (read by co-members, see [SELECT_MEMBERS]). */
 internal const val UPDATE_PROFILE_DISPLAY_NAME = """
     UPDATE profiles SET display_name = ? WHERE id = ?
+"""
+
+/** The user's language, also used by the server for notifications to them (D8). */
+internal const val UPDATE_PROFILE_PREFERRED_LANGUAGE = """
+    UPDATE profiles SET preferred_language = ? WHERE id = ?
 """

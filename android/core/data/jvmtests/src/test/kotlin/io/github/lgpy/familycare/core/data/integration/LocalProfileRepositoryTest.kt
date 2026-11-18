@@ -5,6 +5,7 @@ import io.github.lgpy.familycare.core.data.circle.PowerSyncProfileRepository
 import io.github.lgpy.familycare.core.data.sync.PROFILES_TABLE
 import io.github.lgpy.familycare.core.domain.auth.AuthState
 import io.github.lgpy.familycare.core.domain.circle.CoreError
+import io.github.lgpy.familycare.core.domain.circle.CoreField
 import io.github.lgpy.familycare.core.domain.circle.CoreResult
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
@@ -67,6 +68,37 @@ class LocalProfileRepositoryTest {
             JsonObject(mapOf("display_name" to JsonPrimitive("Ana Maria"))),
             entry.opData!!.jsonValues,
         )
+    }
+
+    @Test
+    fun `updating the preferred language changes the local row and queues a PATCH`() = runBlocking {
+        assertEquals(CoreResult.Success(Unit), repository.updatePreferredLanguage("en"))
+
+        val profile = withTimeout(READ_TIMEOUT) {
+            repository.myProfile.first { it?.preferredLanguage == "en" }
+        }!!
+        assertEquals(local.userId, profile.id)
+        assertEquals("Ana", profile.displayName)
+
+        val entry = local.database.nextTransaction().crud.single()
+        assertEquals(UpdateType.PATCH, entry.op)
+        assertEquals(PROFILES_TABLE, entry.table)
+        assertEquals(local.userId, entry.id)
+        assertEquals(
+            JsonObject(mapOf("preferred_language" to JsonPrimitive("en"))),
+            entry.opData!!.jsonValues,
+        )
+    }
+
+    @Test
+    fun `a language code the server does not accept is rejected before any write`() = runBlocking {
+        assertEquals(
+            CoreResult.Failure(
+                CoreError.Invalid(setOf(CoreField.PROFILE_PREFERRED_LANGUAGE)),
+            ),
+            repository.updatePreferredLanguage("fr"),
+        )
+        assertNull(local.database.getNextCrudTransaction())
     }
 
     @Test

@@ -99,6 +99,7 @@
     <string name="patient_error_escalation">Indique um número inteiro de minutos entre 0 e 1440.</string>
     <string name="patient_error_missed">Indique um número inteiro de minutos entre 1 e 1440.</string>
     <string name="patient_error_note">Mantenha a nota com 2000 caracteres ou menos.</string>
+    <string name="patient_needs_primary">Precisa de um cuidador principal — escolha quem recebe os lembretes.</string>
 
     <!-- M2: Mais. -->
     <string name="more_title">Mais</string>
@@ -116,7 +117,7 @@
     <string name="sign_out_confirm_body">Terá de iniciar sessão com o Google novamente para ver a informação de saúde da sua família.</string>
     <string name="sign_out_confirm_action">Terminar sessão</string>
     <string name="settings_language_title">Idioma</string>
-    <string name="settings_language_body">Aplica-se a este dispositivo.</string>
+    <string name="settings_language_body">Usa-se neste telemóvel e nas notificações que recebe.</string>
     <string name="language_system">Predefinição do sistema</string>
     <string name="language_portuguese">Português (Portugal)</string>
     <string name="language_english">English</string>
@@ -145,7 +146,7 @@
     <string name="family_circle_invite_copied">Código copiado.</string>
     <string name="family_circle_invite_share">Partilhar</string>
     <string name="family_circle_invite_share_chooser">Partilhar código de convite</string>
-    <string name="family_circle_invite_share_message">Entra no meu círculo familiar na aplicação Family Care.\n\n1. Instale a aplicação Family Care.\n2. Inicie sessão com a conta Google %1$s.\n3. No primeiro ecrã, ou em Mais, escolha «Entrar com um código de convite».\n4. Cole este código: %2$s</string>
+    <string name="family_circle_invite_share_message">Entra no meu círculo familiar na aplicação Family Care.\n\n1. Vou enviar-lhe a aplicação Family Care à parte.\n2. Inicie sessão com a conta Google %1$s.\n3. Depois de iniciar sessão, o primeiro ecrã da aplicação oferece «Entrar com um código de convite».\n4. Cole este código: %2$s</string>
     <string name="family_circle_pending_title">Convites pendentes</string>
     <string name="family_circle_pending_empty">Não há convites pendentes.</string>
     <string name="family_circle_pending_expires">Expira a %1$s</string>

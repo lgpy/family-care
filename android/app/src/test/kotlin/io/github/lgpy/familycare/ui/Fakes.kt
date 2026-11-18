@@ -168,9 +168,17 @@ class FakeProfileRepository : ProfileRepository {
     var updateResult: CoreUnitResult = CoreResult.Success(Unit)
     val updates = mutableListOf<String>()
 
+    var languageUpdateResult: CoreUnitResult = CoreResult.Success(Unit)
+    val languageUpdates = mutableListOf<String>()
+
     override suspend fun updateDisplayName(displayName: String): CoreUnitResult {
         updates += displayName
         return updateResult
+    }
+
+    override suspend fun updatePreferredLanguage(preferredLanguage: String): CoreUnitResult {
+        languageUpdates += preferredLanguage
+        return languageUpdateResult
     }
 }
 

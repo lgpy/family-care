@@ -43,6 +43,7 @@ Each decision records what was decided and why. To change one, add a new entry t
 
 ### D8 — Bilingual: Portuguese (Portugal) and English
 - **Decision:** All UI text translatable from day one. Per-user language. Notifications generated in the recipient's language. User-entered data is never translated.
+- **Where the language lives:** `core.profiles.preferred_language` (one of `pt-PT`, `en`; `not null`). Choosing a language in More changes this phone's app language **and** writes the profile. Until someone chooses a language in the app, the phone's own language wins and is written to the profile; the profile is never applied back to a phone (every profile starts as `pt-PT`, so that would switch English phones to Portuguese unasked). "System default" is resolved on the phone before saving (Portuguese → `pt-PT`, anything else → `en`, the app's fallback), because the column cannot hold "follow the phone"; the device keeps following the phone until an explicit choice is made. Rows created by the server default to `pt-PT`.
 - **Why:** Cheap now, painful to retrofit.
 
 ### D9 — Medication model: versioned regimens, derived "missed", stock as a ledger
@@ -98,6 +99,17 @@ Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
 - **Future platforms:** the pure Kotlin domain modules are ready for Kotlin Multiplatform. iOS later: share them (with SwiftUI or Compose Multiplatform screens). Web later: a separate web client (shares the backend; domain logic can be compiled for the web via Kotlin Multiplatform or rewritten).
 - **Trade-off accepted:** web and iOS cost more later than with Flutter.
 - **Unchanged:** everything else (Supabase, PowerSync, local alarms, module rules, security). Dose-slot logic is still duplicated between app (Kotlin) and server (TypeScript), guarded by shared test vectors.
+
+### D23 — Invitations are one-time codes shared as text, not links
+- **Decision:** An invitation is a one-time code (32 Crockford base32 characters) that the owner shares as text through any messaging app. The invitee signs in with the invited Google account and pastes the code on the app's first screen ("Join with an invite code"). This supersedes the "invitations by link" wording in build-plan §M2 and domain/care-circle.md.
+- **Why:** WhatsApp only makes `http(s)` URLs tappable, so a "link" would need a published web page and an App Link domain — more infrastructure than two users need. The code is hashed server-side, bound to the invited email, single-use and expiring, so a URL would add no security. Installing the APK is manual anyway (D18): the inviter sends the app separately, and there is no public URL to point at.
+- **Consequence:** The share message says the app is sent separately and names the exact first-screen step; put a URL back only together with a real download page.
+- **Revisit:** when moving to Google Play (or any public distribution with a stable URL), a link can wrap the same code.
+
+### D24 — Removing a member clears their patient roles
+- **Decision:** When an owner removes a member, the server (`core.remove_member`) clears that user as `primary_caregiver` **and** as `linked_user` of every patient in the circle. If a patient is left with `primary_with_escalation` and no primary caregiver, the app flags it: "Needs a primary caregiver — choose who gets the reminders" in the Patients list and at the top of the patient form, and the form refuses to save until one is chosen.
+- **Why:** A removed member must not keep receiving reminders or stay tied to a patient; leaving the patient silently unreminded would be the dangerous option. Clearing the linked user makes the patient an ordinary patient (the form handles `linked_user = null`), and the flag makes the gap visible until someone chooses.
+- **Server side:** implemented by a backend change in `core.remove_member`; the app side is the domain helper, the flag and the form rule.
 
 ---
 

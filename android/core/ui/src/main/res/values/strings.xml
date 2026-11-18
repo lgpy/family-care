@@ -99,6 +99,7 @@
     <string name="patient_error_escalation">Enter a whole number of minutes between 0 and 1440.</string>
     <string name="patient_error_missed">Enter a whole number of minutes between 1 and 1440.</string>
     <string name="patient_error_note">Keep the note to 2000 characters or fewer.</string>
+    <string name="patient_needs_primary">Needs a primary caregiver — choose who gets the reminders.</string>
 
     <!-- M2: More. -->
     <string name="more_title">More</string>
@@ -116,7 +117,7 @@
     <string name="sign_out_confirm_body">You will need to sign in with Google again to see your family’s health information.</string>
     <string name="sign_out_confirm_action">Sign out</string>
     <string name="settings_language_title">Language</string>
-    <string name="settings_language_body">Applies to this device.</string>
+    <string name="settings_language_body">Used on this phone and for notifications sent to you.</string>
     <string name="language_system">System default</string>
     <string name="language_portuguese">Português (Portugal)</string>
     <string name="language_english">English</string>
@@ -145,7 +146,7 @@
     <string name="family_circle_invite_copied">Code copied.</string>
     <string name="family_circle_invite_share">Share</string>
     <string name="family_circle_invite_share_chooser">Share invite code</string>
-    <string name="family_circle_invite_share_message">Join my family circle on Family Care.\n\n1. Install Family Care.\n2. Sign in with the Google account %1$s.\n3. On the first screen, or in More, choose “Join with an invite code”.\n4. Paste this code: %2$s</string>
+    <string name="family_circle_invite_share_message">Join my family circle on Family Care.\n\n1. I will send you the Family Care app separately.\n2. Sign in with the Google account %1$s.\n3. After signing in, the app’s first screen offers “Join with an invite code”.\n4. Paste this code: %2$s</string>
     <string name="family_circle_pending_title">Pending invitations</string>
     <string name="family_circle_pending_empty">No pending invitations.</string>
     <string name="family_circle_pending_expires">Expires %1$s</string>

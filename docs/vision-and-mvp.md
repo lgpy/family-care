@@ -31,7 +31,7 @@ There is no "patient mode": the app is designed for caregivers.
 ## MVP scope
 
 1. **Accounts and care circle**
-   - Two caregivers, four patient profiles, invitations by link (shared via WhatsApp etc.), accepted by signing in with the invited Google account.
+   - Two caregivers, four patient profiles, invitations by one-time code shared as text (D23), accepted by signing in with the invited Google account.
    - Roles `owner` and `caregiver` (others modelled, not exposed).
    - Reminder policy per patient (see [care-circle](domain/care-circle.md)).
 2. **Medications**

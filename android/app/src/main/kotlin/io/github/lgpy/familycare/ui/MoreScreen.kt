@@ -1,5 +1,6 @@
 package io.github.lgpy.familycare.ui
 
+import android.os.LocaleList
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +39,7 @@ import io.github.lgpy.familycare.core.ui.locale.AppLanguage
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * More: the family circle, the user's own name, account, language, app lock and
@@ -51,7 +53,14 @@ fun MoreScreen(
     modifier: Modifier = Modifier,
 ) {
     val languageController = koinInject<AppLanguageController>()
+    val viewModel = koinViewModel<MoreViewModel>()
     var selectedLanguage by remember { mutableStateOf(languageController.current()) }
+
+    // What "System default" means here, resolved only when the user picks it.
+    val deviceLanguageTags = remember {
+        val locales = LocaleList.getDefault()
+        List(locales.size()) { index -> locales[index].toLanguageTag() }
+    }
 
     val authRepository = koinInject<AuthRepository>()
     val authState by authRepository.state.collectAsState()
@@ -142,8 +151,10 @@ fun MoreScreen(
                         onClick = {
                             if (selectedLanguage != language) {
                                 selectedLanguage = language
-                                // The platform recreates the activity; the new
-                                // locale is picked up by the next composition.
+                                // D8: the account's language follows so the
+                                // server writes notifications in it; the device
+                                // half changes below and recreates the activity.
+                                viewModel.onLanguageChosen(language, deviceLanguageTags)
                                 languageController.set(language)
                             }
                         },

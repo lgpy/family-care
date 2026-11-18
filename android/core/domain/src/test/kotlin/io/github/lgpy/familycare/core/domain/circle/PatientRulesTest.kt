@@ -296,4 +296,44 @@ class PatientRulesTest {
         assertTrue(archived.isArchived)
         assertTrue(archived.validate().isValid)
     }
+
+    // --- Needs a primary caregiver (D24) -----------------------------------
+
+    @Test
+    fun `primary with escalation and no primary caregiver needs one`() {
+        assertTrue(patient().needsPrimaryCaregiver)
+        assertEquals(
+            PatientRules.needsPrimaryCaregiver(ReminderPolicy.PRIMARY_WITH_ESCALATION, null),
+            patient().needsPrimaryCaregiver,
+        )
+    }
+
+    @Test
+    fun `a patient with a primary caregiver does not need one`() {
+        assertFalse(patient(primaryCaregiverId = caregiver.userId).needsPrimaryCaregiver)
+    }
+
+    @Test
+    fun `all caregivers never needs a primary caregiver`() {
+        assertFalse(
+            patient(reminderPolicy = ReminderPolicy.ALL_CAREGIVERS).needsPrimaryCaregiver,
+        )
+        // Even a stale primary is irrelevant: everyone is reminded.
+        assertFalse(
+            patient(
+                reminderPolicy = ReminderPolicy.ALL_CAREGIVERS,
+                primaryCaregiverId = caregiver.userId,
+            ).needsPrimaryCaregiver,
+        )
+    }
+
+    @Test
+    fun `a patient who lost their linked user and primary caregiver needs one`() {
+        // D24: removing a member clears both columns; the patient is now an
+        // ordinary patient with nobody to remind.
+        val afterRemoval = patient(linkedUserId = null, primaryCaregiverId = null)
+
+        assertNull(afterRemoval.linkedUserId)
+        assertTrue(afterRemoval.needsPrimaryCaregiver)
+    }
 }

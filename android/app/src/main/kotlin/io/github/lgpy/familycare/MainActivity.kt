@@ -9,6 +9,7 @@ import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.navigation.FamilyCareApp
 import io.github.lgpy.familycare.ui.AuthGate
 import io.github.lgpy.familycare.ui.circle.CircleGate
+import io.github.lgpy.familycare.ui.profile.ProfileLanguageSync
 import org.koin.compose.koinInject
 
 /**
@@ -35,6 +36,9 @@ class MainActivity : FragmentActivity() {
                     // then the care-circle gate (M2). A signed-out user, or one
                     // who belongs to no family, never sees app content.
                     AuthGate(activity = this@MainActivity) {
+                        // D8: a new phone follows the account's language until
+                        // the user chooses one here.
+                        ProfileLanguageSync()
                         CircleGate {
                             FamilyCareApp()
                         }
