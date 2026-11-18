@@ -11,12 +11,13 @@ enabled = true
 port = 54321
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
-# `core` and `meds` are exposed explicitly despite auto_expose_new_tables: the
-# app's writes go through PostgREST (PowerSync's Supabase connector), and they
-# are not the `public` schema, so they have to be listed here. Access is still
+# `core`, `meds`, `appointments` and `info` are exposed explicitly despite
+# auto_expose_new_tables: the app's writes go through PostgREST (PowerSync's
+# Supabase connector), and they are not the `public` schema, so they have to be
+# listed here. Access is still
 # denied by default: the migrations grant only what RLS policies allow (see §3,
 # D13).
-schemas = ["public", "graphql_public", "core", "meds"]
+schemas = ["public", "graphql_public", "core", "meds", "appointments", "info"]
 # Extra schemas to add to the search_path of every request.
 extra_search_path = ["public", "extensions"]
 # The maximum number of rows returned from a view, table, or stored procedure. Limits payload size
@@ -405,10 +406,11 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
-# M4/M5 push functions. pg_net cannot send a Supabase JWT, so the gateway's JWT
+# M4-M6 push functions. pg_net cannot send a Supabase JWT, so the gateway's JWT
 # verification is off for these and they authenticate with the shared secret
 # header (X-Cron-Secret) themselves - see backend/README.md
-# "Deploying the M4 push functions" and "Deploying the M5 stock-low function".
+# "Deploying the M4 push functions", "Deploying the M5 stock-low function" and
+# "Deploying the M6 appointment-changed function".
 [functions.escalate]
 verify_jwt = false
 
@@ -416,6 +418,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.stock-low]
+verify_jwt = false
+
+[functions.appointment-changed]
 verify_jwt = false
 
 [analytics]

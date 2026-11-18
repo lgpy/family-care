@@ -56,7 +56,7 @@ Nothing in this repository links to a remote project: linking and `db push` are
 done by hand, on purpose, so a stray command cannot touch prod. Dev holds
 invented test data only — never real health data.
 
-## What exists so far (M1–M5)
+## What exists so far (M1–M6)
 
 M1 (walking skeleton):
 
@@ -70,8 +70,10 @@ M1 (walking skeleton):
   introduced live on in `tests/core_security_test.sql`.
 - The `powersync` publication and the Sync Streams config in `../powersync/`.
 - `core` and `meds` are listed in `api.schemas` in `config.toml` so PostgREST
-  can serve them; access is still governed by the grants and RLS. That file
-  only configures the local stack: on a **hosted** project add both under
+  can serve them; access is still governed by the grants and RLS. From M6 the
+  same list also has `appointments` and `info`. That file
+  only configures the local stack: on a **hosted** project add `core`, `meds`,
+  `appointments` and `info` under
   Dashboard → Integrations → Data API → Settings → *Exposed schemas* (done on
   dev and prod), or the app and edge functions get `PGRST106 Invalid schema`. Because they
   are not `public`, a REST client must name the schema in `Accept-Profile`
@@ -400,6 +402,107 @@ Do this on **dev** first, never against prod without the build-plan §5 gate.
    select * from meds.stock_alerts;
    ```
 
+## M6 (appointments and patient info)
+
+Database — `migrations/20261122120000_appointments_and_info.sql`. Two
+independent modules in their own schemas (D5), each with its own grants, policies,
+audit trigger and publication membership. The appointment **change push**
+(D27/D29) is a separate migration (task 2): nothing here posts to pg_net.
+
+- `appointments.appointments`: one row per appointment. `kind` is
+  `appointments.appointment_kind` (`consultation`, `blood_test`, `exam`,
+  `checkup`, `other`); `starts_local` is a whole-minute wall-clock timestamp and
+  `time_zone` an IANA zone (the `meds.regimens` convention, so a DST change or a
+  trip abroad never moves an appointment). Optional `title`, `duration_minutes`
+  (1..1440), `place`, `doctor`, `preparation`, `notes`, `companion_user_id`,
+  `follow_up_of` and `cancelled_at`; text lengths follow the table in
+  `docs/domain/appointments.md`.
+- Appointment rules live in `appointments.check_appointment()` (BEFORE
+  INSERT/UPDATE): the time zone must exist in `pg_timezone_names`; `created_by`
+  is the caller on insert when authenticated (no spoofing); `patient_id` never
+  changes; on update `updated_at = now()` and `updated_by = auth.uid()`;
+  `companion_user_id` must be an owner or caregiver of the patient's circle (a
+  viewer or an outsider is refused, null means everyone is reminded);
+  `follow_up_of` must be another appointment of the same patient.
+- Cancelling is `cancelled_at`, not a delete (the history keeps cancelled
+  appointments). A cancelled row can still be edited; the audit log keeps every
+  change.
+- `info.patient_info`: one row per patient, `id = patient_id` (deterministic, so
+  two offline creates converge), `patient_id` unique and cascading with the
+  patient. `allergies` and `conditions` are jsonb arrays (0..30 entries, 1..100 /
+  1..200 characters), `emergency_contacts` is a jsonb array of 0..5
+  `{name, relationship, phone}`, `sns_number` is exactly 9 digits,
+  `health_centre_phone` allows digits, spaces, `+`, `-`, `(`, `)`. The jsonb
+  rules are immutable functions (`info.text_list_is_valid`, `info.contacts_are_valid`)
+  used by CHECK constraints, like `meds.times_are_valid`. `info.check_patient_info()`
+  keeps `id`/`patient_id` immutable and sets `updated_at`/`updated_by` on update.
+- RLS mirrors the other modules through `core.can(patient_id, action)`: any
+  member reads, owner/caregiver inserts and updates, only an owner deletes
+  (appointments too — the app cancels instead). RLS is enabled **and forced**;
+  nothing is granted to `anon`/`PUBLIC`; `authenticated` gets
+  `select/insert/update/delete`. `service_role` gets `USAGE` on the schema and
+  `SELECT` on `appointments.appointments` for the M6 change push.
+- Audit (D14): `appointments.audit_row_change()` and `info.audit_row_change()`
+  write `core.audit_log` with the actor and the patient/circle derived from
+  `patient_id`. They live in their own schemas (not `core`) for the module rule.
+- The `powersync` publication adds `appointments.appointments` and
+  `info.patient_info`; the streams `appointments` and `patient_info` in
+  `../powersync/sync-config.yaml` walk patient → circle → membership exactly like
+  `patients`, auto-subscribed, so every member (viewers included) has them
+  offline.
+- `appointments` and `info` are in `api.schemas` in `config.toml`. On the
+  **hosted** projects they must also be added under
+  Dashboard → Integrations → Data API → Settings → *Exposed schemas*, or every
+  request gets `PGRST106 Invalid schema`.
+- Change push — `migrations/20261122130000_appointment_push.sql`
+  (docs/domain/appointments.md "Change push"). `appointments.notify_appointment_changed()`
+  (security definer, `search_path = ''`) is an AFTER INSERT/UPDATE trigger that
+  posts `{appointment_id, actor}` through the M4 `core.post_to_function` to the
+  URL in Vault under `appointment_changed_url`. On update it fires only when
+  `starts_local`, `time_zone`, `place`, `companion_user_id` or `cancelled_at`
+  changed, and it skips appointments that started more than a day ago
+  (`starts_local` read in the appointment's own `time_zone`). Like the dose
+  trigger it is best effort: no Vault, no pg_net or no secret is a silent
+  no-op, and it never raises.
+- `functions/appointment-changed/index.ts`: same shared-secret check and
+  service-role reads as `dose-confirmed`, plus `_shared/appointmentChanged.ts`
+  (pure planning, unit-tested). It reads the appointment → patient → circle,
+  takes the circle's owners and caregivers minus the actor (`created_by` on
+  insert, `updated_by` on update), sends a visible push per recipient in their
+  `preferred_language` — channel `appointment_updates`, tag
+  `appt-<appointment_id>`, `data` = `{"type":"appointment_changed"}` — deletes
+  dead tokens and returns counts. A missing appointment (cascade) returns zeros.
+
+### Deploying the M6 appointment-changed function (human steps)
+
+Do this on **dev** first, never against prod without the build-plan §5 gate.
+
+1. The secrets are the M4 ones: `ESCALATION_CRON_SECRET` and
+   `FCM_SERVICE_ACCOUNT_JSON` are already in the function environment, so
+   nothing new goes to `secrets set`.
+2. Store the function URL in Vault (SQL editor on dev). The shared secret is the
+   existing `push_cron_secret`, whose value is `ESCALATION_CRON_SECRET`:
+
+   ```sql
+   select vault.create_secret('https://<dev-ref>.supabase.co/functions/v1/appointment-changed', 'appointment_changed_url');
+   ```
+
+   Without `appointment_changed_url` the trigger is a silent no-op, which looks
+   like "the other phones were never told", not like an error.
+3. Deploy. `verify_jwt = false` is set for it in `config.toml` for the same
+   reason as the M4/M5 functions (pg_net cannot send a Supabase JWT; the
+   function checks the shared secret itself).
+
+   ```bash
+   npx supabase@latest functions deploy appointment-changed --project-ref <dev-ref>
+   ```
+
+4. Smoke test on dev: insert an appointment a few days ahead for a circle with
+   two devices and watch
+   `select * from net._http_response order by id desc limit 5;` plus the function
+   logs in the dashboard. An update of `notes` must produce no request; changing
+   `starts_local` must produce one.
+
 ## Tests
 
 `npx supabase@latest test db` runs every `*.sql` file in `supabase/tests/` inside
@@ -419,7 +522,7 @@ append-only against clients and the table owner).
 at a time, iterating `pg_class`: at least one table exists, RLS is enabled
 **and forced** on every `core` table, nothing is granted to `PUBLIC` or `anon`,
 `authenticated` may use the schema, the `powersync` publication contains
-exactly the seven synced tables, and the M1 `sync_probe` table is gone while
+exactly the ten synced tables, and the M1 `sync_probe` table is gone while
 `core.set_updated_at()` remains.
 
 `core_m2_fixes_test.sql` covers the follow-up migration: removed-member cleanup
@@ -457,6 +560,28 @@ unreadable for every API role, the exact sync-stream query as each user, the
 audit row's derived patient/circle/actor, the Vault no-op and queued request,
 and the `stock_low_daily` cron job.
 
+`appointments_test.sql` covers M6 appointments: the enum values, forced RLS and
+privileges, the text/minutes/duration/time-zone checks, `patient_id`
+immutability, `created_by` spoofing, the companion (viewer and outsider refused)
+and follow-up (self and other patient refused) rules, `updated_by` on update,
+RLS per role (delete only for an owner), the exact sync-stream query as each
+user, and the audit rows for insert/update/delete.
+
+`appointment_push_test.sql` covers the M6 change push: the trigger is a no-op
+without Vault (the insert still succeeds, nothing is queued), an insert queues
+exactly one pg_net request to `appointment_changed_url` with the Vault secret
+header and `{appointment_id, actor}` (`actor` = `created_by`), a `notes`-only
+update queues nothing, `starts_local` and `cancelled_at` updates queue one each
+(`actor` = `updated_by`), and an appointment over a day in the past queues
+nothing.
+
+`info_test.sql` covers M6 patient info: forced RLS and privileges, `id =
+patient_id` and the one-row-per-patient rule, both immutability rules, every
+validator (allergy/condition counts and lengths, the SNS number, the phone
+charset, the emergency contacts), the defaults, `updated_by` on update, RLS per
+role (delete only for an owner), the exact sync-stream query as each user, and
+the audit rows for insert/update/delete.
+
 The Deno suite in `supabase/functions/` is the D22 guard: every case in
 `shared/test-vectors/dose-slots.json`, `dose-status.json` and `stock.json` is
 asserted against the TypeScript port, plus the pure escalation selection
@@ -467,8 +592,9 @@ viewers excluded, language per recipient, zero devices), the error-log helper an
 the FCM sender against a mocked `fetch` (JWT signature, token cache, dead-token
 and retry classification).
 
-`core_care_circle_test.sql` and `meds_test.sql` also run the **exact Sync
-Streams queries** from `../powersync/sync-config.yaml` as each test user, so the
+`core_care_circle_test.sql`, `meds_test.sql`, `stock_test.sql` and (M6)
+`appointments_test.sql` / `info_test.sql` also run the **exact Sync Streams
+queries** from `../powersync/sync-config.yaml` as each test user, so the
 read half and the write half are tested against the same scenarios.
 `../powersync/check-sync-tests.sh` extracts every `query:` from the YAML and
 fails if any of them (with `auth.user_id()` replaced by `(select auth.uid())`)
@@ -479,4 +605,4 @@ CI runs the same commands (the drift check, `supabase test db` and `db lint`) in
 the `database` job of `.github/workflows/ci.yml`, so a broken schema change or a
 stream/test mismatch fails the pull request. The `functions` job installs Deno,
 runs `deno test --allow-read` (the shared vectors, escalation selection, stock
-planning and FCM sender) and type-checks the three deployable functions.
+planning and FCM sender) and type-checks the four deployable functions.

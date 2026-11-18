@@ -113,8 +113,9 @@ select ok((select relrowsecurity and relforcerowsecurity
 select is(
   (select string_agg(schemaname || '.' || tablename, ',' order by schemaname, tablename)
      from pg_publication_tables where pubname = 'powersync'),
-  'core.care_circles,core.memberships,core.patients,core.profiles,'
-  'meds.dose_log,meds.medications,meds.regimens,meds.stock_movements',
+  'appointments.appointments,core.care_circles,core.memberships,core.patients,'
+  'core.profiles,info.patient_info,meds.dose_log,meds.medications,'
+  'meds.regimens,meds.stock_movements',
   'the powersync publication holds exactly the synced tables: no device token and no server ledgers');
 
 select is(

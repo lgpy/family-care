@@ -127,19 +127,21 @@ prod; the quarterly test above is the rehearsal.
      --command 'SET session_replication_role = replica' --file data.sql
    ```
 
-   The schema includes the `core`, `meds` and `powersync` publication objects;
-   the data includes `auth.users`, so people can sign in with the same Google
-   accounts. Do **not** run `supabase db push` or `db reset` into this database:
-   the schema is already the one in the backup, and the migration history is not
-   in it. From then on, apply only new migrations by hand.
+   The schema includes the `core`, `meds`, `appointments`, `info` and `powersync`
+   publication objects; the data includes `auth.users`, so people can sign in
+   with the same Google accounts. Do **not** run `supabase db push` or
+   `db reset` into this database: the schema is already the one in the backup,
+   and the migration history is not in it. From then on, apply only new
+   migrations by hand.
 
    **Expose the schemas.** `config.toml`'s `api.schemas` only applies to the
    local stack; a hosted project exposes `public` and `graphql_public` only.
    Dashboard → Integrations → Data API → Settings → *Exposed schemas*: add
-   `core` and `meds` (4 of 4), Save. Without it the app and the edge functions
-   fail with `PGRST106 Invalid schema` (found while setting up prod,
-   2026-11-18). Check: an anonymous request with `Accept-Profile: meds` must
-   answer `permission denied for schema meds`, not `Invalid schema`.
+   `core`, `meds`, `appointments` and `info` (4 of 4 each), Save. Without it the
+   app and the edge functions fail with `PGRST106 Invalid schema` (found while
+   setting up prod, 2026-11-18). Check: an anonymous request with
+   `Accept-Profile: meds` must answer `permission denied for schema meds`, not
+   `Invalid schema`.
 4. **Vault secrets.** The CLI's dump excludes the `vault` schema entirely, so
    the secret values are not in the backup and must be re-created deliberately.
    In the SQL editor:
@@ -148,14 +150,16 @@ prod; the quarterly test above is the rehearsal.
    select vault.create_secret('https://<new-ref>.supabase.co/functions/v1/escalate', 'escalate_url');
    select vault.create_secret('https://<new-ref>.supabase.co/functions/v1/dose-confirmed', 'dose_confirmed_url');
    select vault.create_secret('https://<new-ref>.supabase.co/functions/v1/stock-low', 'stock_low_url');
+   select vault.create_secret('https://<new-ref>.supabase.co/functions/v1/appointment-changed', 'appointment_changed_url');
    select vault.create_secret('<ESCALATION_CRON_SECRET>', 'push_cron_secret');
    ```
 
    The names come from `core.push_setting()` in
-   `backend/supabase/migrations/20261120120000_push_and_escalation.sql` and
-   `20261121120000_stock.sql` (`stock_low_url`). Without them the webhooks and
-   the daily low-stock job are silent no-ops, which looks like "push stopped
-   working", not like an error.
+   `backend/supabase/migrations/20261120120000_push_and_escalation.sql`,
+   `20261121120000_stock.sql` (`stock_low_url`) and
+   `20261122130000_appointment_push.sql` (`appointment_changed_url`). Without
+   them the webhooks and the daily low-stock job are silent no-ops, which looks
+   like "push stopped working", not like an error.
 5. **pg_cron jobs.** `cron` is not part of a database dump, so re-check and
    re-create:
 
@@ -182,16 +186,28 @@ prod; the quarterly test above is the rehearsal.
    npx supabase@latest secrets set --project-ref <new-ref> \
      FCM_SERVICE_ACCOUNT_JSON="$(cat /path/to/service-account.json)" \
      ESCALATION_CRON_SECRET="<the value stored in Vault above>"
-   npx supabase@latest functions deploy escalate dose-confirmed stock-low --project-ref <new-ref>
+   npx supabase@latest functions deploy escalate dose-confirmed stock-low appointment-changed --project-ref <new-ref>
    ```
 
    `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are supplied by the runtime.
-   `verify_jwt = false` for all three is already in `backend/supabase/config.toml`.
+   `verify_jwt = false` for all four is already in `backend/supabase/config.toml`.
 7. **PowerSync.** Create/point the instance at the new project: replication role
    `powersync_role`, database connection, Supabase Auth + JWKS, deploy
    `backend/powersync/sync-config.yaml` (steps in
-   `backend/powersync/README.md`). Test that a sync with a real test account
-   returns rows.
+   `backend/powersync/README.md`). The M6 schemas need the same grants as
+   `core`/`meds` (a plain dump carries them, but a hand-made role does not):
+
+   ```sql
+   grant usage on schema appointments to powersync_role;
+   grant select on all tables in schema appointments to powersync_role;
+   grant usage on schema info to powersync_role;
+   grant select on all tables in schema info to powersync_role;
+   alter default privileges in schema appointments grant select on tables to powersync_role;
+   alter default privileges in schema info grant select on tables to powersync_role;
+   ```
+
+   Test that a sync with a real test account returns rows (including the
+   appointments and patient-info streams).
 8. **Google sign-in.** In Google Cloud, make sure the OAuth client for the
    release key still exists and add the new redirect URL if Supabase asks for
    one; in the new Supabase project enable the Google provider with the Web

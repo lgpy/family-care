@@ -64,6 +64,16 @@ stock_movements:
                                         WHERE circle_id IN (
                                           SELECT circle_id FROM "core"."memberships"
                                           WHERE user_id = auth.user_id())))
+appointments: SELECT * FROM "appointments"."appointments"
+              WHERE patient_id IN (SELECT id FROM "core"."patients"
+                                   WHERE circle_id IN (
+                                     SELECT circle_id FROM "core"."memberships"
+                                     WHERE user_id = auth.user_id()))
+patient_info: SELECT * FROM "info"."patient_info"
+              WHERE patient_id IN (SELECT id FROM "core"."patients"
+                                   WHERE circle_id IN (
+                                     SELECT circle_id FROM "core"."memberships"
+                                     WHERE user_id = auth.user_id()))
 ```
 
 (Shown wrapped for reading; each `query:` is one line in the file.)
@@ -74,9 +84,10 @@ stock_movements:
 - The access rule is `core.memberships`, mirroring `core.circle_role()` /
   `core.can()` in the database (D13): a user downloads exactly the circles they
   belong to, all memberships and patient rows of those circles, the profiles of
-  co-members, and the medications/regimens/dose log of those patients. A removed
-  member stops matching the inner subquery, so their data leaves the phone on
-  the next sync (T7).
+  co-members, and the medications/regimens/dose log of those patients, plus the
+  M6 appointments and patient info of those patients. A removed member stops
+  matching the inner subquery, so their data leaves the phone on the next sync
+  (T7).
 - `dose_log` is synced without a time window for now. It is append-only and
   grows forever, so a later milestone should bound it (e.g. the last few months
   of `scheduled_local`) in both the stream and its test.
@@ -129,8 +140,9 @@ Self-hosted PowerSync instead reads the same file through its instance config:
 
 Client-side use (Android): auto-subscribed streams need no explicit subscribe;
 read the local tables `care_circles`, `memberships`, `profiles`, `patients`,
-`medications`, `regimens` and `dose_log`. Every synced table has a primary key
-named `id` (uuid) because PowerSync requires that name.
+`medications`, `regimens`, `dose_log`, `stock_movements`, `appointments` and
+`patient_info`. Every synced table has a primary key named `id` (uuid) because
+PowerSync requires that name.
 
 ## Manual setup: replication role (a secret, so not a migration)
 
@@ -152,11 +164,17 @@ grant usage on schema core to powersync_role;
 grant select on all tables in schema core to powersync_role;
 grant usage on schema meds to powersync_role;
 grant select on all tables in schema meds to powersync_role;
+grant usage on schema appointments to powersync_role;
+grant select on all tables in schema appointments to powersync_role;
+grant usage on schema info to powersync_role;
+grant select on all tables in schema info to powersync_role;
 
 -- Cover tables added by future migrations (they are created by the `postgres`
 -- role, which is the role that must own this default privilege).
 alter default privileges in schema core grant select on tables to powersync_role;
 alter default privileges in schema meds grant select on tables to powersync_role;
+alter default privileges in schema appointments grant select on tables to powersync_role;
+alter default privileges in schema info grant select on tables to powersync_role;
 ```
 
 `bypassrls` is required because PowerSync reads rows for *many* users from one
@@ -172,9 +190,10 @@ added after `alter default privileges` and needs an explicit `grant select`.
 Build-plan §4 lists "sync-rule tests: test users download exactly what they
 should" as its own level of testing. Reads come from this file and writes from
 RLS, so the two rule sets are tested against the same scenarios
-(security-and-privacy §3): `supabase/tests/core_care_circle_test.sql` and
-`supabase/tests/meds_test.sql` execute the **exact queries above** as each test
-user (substituting `auth.user_id()` with
+(security-and-privacy §3): `supabase/tests/core_care_circle_test.sql`,
+`supabase/tests/meds_test.sql`, `supabase/tests/stock_test.sql` and (M6)
+`supabase/tests/appointments_test.sql` / `info_test.sql` execute the **exact
+queries above** as each test user (substituting `auth.user_id()` with
 `(select auth.uid())`, which reads the same JWT `sub` claim; the tests set
 `request.jwt.claims` and run with RLS bypassed, as the replication role does).
 
