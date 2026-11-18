@@ -7,4 +7,7 @@ plugins {
 // it uses nothing but the Kotlin standard library (and tests).
 dependencies {
     api(project(":core:domain"))
+
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }

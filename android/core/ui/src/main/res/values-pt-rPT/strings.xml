@@ -115,6 +115,45 @@
     <string name="patient_timeline_medication_changed_detail">Nova dose ou horário</string>
     <string name="patient_timeline_medication_stopped">Parou %1$s</string>
 
+    <!-- M6/D29: informação do doente (docs/domain/patient-info.md). -->
+    <string name="patient_info_tab_title">Informação</string>
+    <string name="patient_info_allergies_banner">Alergias: %1$s</string>
+    <string name="patient_info_conditions_line">Doenças: %1$s</string>
+    <string name="patient_info_list_separator">" · "</string>
+    <string name="patient_info_allergies_title">Alergias</string>
+    <string name="patient_info_conditions_title">Doenças</string>
+    <string name="patient_info_sns_label">Número de utente</string>
+    <string name="patient_info_doctor_label">Médico de família</string>
+    <string name="patient_info_centre_label">Centro de saúde</string>
+    <string name="patient_info_centre_phone_label">Telefone do centro de saúde</string>
+    <string name="patient_info_contacts_title">Contactos de emergência</string>
+    <string name="patient_info_notes_title">Notas</string>
+    <string name="patient_info_empty">Ainda não há informação médica registada.</string>
+    <string name="patient_info_edit">Editar</string>
+    <string name="patient_info_edit_title">Editar informação</string>
+    <string name="patient_info_save">Guardar</string>
+    <string name="patient_info_add">Adicionar</string>
+    <string name="patient_info_remove">Remover %1$s</string>
+    <string name="patient_info_add_allergy">Adicionar alergia</string>
+    <string name="patient_info_add_condition">Adicionar doença</string>
+    <string name="patient_info_add_contact">Adicionar contacto</string>
+    <string name="patient_info_contact">Contacto %1$d</string>
+    <string name="patient_info_remove_contact">Remover este contacto</string>
+    <string name="patient_info_contact_name">Nome</string>
+    <string name="patient_info_contact_relationship">Relação (opcional)</string>
+    <string name="patient_info_contact_phone">Telefone</string>
+    <string name="patient_info_not_allowed">Apenas proprietários e cuidadores podem editar esta informação.</string>
+    <string name="patient_info_save_failed">Não foi possível guardar. Tente novamente.</string>
+    <string name="patient_info_error_allergies">Use até 30 alergias, com 100 caracteres cada.</string>
+    <string name="patient_info_error_conditions">Use até 30 doenças, com 200 caracteres cada.</string>
+    <string name="patient_info_error_sns">Introduza os 9 dígitos do número de utente.</string>
+    <string name="patient_info_error_text_length">Use no máximo %1$d caracteres.</string>
+    <string name="patient_info_error_phone">Use dígitos, espaços, +, -, ( e ), até 30 caracteres.</string>
+    <string name="patient_info_error_contacts">Adicione no máximo 5 contactos.</string>
+    <string name="patient_info_error_contact_name">Introduza um nome com 100 caracteres no máximo.</string>
+    <string name="patient_info_error_relationship">Use no máximo 50 caracteres na relação.</string>
+    <string name="patient_info_error_notes">Use no máximo 2000 caracteres nas notas.</string>
+
     <!-- M2: Mais. -->
     <string name="more_title">Mais</string>
     <string name="more_family_circle">Círculo familiar</string>
