@@ -166,7 +166,7 @@ data class DosesTodayUiState(
 )
 
 /** Translates one domain group into what the card draws. */
-private fun TodayDoseGroup.toUi(
+internal fun TodayDoseGroup.toUi(
     patientName: String,
     memberNames: Map<String, String?>,
     myUserId: String?,

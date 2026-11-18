@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.navigation
 
 import io.github.lgpy.familycare.feature.medications.MedicationsRoutes
+import io.github.lgpy.familycare.feature.medications.reminders.ReminderRoutes
 
 /**
  * The routes of the app shell (M2, M3).
@@ -20,6 +21,7 @@ enum class Destination(val route: String) {
     Patients("patients"),
     More("more"),
     FamilyCircle("more/family-circle"),
+    Reminders(ReminderRoutes.SETUP),
     YourName("more/your-name"),
     PatientNew("patients/new"),
     PatientEdit("patients/{$PATIENT_ID_ARG}"),

@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.di
 
 import android.os.SystemClock
+import android.app.AlarmManager
 import io.github.lgpy.familycare.BuildConfig
 import io.github.lgpy.familycare.auth.GoogleSignIn
 import io.github.lgpy.familycare.core.data.DataLayer
@@ -15,10 +16,16 @@ import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
 import io.github.lgpy.familycare.feature.medications.dashboard.MedicationsDashboardCard
+import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionDashboardCard
+import io.github.lgpy.familycare.feature.medications.dashboard.ReminderHealthDashboardCard
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationsData
 import io.github.lgpy.familycare.feature.medications.medicationsModule
+import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
+import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealthChecker
+import io.github.lgpy.familycare.feature.medications.reminders.ReminderSchedulerCoordinator
+import io.github.lgpy.familycare.feature.medications.reminders.ScheduledRemindersStore
 import io.github.lgpy.familycare.ui.MoreViewModel
 import io.github.lgpy.familycare.ui.SignInViewModel
 import io.github.lgpy.familycare.ui.TodayViewModel
@@ -28,6 +35,9 @@ import io.github.lgpy.familycare.ui.patients.PatientFormViewModel
 import io.github.lgpy.familycare.ui.patients.PatientsViewModel
 import io.github.lgpy.familycare.ui.profile.YourNameViewModel
 import io.github.lgpy.familycare.ui.sync.UploadRejectionViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
@@ -93,7 +103,38 @@ val appModule: Module = module {
     // card, the shell renders whatever was registered, in order. Today imports no
     // feature module to do it.
     single<DashboardCard> { MedicationsDashboardCard() }
+    single<DashboardCard> { NeedsAttentionDashboardCard() }
+    single<DashboardCard> { ReminderHealthDashboardCard() }
     single { DashboardCards(getAll<DashboardCard>()) }
+
+    // M4 dose reminders (D4/D19/D25). The scheduler, its local alarm index and
+    // the health check are app-wide singletons: receivers reach them through
+    // Koin after `FamilyCareApplication` has started it.
+    single { ScheduledRemindersStore(androidContext()) }
+    single {
+        DoseReminderScheduler(
+            context = androidContext(),
+            medicationRepository = get(),
+            doseLogRepository = get(),
+            patientRepository = get(),
+            careCircleRepository = get(),
+            authRepository = get(),
+            store = get(),
+            alarmManager = androidContext().getSystemService(AlarmManager::class.java),
+        )
+    }
+    single { ReminderHealthChecker(androidContext(), get(), get()) }
+    single {
+        ReminderSchedulerCoordinator(
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            scheduler = get(),
+            medicationRepository = get(),
+            doseLogRepository = get(),
+            patientRepository = get(),
+            careCircleRepository = get(),
+            authRepository = get(),
+        )
+    }
 
     // The medications module's view models. Included here so the app stays the
     // only place that knows which modules exist.

@@ -12,6 +12,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -38,6 +39,7 @@ import io.github.lgpy.familycare.ui.circle.FamilyCircleScreen
 import io.github.lgpy.familycare.ui.patients.PatientFormScreen
 import io.github.lgpy.familycare.ui.patients.PatientsScreen
 import io.github.lgpy.familycare.ui.profile.YourNameScreen
+import io.github.lgpy.familycare.ui.reminders.RemindersScreen
 import io.github.lgpy.familycare.ui.sync.UploadRejectionBanner
 
 /**
@@ -56,11 +58,22 @@ import io.github.lgpy.familycare.ui.sync.UploadRejectionBanner
 @Composable
 fun FamilyCareApp(
     modifier: Modifier = Modifier,
+    initialRoute: String? = null,
+    onInitialRouteOpened: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = Destination.topLevel.any { it.route == currentRoute }
+
+    // A dose notification opens its dose-slot screen, but only once the lock,
+    // sign-in and circle gates above this composable have let the user in.
+    LaunchedEffect(initialRoute) {
+        if (!initialRoute.isNullOrBlank() && initialRoute != currentRoute) {
+            navController.navigate(initialRoute) { launchSingleTop = true }
+            onInitialRouteOpened()
+        }
+    }
 
     Scaffold(
         modifier = modifier,
@@ -128,12 +141,18 @@ fun FamilyCareApp(
                     onOpenFamilyCircle = {
                         navController.navigate(Destination.FamilyCircle.route)
                     },
+                    onOpenReminders = {
+                        navController.navigate(Destination.Reminders.route)
+                    },
                     onOpenYourName = { navController.navigate(Destination.YourName.route) },
                     onOpenAbout = { navController.navigate(Destination.About.route) },
                 )
             }
             composable(Destination.FamilyCircle.route) {
                 FamilyCircleScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Destination.Reminders.route) {
+                RemindersScreen(onBack = { navController.popBackStack() })
             }
             composable(Destination.YourName.route) {
                 YourNameScreen(onBack = { navController.popBackStack() })

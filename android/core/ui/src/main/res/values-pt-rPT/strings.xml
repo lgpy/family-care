@@ -345,4 +345,63 @@
     <string name="sign_in_in_progress">A iniciar sessão…</string>
     <string name="sign_in_loading">A verificar a sessão…</string>
     <string name="sign_in_failed">Não foi possível iniciar sessão. Tente novamente.</string>
+
+    <!-- M4: lembretes de tomas (D25/D26). -->
+    <string name="reminder_channel_name">Lembretes de tomas</string>
+    <string name="reminder_channel_description">Alarmes para tomas na hora. Não mostram dados de saúde no ecrã bloqueado.</string>
+    <string name="reminder_notification_title">Toma para dar</string>
+    <string name="reminder_notification_public_title">Family Care · Há uma toma para dar</string>
+    <string name="reminder_notification_text">%1$s · %2$s</string>
+    <string name="reminder_action_given">Dada ✓</string>
+    <string name="reminder_action_snooze">Adiar 15 min</string>
+    <plurals name="reminder_notification_medications">
+        <item quantity="one">%1$d medicação</item>
+        <item quantity="other">%1$d medicações</item>
+    </plurals>
+
+    <string name="reminders_needs_attention_title">Precisa de atenção</string>
+    <string name="reminders_needs_attention_line">%1$s · %2$s · %3$s · por confirmar</string>
+    <string name="reminders_health_card_title">Os lembretes precisam de atenção</string>
+    <string name="reminders_health_card_body">Este telemóvel pode não o lembrar a tempo. Verifique as definições.</string>
+    <string name="reminders_health_card_action">Corrigir lembretes</string>
+    <string name="reminders_health_notifications">Notificações</string>
+    <string name="reminders_health_exact_alarms">Alarmes exatos</string>
+    <string name="reminders_health_battery">Otimização da bateria</string>
+    <string name="reminders_health_alarms">Alarmes agendados</string>
+
+    <string name="more_reminders">Lembretes</string>
+    <string name="more_reminders_body">Confirme que este telemóvel o consegue lembrar a tempo.</string>
+    <string name="reminders_title">Tornar os lembretes fiáveis</string>
+    <string name="reminders_intro">Os lembretes de tomas são alarmes neste telemóvel. Alguns fabricantes fecham aplicações em segundo plano; estes passos mantêm os lembretes fiáveis.</string>
+    <string name="reminders_checks_title">Verificações</string>
+    <string name="reminders_notifications">As notificações estão permitidas</string>
+    <string name="reminders_channel">O canal de lembretes de tomas está ativo</string>
+    <string name="reminders_exact_alarms">Os alarmes podem ser exatos</string>
+    <string name="reminders_battery">O Family Care não está sujeito à otimização da bateria</string>
+    <string name="reminders_alarms_scheduled">Lembretes agendados: %1$d de %2$d</string>
+    <string name="reminders_next_alarm">Próximo lembrete: %1$s</string>
+    <string name="reminders_no_next_alarm">Ainda não há lembretes agendados.</string>
+    <string name="reminders_all_good">Os lembretes parecem fiáveis neste telemóvel.</string>
+    <string name="reminders_open_notification_settings">Abrir definições de notificações</string>
+    <string name="reminders_request_battery">Permitir bateria em segundo plano</string>
+    <string name="reminders_open_app_details">Abrir definições da aplicação</string>
+    <string name="reminders_honor_title">Honor / MagicOS</string>
+    <string name="reminders_honor_steps">App launch → Gerir manualmente: ativação automática, arranque secundário e execução em segundo plano ligados. Bateria → não otimizar. Permitir notificações e notificações no ecrã bloqueado.</string>
+    <string name="reminders_samsung_title">Samsung / One UI</string>
+    <string name="reminders_samsung_steps">Bateria → Sem restrições. Adicione o Family Care às aplicações que nunca dormem. Desative Colocar aplicações não utilizadas a dormir. Permitir notificações.</string>
+    <string name="reminders_other_title">Este telemóvel</string>
+    <string name="reminders_other_steps">Permita notificações, desative a otimização da bateria para o Family Care e mantenha a aplicação em segundo plano.</string>
+    <string name="reminders_open_startup_settings">Abrir definições de arranque</string>
+    <string name="reminders_open_battery_settings">Abrir definições de bateria</string>
+    <string name="reminders_manual_title">Concluído manualmente</string>
+    <string name="reminders_manual_hint">Marque os passos que concluiu. Ficam guardados apenas neste telemóvel.</string>
+    <string name="reminders_manual_launch">Definir o arranque como Gerir manualmente</string>
+    <string name="reminders_manual_background">Ativar arranque automático, arranque secundário e execução em segundo plano</string>
+    <string name="reminders_manual_battery">Definir a bateria como Sem restrições / não otimizar</string>
+    <string name="reminders_manual_never_sleeping">Adicionar o Family Care às aplicações que nunca dormem</string>
+    <string name="reminders_manual_unused_apps">Desativar Colocar aplicações não utilizadas a dormir</string>
+    <string name="reminders_manual_lockscreen">Permitir notificações no ecrã bloqueado</string>
+    <string name="reminders_refresh">Verificar novamente</string>
+    <string name="reminders_fix">Corrigir</string>
+    <string name="reminders_settings_unavailable">Este telemóvel não tem esse ecrã de definições. A abrir as definições da aplicação.</string>
 </resources>

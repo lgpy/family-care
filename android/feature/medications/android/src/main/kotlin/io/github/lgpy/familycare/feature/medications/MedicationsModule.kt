@@ -1,6 +1,8 @@
 package io.github.lgpy.familycare.feature.medications
 
 import io.github.lgpy.familycare.feature.medications.dashboard.DosesTodayViewModel
+import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionViewModel
+import io.github.lgpy.familycare.feature.medications.dashboard.ReminderHealthViewModel
 import io.github.lgpy.familycare.feature.medications.detail.MedicationDetailViewModel
 import io.github.lgpy.familycare.feature.medications.doses.DoseSlotViewModel
 import io.github.lgpy.familycare.feature.medications.form.MedicationFormViewModel
@@ -29,6 +31,16 @@ val medicationsModule: Module = module {
             careCircleRepository = get(),
         )
     }
+
+    viewModel {
+        NeedsAttentionViewModel(
+            doseLogRepository = get(),
+            medicationRepository = get(),
+            careCircleRepository = get(),
+        )
+    }
+
+    viewModel { ReminderHealthViewModel(checker = get()) }
 
     viewModel { (patientId: String, scheduledLocal: String) ->
         DoseSlotViewModel(

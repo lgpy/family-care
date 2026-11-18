@@ -1,11 +1,16 @@
 package io.github.lgpy.familycare
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockGate
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
+import io.github.lgpy.familycare.feature.medications.reminders.ReminderContract
 import io.github.lgpy.familycare.navigation.FamilyCareApp
 import io.github.lgpy.familycare.ui.AuthGate
 import io.github.lgpy.familycare.ui.circle.CircleGate
@@ -18,8 +23,16 @@ import org.koin.compose.koinInject
  * LocaleManager handles per-app language, so AppCompat is not required.
  */
 class MainActivity : FragmentActivity() {
+
+    /**
+     * A route from a dose notification's content intent (M4), consumed once by
+     * the navigation graph after the lock and gates have been passed.
+     */
+    private var pendingRoute by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingRoute = intent?.getStringExtra(ReminderContract.EXTRA_ROUTE)
 
         // Health data must never show in the Recents thumbnail. Deliberately
         // not FLAG_SECURE: screenshots inside the app stay allowed.
@@ -40,11 +53,20 @@ class MainActivity : FragmentActivity() {
                         // the user chooses one here.
                         ProfileLanguageSync()
                         CircleGate {
-                            FamilyCareApp()
+                            FamilyCareApp(
+                                initialRoute = pendingRoute,
+                                onInitialRouteOpened = { pendingRoute = null },
+                            )
                         }
                     }
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingRoute = intent.getStringExtra(ReminderContract.EXTRA_ROUTE)
     }
 }

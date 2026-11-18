@@ -1,0 +1,110 @@
+package io.github.lgpy.familycare.feature.medications.dashboard
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
+import io.github.lgpy.familycare.core.domain.circle.PatientId
+import io.github.lgpy.familycare.core.domain.circle.canWrite
+import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
+import io.github.lgpy.familycare.feature.medications.data.GivenBy
+import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
+import io.github.lgpy.familycare.feature.medications.ui.MedsUiError
+import io.github.lgpy.familycare.feature.medications.ui.uiError
+import java.time.LocalDateTime
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+/**
+ * The "Needs attention" card (docs/ux/screens.md §1, docs/domain/medications.md):
+ * overdue and missed dose groups of the circle, ordered above "Doses today".
+ *
+ * It reuses the doses-today view of the data ([DoseLogRepository.dosesToday])
+ * and the same group-confirm write; only the filter differs. A group that is
+ * still unconfirmed cannot already have a confirmation, but the same
+ * double-confirmation guard is kept so a sync arriving between the tap and the
+ * save cannot cause a second entry.
+ */
+class NeedsAttentionViewModel(
+    private val doseLogRepository: DoseLogRepository,
+    medicationRepository: MedicationRepository,
+    careCircleRepository: CareCircleRepository,
+) : ViewModel() {
+
+    private val local = MutableStateFlow(NeedsAttentionUiState())
+
+    val uiState: StateFlow<NeedsAttentionUiState> = combine(
+        local,
+        doseLogRepository.dosesToday,
+        medicationRepository.activeMedications,
+        careCircleRepository.myRole,
+        careCircleRepository.members,
+    ) { state, groups, medications, role, members ->
+        val patientNames = medications.associate { it.patient.patientId to it.patient.displayName }
+        val memberNames = members.associate { it.userId to it.displayName }
+        val myUserId = members.firstOrNull { it.isMe }?.userId
+        state.copy(
+            loaded = true,
+            canWrite = role.canWrite,
+            groups = groups
+                .map { group ->
+                    group.toUi(patientNames[group.patientId].orEmpty(), memberNames, myUserId)
+                }
+                .filter { group ->
+                    group.state == DoseGroupState.OVERDUE || group.state == DoseGroupState.MISSED
+                },
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = NeedsAttentionUiState(),
+    )
+
+    fun give(patientId: PatientId, scheduledLocal: LocalDateTime) {
+        val group = uiState.value.groups.firstOrNull {
+            it.patientId == patientId && it.scheduledLocal == scheduledLocal
+        } ?: return
+        if (uiState.value.saving) return
+        if (group.hasConfirmation) {
+            local.update { it.copy(warning = group) }
+            return
+        }
+        save(group)
+    }
+
+    fun giveAnyway() {
+        val group = uiState.value.warning ?: return
+        local.update { it.copy(warning = null) }
+        save(group)
+    }
+
+    fun dismissWarning() {
+        local.update { it.copy(warning = null) }
+    }
+
+    fun clearError() {
+        local.update { it.copy(error = null) }
+    }
+
+    private fun save(group: DoseGroupUi) {
+        local.update { it.copy(saving = true, error = null) }
+        viewModelScope.launch {
+            val result = doseLogRepository.confirm(group.timeSlotGroup, givenBy = GivenBy.Me)
+            local.update { it.copy(saving = false, error = result.uiError()) }
+        }
+    }
+}
+
+/** What the card shows: overdue/missed groups and dialog state. */
+data class NeedsAttentionUiState(
+    val groups: List<DoseGroupUi> = emptyList(),
+    val canWrite: Boolean = false,
+    val loaded: Boolean = false,
+    val saving: Boolean = false,
+    val warning: DoseGroupUi? = null,
+    val error: MedsUiError? = null,
+)

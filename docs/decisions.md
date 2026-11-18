@@ -111,6 +111,17 @@ Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
 - **Why:** A removed member must not keep receiving reminders or stay tied to a patient; leaving the patient silently unreminded would be the dangerous option. Clearing the linked user makes the patient an ordinary patient (the form handles `linked_user = null`), and the flag makes the gap visible until someone chooses.
 - **Server side:** implemented by a backend change in `core.remove_member`; the app side is the domain helper, the flag and the form rule.
 
+### D25 — Reminders use alarm-clock alarms with `USE_EXACT_ALARM`
+- **Decision:** Schedule dose reminders with `AlarmManager.setAlarmClock` (D19) under the `USE_EXACT_ALARM` permission, which Android grants at install to alarm/reminder apps. Still check `canScheduleExactAlarms()` in the health check, and fall back to an inexact `setAndAllowWhileIdle` alarm if a system build refuses it.
+- **Why:** Alarm-clock alarms are the type phone makers are least willing to defer, and sideloading (D18) means Play policy review does not apply.
+- **Revisit:** moving to Google Play requires `SCHEDULE_EXACT_ALARM` plus a user grant, with the setup screen guiding it.
+- **Consequence:** `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` and a brand-specific setup screen (build-plan §8) remain part of the reliability story; the health check reports each verifiable setting.
+
+### D26 — Reminder notifications are private on the lock screen
+- **Decision:** Dose reminders use one channel, `dose_reminders` (high importance, alarm-like sound). The notification is `VISIBILITY_PRIVATE` with a public version that says only "Family Care · A dose is due" (pt-PT "Family Care · Há uma toma para dar"). The private (unlocked) text may name the patient, the time and the count ("Grandma · 08:00 · 4 medications"); nothing is written to logs. Actions are "Given ✓" (confirms the whole group, one entry per medication) and "Snooze 15 min" (local only, does not delay escalation).
+- **Why:** the lock screen is visible to anyone holding the phone, but once unlocked the reminder must be actionable at a glance. Group confirmation keeps the interaction to one tap without breaking the one-entry-per-medication storage rule.
+- **Consequence:** no full-screen intent; the notification plus the alarm-clock alarm is enough. Tapping opens the existing dose-slot screen.
+
 ---
 
 ## Open questions

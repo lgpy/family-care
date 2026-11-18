@@ -93,3 +93,11 @@ Health measurements (blood pressure, glucose, weight, temperature…) should be 
 - **Localisation:** pt-PT and en; per-user language.
 - **Backups:** provider daily backups, plus an independent weekly encrypted export of database *and* files to a second EU provider. Restores tested. (Detailed in [security-and-privacy.md](security-and-privacy.md).)
 - **GDPR:** EU hosting, DPAs with all processors (Supabase, PowerSync, Google/FCM), data export and deletion per patient, retention policy, audit log. (Detailed in [security-and-privacy.md](security-and-privacy.md).)
+
+## Reminders (M4)
+
+Dose reminders are device-local (D4): `AlarmManager.setAlarmClock` alarms (D19/D25), one per patient + scheduled instant, carrying the whole time-slot group so the notification and "Given ✓" need no network. `feature/medications/domain` decides *who* is reminded (`ReminderRouting`: the medication override wins over the patient's policy/primary, viewers are never reminded, a missing primary means nobody locally) and *what* is planned (`ReminderPlanning`: the next 48 h, DST-safe slots, confirmed/skipped slots removed). The Android layer turns the plan into alarms and keeps a small `SharedPreferences` index so the next pass can cancel stale ones.
+
+Rescheduling runs on app start, on patient/medication/regimen/dose-log/membership/session changes (flows, debounced), on `BOOT_COMPLETED`, `TIME_SET`, `TIMEZONE_CHANGED`, `MY_PACKAGE_REPLACED`, and on a daily safety alarm. `LOCKED_BOOT_COMPLETED` is deliberately not handled: the encrypted database and Keystore key need the first unlock. Signed out means no plan and all alarms are cancelled; receivers never crash in that state.
+
+The notification channel is `dose_reminders` (high importance, alarm sound) with `VISIBILITY_PRIVATE`: the public lock-screen version is only "Family Care · A dose is due" / "Family Care · Há uma toma para dar" (D26). The private text may name the patient, time and number of medications; nothing is logged. "Snooze 15 min" is local only and never delays server escalation. The health check (notifications, channel, exact alarms, battery optimisation, scheduled-vs-planned alarms) runs on app start and feeds a Today card; More → Reminders shows the per-brand guide from [build-plan §8](build-plan.md).

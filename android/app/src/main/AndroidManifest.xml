@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- M4 dose reminders (D4/D25). USE_EXACT_ALARM is granted at install for
+         alarm/reminder apps; we sideload (D18), so Play policy review does not
+         apply. Moving to Google Play means SCHEDULE_EXACT_ALARM plus a user
+         grant, with the health check guiding it. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <application
         android:name=".FamilyCareApplication"
         android:allowBackup="false"
@@ -11,12 +20,38 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.FamilyCare">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- The alarm that posts one group's notification. Explicit intents only. -->
+        <receiver
+            android:name=".feature.medications.reminders.DoseReminderReceiver"
+            android:exported="false" />
+
+        <!-- "Given ✓" / "Snooze 15 min" from the notification. -->
+        <receiver
+            android:name=".feature.medications.reminders.DoseActionReceiver"
+            android:exported="false" />
+
+        <!-- Reschedule triggers: boot, clock/zone changes, app update and the
+             daily safety alarm. LOCKED_BOOT_COMPLETED is deliberately absent:
+             the encrypted database and Keystore key need the first unlock. -->
+        <receiver
+            android:name=".feature.medications.reminders.ReminderRescheduleReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="io.github.lgpy.familycare.action.RESCHEDULE_REMINDERS" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

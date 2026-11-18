@@ -345,4 +345,63 @@
     <string name="sign_in_in_progress">Signing in…</string>
     <string name="sign_in_loading">Checking your session…</string>
     <string name="sign_in_failed">Could not sign in. Try again.</string>
+
+    <!-- M4: dose reminders (D25/D26). -->
+    <string name="reminder_channel_name">Dose reminders</string>
+    <string name="reminder_channel_description">Alarms for doses that are due. They contain no health details on the lock screen.</string>
+    <string name="reminder_notification_title">Dose due</string>
+    <string name="reminder_notification_public_title">Family Care · A dose is due</string>
+    <string name="reminder_notification_text">%1$s · %2$s</string>
+    <string name="reminder_action_given">Given ✓</string>
+    <string name="reminder_action_snooze">Snooze 15 min</string>
+    <plurals name="reminder_notification_medications">
+        <item quantity="one">%1$d medication</item>
+        <item quantity="other">%1$d medications</item>
+    </plurals>
+
+    <string name="reminders_needs_attention_title">Needs attention</string>
+    <string name="reminders_needs_attention_line">%1$s · %2$s · %3$s · not confirmed</string>
+    <string name="reminders_health_card_title">Reminders need attention</string>
+    <string name="reminders_health_card_body">This phone may not remind you on time. Check the settings.</string>
+    <string name="reminders_health_card_action">Fix reminders</string>
+    <string name="reminders_health_notifications">Notifications</string>
+    <string name="reminders_health_exact_alarms">Exact alarms</string>
+    <string name="reminders_health_battery">Battery optimisation</string>
+    <string name="reminders_health_alarms">Alarms scheduled</string>
+
+    <string name="more_reminders">Reminders</string>
+    <string name="more_reminders_body">Check that this phone can remind you on time.</string>
+    <string name="reminders_title">Make reminders reliable</string>
+    <string name="reminders_intro">Dose reminders are alarms on this phone. Phone makers sometimes stop apps in the background, so these steps keep them reliable.</string>
+    <string name="reminders_checks_title">Checks</string>
+    <string name="reminders_notifications">Notifications are allowed</string>
+    <string name="reminders_channel">The dose reminders channel is on</string>
+    <string name="reminders_exact_alarms">Alarms can be exact</string>
+    <string name="reminders_battery">Family Care is not battery-optimised</string>
+    <string name="reminders_alarms_scheduled">Reminders scheduled: %1$d of %2$d</string>
+    <string name="reminders_next_alarm">Next reminder: %1$s</string>
+    <string name="reminders_no_next_alarm">No reminder is scheduled yet.</string>
+    <string name="reminders_all_good">Reminders look reliable on this phone.</string>
+    <string name="reminders_open_notification_settings">Open notification settings</string>
+    <string name="reminders_request_battery">Allow background battery use</string>
+    <string name="reminders_open_app_details">Open app settings</string>
+    <string name="reminders_honor_title">Honor / MagicOS</string>
+    <string name="reminders_honor_steps">App launch → Manage manually: auto-launch, secondary launch and run in background on. Battery → don’t optimise. Allow notifications and lock-screen notifications.</string>
+    <string name="reminders_samsung_title">Samsung / One UI</string>
+    <string name="reminders_samsung_steps">Battery → Unrestricted. Add Family Care to Never sleeping apps. Turn off Put unused apps to sleep. Allow notifications.</string>
+    <string name="reminders_other_title">This phone</string>
+    <string name="reminders_other_steps">Allow notifications, turn off battery optimisation for Family Care, and keep the app running in the background.</string>
+    <string name="reminders_open_startup_settings">Open app launch settings</string>
+    <string name="reminders_open_battery_settings">Open battery settings</string>
+    <string name="reminders_manual_title">Done by hand</string>
+    <string name="reminders_manual_hint">Tick the steps you completed. They are stored on this phone only.</string>
+    <string name="reminders_manual_launch">Set app launch to Manage manually</string>
+    <string name="reminders_manual_background">Turn on auto-launch, secondary launch and run in background</string>
+    <string name="reminders_manual_battery">Set battery use to Unrestricted / don’t optimise</string>
+    <string name="reminders_manual_never_sleeping">Add Family Care to Never sleeping apps</string>
+    <string name="reminders_manual_unused_apps">Turn off Put unused apps to sleep</string>
+    <string name="reminders_manual_lockscreen">Allow lock-screen notifications</string>
+    <string name="reminders_refresh">Check again</string>
+    <string name="reminders_fix">Fix</string>
+    <string name="reminders_settings_unavailable">This phone does not offer that settings screen. Opening app settings instead.</string>
 </resources>

@@ -48,6 +48,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun MoreScreen(
     onOpenFamilyCircle: () -> Unit,
+    onOpenReminders: () -> Unit,
     onOpenYourName: () -> Unit,
     onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
@@ -85,6 +86,12 @@ fun MoreScreen(
             title = R.string.more_family_circle,
             body = R.string.more_family_circle_body,
             onClick = onOpenFamilyCircle,
+        )
+        // M4: the per-brand reliability guide and the health checks.
+        MoreEntry(
+            title = R.string.more_reminders,
+            body = R.string.more_reminders_body,
+            onClick = onOpenReminders,
         )
         MoreEntry(
             title = R.string.more_your_name,
