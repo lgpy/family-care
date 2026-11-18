@@ -9,7 +9,7 @@ backend/
 ├─ supabase/
 │  ├─ config.toml         local stack config (project_id "family-care")
 │  ├─ migrations/         versioned schema, one schema per module
-│  ├─ functions/          edge functions (escalate, dose-confirmed) + Deno tests
+│  ├─ functions/          edge functions (escalate, dose-confirmed, stock-low) + Deno tests
 │  └─ tests/              pgTAP database tests (access isolation, ...)
 └─ powersync/
    ├─ sync-config.yaml    what each phone downloads (Sync Streams)
@@ -56,7 +56,7 @@ Nothing in this repository links to a remote project: linking and `db push` are
 done by hand, on purpose, so a stray command cannot touch prod. Dev holds
 invented test data only — never real health data.
 
-## What exists so far (M1–M4)
+## What exists so far (M1–M5)
 
 M1 (walking skeleton):
 
@@ -121,8 +121,8 @@ M3 (medications) — `migrations/20261119120000_meds.sql`:
   form, stock unit, instructions, prescription validity, low-stock threshold in
   days, optional reminder-policy override and primary-caregiver override,
   stopped stamp), `regimens` (versioned schedule) and `dose_log` (append-only
-  outcome records). Stock, low-stock and shopping are **M5** and do not exist
-  yet. Enums `medication_form`, `schedule_type`, `skip_reason` and
+  outcome records). Stock, low-stock and shopping are **M5** (below). Enums
+  `medication_form`, `schedule_type`, `skip_reason` and
   `dose_outcome` use the names the Kotlin domain maps.
 - **Versioned regimens (D9):** every column except `end_date` is immutable; a
   trigger also allows only setting `end_date` or moving it earlier, never
@@ -296,14 +296,109 @@ npx supabase@latest test db           # pgTAP incl. supabase/tests/push_test.sql
 bash powersync/check-sync-tests.sh    # stream/test drift (unchanged by M4)
 
 cd supabase/functions
-npx --yes deno test --allow-read      # shared vectors + escalation + FCM
-npx --yes deno check escalate/index.ts dose-confirmed/index.ts
+npx --yes deno test --allow-read      # shared vectors + escalation + FCM + stock
+npx --yes deno check escalate/index.ts dose-confirmed/index.ts stock-low/index.ts
 ```
 
 `--allow-read` is only for reading `shared/test-vectors/` outside the function
 directory. `npx supabase@latest functions serve` is optional: the database side
 of the webhooks is exercised by `push_test.sql` with Vault configured inside the
 rolled-back transaction, so nothing needs the edge runtime to pass.
+
+## M5 (stock and shopping)
+
+Database — `migrations/20261121120000_stock.sql`:
+
+- `meds.stock_movements`: the append-only stock ledger (D6/D28). `kind` is
+  `count` (a stocktake and the baseline, may be 0), `refill` (+N) or `discard`
+  (−N, reason required and non-blank). `quantity` is `numeric(9,3)` in the
+  medication's `stock_unit`, 0..100000 with refill/discard > 0; `occurred_at`
+  comes from the phone, `created_by` defaults to the caller and a trigger
+  refuses a different value when the caller is authenticated. Only
+  `SELECT`/`INSERT` are granted; a `BEFORE UPDATE` trigger raises for every role,
+  exactly like the dose log, and a wrong movement is corrected by a new count.
+  There is deliberately no "dose" movement: taken doses come from
+  `meds.dose_log`.
+- Current stock is **derived, never stored**: the latest `count` (the baseline)
+  plus refills minus discards after it, minus the effective `taken` quantities
+  in the dose log after it. The exact rules — baseline ties, corrections, a
+  `taken` entry with no `actual_quantity`, consumption per schedule type, days
+  remaining with multiply-before-divide, low stock and the shopping status — are
+  written out in `shared/test-vectors/README.md` and pinned by
+  `shared/test-vectors/stock.json` for the Kotlin app and the server (D22).
+- RLS mirrors the other meds tables through `meds.patient_of_medication()` +
+  `core.can()`: any member reads, owner/caregiver appends, no client updates or
+  deletes. Audit (`meds.audit_row_change()`) records the derived patient and
+  circle for every movement.
+- `meds.stock_alerts`: the server-only ledger of low episodes, one row per
+  medication (`medication_id` primary key, `alerted_at`, `recipients`). No API
+  privilege, no policies and not synced, like `meds.escalations`. The row is
+  removed when the medication is no longer low, which re-arms the alert.
+- `stock_movements` joins the `powersync` publication (the phone derives stock
+  locally); `stock_alerts` does not.
+- Daily job plumbing in the same Vault/pg_net/pg_cron shape as M4:
+  `core.enqueue_stock_low_push()` posts to the URL in Vault under
+  `stock_low_url` with the shared `push_cron_secret`, and pg_cron runs it daily
+  at `0 9 * * *` (`stock_low_daily`). Absent secrets, pg_net or pg_cron make it
+  a no-op.
+- `service_role` gains `SELECT` on the movement ledger and
+  `SELECT`/`INSERT`/`DELETE` on the alert ledger; nothing else widens.
+
+Edge functions — `supabase/functions/`:
+
+- `_shared/stock.ts`: the TypeScript stock rules (baseline, effective dose
+  entries, active regimen, daily consumption, days remaining, low stock,
+  shopping status). `_shared/stock_vectors_test.ts` asserts every case in
+  `shared/test-vectors/stock.json`, numbers within 1e-9.
+- `_shared/stockAlerts.ts`: the pure planning of the daily job — which
+  medications are low, one push per low episode, owners/caregivers only (never
+  viewers, not routed by reminder policy), the text in each recipient's
+  language, an alert row even with zero devices, and the rows to clear for
+  recovered/stopped medications. Unit-tested in `_shared/stockAlerts_test.ts`.
+- `stock-low/index.ts`: the cron entry point. Same `X-Cron-Secret` check as
+  `escalate`, service role. Reads active medications with their regimens, the
+  stock and alert ledgers, and only the dose-log entries that can change a stock
+  figure (after the oldest baseline count). "Today" is the current date in each
+  regimen's zone. Sends generic localized notifications (channel
+  `stock_alerts`, tag `stock-<medication_id>`, `data` = `{"type":"stock_low"}`),
+  writes the new alert rows, clears recovered ones, deletes dead tokens and
+  returns counts.
+- `_shared/log.ts`: `errorText()`, used by all three functions in
+  `console.error`. It reads a PostgREST error object's `message`/`code`
+  (never `details`, a body or a token) instead of logging `[object Object]`.
+
+### Deploying the M5 stock-low function (human steps)
+
+Do this on **dev** first, never against prod without the build-plan §5 gate.
+
+1. The secrets are the M4 ones: `ESCALATION_CRON_SECRET` and
+   `FCM_SERVICE_ACCOUNT_JSON` are already in the function environment, so
+   nothing new goes to `secrets set`.
+2. Store the function URL in Vault (SQL editor on dev). The shared secret is the
+   existing `push_cron_secret`, whose value is `ESCALATION_CRON_SECRET`:
+
+   ```sql
+   select vault.create_secret('https://<dev-ref>.supabase.co/functions/v1/stock-low', 'stock_low_url');
+   ```
+
+   Without `stock_low_url` the job is a silent no-op, which looks like "no low
+   stock", not like an error.
+3. Deploy. `verify_jwt = false` is set for it in `config.toml` for the same
+   reason as the M4 functions (pg_net cannot send a Supabase JWT; the function
+   checks the shared secret itself).
+
+   ```bash
+   npx supabase@latest functions deploy stock-low --project-ref <dev-ref>
+   ```
+
+4. Smoke test on dev:
+
+   ```sql
+   select * from cron.job where jobname = 'stock_low_daily';
+   select * from cron.job_run_details order by start_time desc limit 5;
+   select * from net._http_response order by id desc limit 5;
+   select * from meds.stock_alerts;
+   ```
 
 ## Tests
 
@@ -352,12 +447,25 @@ coalesces overrides and hides stopped medications, and the webhooks are a no-op
 without Vault and queue exactly one pg_net request (URL, secret header) with it.
 The cron job's schedule and command are asserted too.
 
+`stock_test.sql` covers M5: the movement constraints (a count may be 0, refill
+and discard must be > 0, a discard needs a non-blank reason, the quantity range
+and the reason length), `created_by` spoofing, append-only refusal for
+`authenticated`, the table owner and `service_role`, RLS per role (owner and
+caregiver read and append, a viewer reads but cannot append, another circle and
+a user without a circle see and write nothing), the alert ledger being
+unreadable for every API role, the exact sync-stream query as each user, the
+audit row's derived patient/circle/actor, the Vault no-op and queued request,
+and the `stock_low_daily` cron job.
+
 The Deno suite in `supabase/functions/` is the D22 guard: every case in
-`shared/test-vectors/dose-slots.json` and `dose-status.json` is asserted against
-the TypeScript port, plus the pure escalation selection (overdue once, ledger
-skip, confirmed/missed/due skipped, `all_caregivers` local-only, medication
-override, null primary, viewer excluded, DST slot) and the FCM sender against a
-mocked `fetch` (JWT signature, token cache, dead-token and retry classification).
+`shared/test-vectors/dose-slots.json`, `dose-status.json` and `stock.json` is
+asserted against the TypeScript port, plus the pure escalation selection
+(overdue once, ledger skip, confirmed/missed/due skipped, `all_caregivers`
+local-only, medication override, null primary, viewer excluded, DST slot), the
+pure low-stock planning (one push per episode, recovered/stopped rows cleared,
+viewers excluded, language per recipient, zero devices), the error-log helper and
+the FCM sender against a mocked `fetch` (JWT signature, token cache, dead-token
+and retry classification).
 
 `core_care_circle_test.sql` and `meds_test.sql` also run the **exact Sync
 Streams queries** from `../powersync/sync-config.yaml` as each test user, so the
@@ -370,5 +478,5 @@ editing one side without the other fails the pull request.
 CI runs the same commands (the drift check, `supabase test db` and `db lint`) in
 the `database` job of `.github/workflows/ci.yml`, so a broken schema change or a
 stream/test mismatch fails the pull request. The `functions` job installs Deno,
-runs `deno test --allow-read` (the shared vectors, escalation selection and FCM
-sender) and type-checks the two deployable functions.
+runs `deno test --allow-read` (the shared vectors, escalation selection, stock
+planning and FCM sender) and type-checks the three deployable functions.

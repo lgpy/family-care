@@ -56,6 +56,14 @@ dose_log:     SELECT * FROM "meds"."dose_log"
                                         WHERE circle_id IN (
                                           SELECT circle_id FROM "core"."memberships"
                                           WHERE user_id = auth.user_id())))
+stock_movements:
+              SELECT * FROM "meds"."stock_movements"
+              WHERE medication_id IN (SELECT id FROM "meds"."medications"
+                                      WHERE patient_id IN (
+                                        SELECT id FROM "core"."patients"
+                                        WHERE circle_id IN (
+                                          SELECT circle_id FROM "core"."memberships"
+                                          WHERE user_id = auth.user_id())))
 ```
 
 (Shown wrapped for reading; each `query:` is one line in the file.)

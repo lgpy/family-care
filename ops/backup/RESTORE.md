@@ -147,12 +147,14 @@ prod; the quarterly test above is the rehearsal.
    ```sql
    select vault.create_secret('https://<new-ref>.supabase.co/functions/v1/escalate', 'escalate_url');
    select vault.create_secret('https://<new-ref>.supabase.co/functions/v1/dose-confirmed', 'dose_confirmed_url');
+   select vault.create_secret('https://<new-ref>.supabase.co/functions/v1/stock-low', 'stock_low_url');
    select vault.create_secret('<ESCALATION_CRON_SECRET>', 'push_cron_secret');
    ```
 
    The names come from `core.push_setting()` in
-   `backend/supabase/migrations/20261120120000_push_and_escalation.sql`.
-   Without them the webhooks are silent no-ops, which looks like "push stopped
+   `backend/supabase/migrations/20261120120000_push_and_escalation.sql` and
+   `20261121120000_stock.sql` (`stock_low_url`). Without them the webhooks and
+   the daily low-stock job are silent no-ops, which looks like "push stopped
    working", not like an error.
 5. **pg_cron jobs.** `cron` is not part of a database dump, so re-check and
    re-create:
@@ -161,13 +163,15 @@ prod; the quarterly test above is the rehearsal.
    select jobid, jobname, schedule, command from cron.job order by jobname;
    ```
 
-   Expect `core_purge_audit_log` (`23 3 * * *`, `select core.purge_audit_log()`)
-   and `push_escalation_tick` (`*/5 * * * *`,
-   `select core.enqueue_escalation_push()`). If either is missing:
+   Expect `core_purge_audit_log` (`23 3 * * *`, `select core.purge_audit_log()`),
+   `push_escalation_tick` (`*/5 * * * *`,
+   `select core.enqueue_escalation_push()`) and `stock_low_daily`
+   (`0 9 * * *`, `select core.enqueue_stock_low_push()`). If any is missing:
 
    ```sql
    select cron.schedule('core_purge_audit_log', '23 3 * * *', 'select core.purge_audit_log()');
    select cron.schedule('push_escalation_tick', '*/5 * * * *', 'select core.enqueue_escalation_push()');
+   select cron.schedule('stock_low_daily', '0 9 * * *', 'select core.enqueue_stock_low_push()');
    ```
 
    Enable `pg_cron` and `pg_net` first if the dashboard does not already have
@@ -178,11 +182,11 @@ prod; the quarterly test above is the rehearsal.
    npx supabase@latest secrets set --project-ref <new-ref> \
      FCM_SERVICE_ACCOUNT_JSON="$(cat /path/to/service-account.json)" \
      ESCALATION_CRON_SECRET="<the value stored in Vault above>"
-   npx supabase@latest functions deploy escalate dose-confirmed --project-ref <new-ref>
+   npx supabase@latest functions deploy escalate dose-confirmed stock-low --project-ref <new-ref>
    ```
 
    `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are supplied by the runtime.
-   `verify_jwt = false` for both is already in `backend/supabase/config.toml`.
+   `verify_jwt = false` for all three is already in `backend/supabase/config.toml`.
 7. **PowerSync.** Create/point the instance at the new project: replication role
    `powersync_role`, database connection, Supabase Auth + JWKS, deploy
    `backend/powersync/sync-config.yaml` (steps in
