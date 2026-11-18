@@ -132,6 +132,14 @@ prod; the quarterly test above is the rehearsal.
    accounts. Do **not** run `supabase db push` or `db reset` into this database:
    the schema is already the one in the backup, and the migration history is not
    in it. From then on, apply only new migrations by hand.
+
+   **Expose the schemas.** `config.toml`'s `api.schemas` only applies to the
+   local stack; a hosted project exposes `public` and `graphql_public` only.
+   Dashboard → Integrations → Data API → Settings → *Exposed schemas*: add
+   `core` and `meds` (4 of 4), Save. Without it the app and the edge functions
+   fail with `PGRST106 Invalid schema` (found while setting up prod,
+   2026-11-18). Check: an anonymous request with `Accept-Profile: meds` must
+   answer `permission denied for schema meds`, not `Invalid schema`.
 4. **Vault secrets.** The CLI's dump excludes the `vault` schema entirely, so
    the secret values are not in the backup and must be re-created deliberately.
    In the SQL editor:

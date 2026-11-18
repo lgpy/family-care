@@ -70,7 +70,10 @@ M1 (walking skeleton):
   introduced live on in `tests/core_security_test.sql`.
 - The `powersync` publication and the Sync Streams config in `../powersync/`.
 - `core` and `meds` are listed in `api.schemas` in `config.toml` so PostgREST
-  can serve them; access is still governed by the grants and RLS. Because they
+  can serve them; access is still governed by the grants and RLS. That file
+  only configures the local stack: on a **hosted** project add both under
+  Dashboard → Integrations → Data API → Settings → *Exposed schemas* (done on
+  dev and prod), or the app and edge functions get `PGRST106 Invalid schema`. Because they
   are not `public`, a REST client must name the schema in `Accept-Profile`
   (reads) and `Content-Profile` (writes) headers.
 
