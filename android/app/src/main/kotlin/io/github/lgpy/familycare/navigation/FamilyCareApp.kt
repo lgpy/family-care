@@ -32,10 +32,15 @@ import io.github.lgpy.familycare.ui.circle.FamilyCircleScreen
 import io.github.lgpy.familycare.ui.patients.PatientFormScreen
 import io.github.lgpy.familycare.ui.patients.PatientsScreen
 import io.github.lgpy.familycare.ui.profile.YourNameScreen
+import io.github.lgpy.familycare.ui.sync.UploadRejectionBanner
 
 /**
  * The app shell once the user belongs to a circle: a bottom bar with Today,
  * Patients and More, and the screens those open.
+ *
+ * The top bar is the persistent message about a change the server refused and
+ * the queue discarded (see `UploadRejectionBanner`); it is empty while there is
+ * no such change, including during offline or transient sync trouble.
  *
  * Agenda and Shopping are later milestones and are deliberately not shown as
  * placeholders. The care-circle gate lives outside this composable (see
@@ -53,6 +58,7 @@ fun FamilyCareApp(
 
     Scaffold(
         modifier = modifier,
+        topBar = { UploadRejectionBanner() },
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar {

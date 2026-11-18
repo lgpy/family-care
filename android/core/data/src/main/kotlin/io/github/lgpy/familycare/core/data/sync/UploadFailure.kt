@@ -2,6 +2,7 @@ package io.github.lgpy.familycare.core.data.sync
 
 import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.postgrest.exception.PostgrestRestException
+import io.github.lgpy.familycare.core.domain.sync.RejectionReason
 
 /**
  * Why an upload attempt failed, in the terms the retry policy needs.
@@ -16,6 +17,23 @@ internal data class UploadFailure(
 ) {
     /** Whether retrying cannot help, so the queue must move on. */
     val isPermanent: Boolean get() = isPermanentUploadFailure(statusCode, postgresCode)
+
+    /**
+     * The coarse reason a *permanent* failure is reported to the user as.
+     *
+     * Only meaningful when [isPermanent] is true: a policy denial is "not
+     * allowed", a data or constraint violation means the values themselves are
+     * invalid, and everything else permanent is a plain "other". Callers must
+     * not call this for a transient failure.
+     */
+    fun rejectionReason(): RejectionReason = when {
+        postgresCode == RLS_DENIED -> RejectionReason.NOT_ALLOWED
+        postgresCode != null &&
+            postgresCode.length == SQLSTATE_LENGTH &&
+            postgresCode.take(2) in PERMANENT_SQLSTATE_CLASSES -> RejectionReason.INVALID_DATA
+
+        else -> RejectionReason.OTHER
+    }
 
     companion object {
         /**
@@ -37,7 +55,8 @@ internal data class UploadFailure(
  * Permanent failures are the ones a retry would repeat forever: the row is
  * rejected by a policy or a constraint, or the request itself is malformed.
  * For those the transaction is completed (so one bad row cannot wedge the whole
- * queue) and the failure is surfaced through `SyncState.hasError`.
+ * queue) and the refusal is surfaced through `SyncState.rejectedUpload`, which
+ * is what the user is told about.
  *
  * Everything else is transient and is rethrown so PowerSync retries after its
  * delay: no response at all (offline), 5xx, and the client errors that mean

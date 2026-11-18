@@ -6,6 +6,7 @@ import com.powersync.sync.SyncOptions
 import com.powersync.sync.SyncStatusData
 import io.github.jan.supabase.SupabaseClient
 import io.github.lgpy.familycare.core.domain.auth.AuthState
+import io.github.lgpy.familycare.core.domain.sync.RejectedUpload
 import io.github.lgpy.familycare.core.domain.sync.SyncState
 import io.ktor.client.HttpClient
 import kotlin.coroutines.cancellation.CancellationException
@@ -36,6 +37,12 @@ interface SyncService {
      * local data when signed out. Safe to call once per process.
      */
     fun start()
+
+    /**
+     * Marks the latest refused change as seen: the app-shell message disappears
+     * and does not come back. A later refusal is a new event and shows again.
+     */
+    fun acknowledgeRejectedUpload()
 }
 
 /**
@@ -49,7 +56,8 @@ internal class PowerSyncSyncService(
     private val connector: SupabaseSyncConnector,
     private val httpClient: HttpClient,
     private val authState: StateFlow<AuthState>,
-    private val uploadFailure: MutableStateFlow<Boolean>,
+    private val connectionFailed: MutableStateFlow<Boolean>,
+    private val rejections: UploadRejections,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : SyncService, SyncSession {
 
@@ -58,20 +66,28 @@ internal class PowerSyncSyncService(
 
     override val state: StateFlow<SyncState> = combine(
         database.currentStatus.asFlow().onStart { emit(database.currentStatus) },
-        uploadFailure,
-    ) { status, failed -> status.toSyncState(failed) }
+        connectionFailed,
+        rejections.state,
+    ) { status, failed, rejection -> status.toSyncState(failed, rejection) }
         .stateIn(
             scope = scope,
             started = SharingStarted.Eagerly,
-            initialValue = database.currentStatus.toSyncState(uploadFailure.value),
+            initialValue = database.currentStatus.toSyncState(
+                hasError = connectionFailed.value,
+                rejection = rejections.state.value,
+            ),
         )
 
     override fun start() {
         if (started) return
         started = true
         scope.launch {
-            lifecycle.run(authState) { uploadFailure.value = true }
+            lifecycle.run(authState) { connectionFailed.value = true }
         }
+    }
+
+    override fun acknowledgeRejectedUpload() {
+        rejections.acknowledge()
     }
 
     /**
@@ -91,7 +107,10 @@ internal class PowerSyncSyncService(
         // Hard clear: nothing of the signed-out user's health data may remain
         // readable in the SQLite file.
         database.disconnectAndClear(clearLocal = true, soft = false)
-        uploadFailure.value = false
+        // A connection error and a refused change belong to the session that
+        // ended; the next user must not see either.
+        connectionFailed.value = false
+        rejections.acknowledge()
     }
 
     /** Cancels the session follower; only needed for tests and shutdown. */
@@ -106,12 +125,18 @@ internal class PowerSyncSyncService(
     }
 }
 
-private fun SyncStatusData.toSyncState(hasError: Boolean): SyncState = SyncState(
+private fun SyncStatusData.toSyncState(
+    hasError: Boolean,
+    rejection: RejectedUpload?,
+): SyncState = SyncState(
     connected = connected,
     connecting = connecting,
     uploading = uploading,
     downloading = downloading,
     hasSynced = hasSynced,
     lastSyncedAt = lastSyncedAt,
-    hasError = hasError || anyError != null,
+    // A refusal is not a transport error but it is still something that went
+    // wrong for the user: keep hasError true while it is unacknowledged.
+    hasError = hasError || anyError != null || rejection != null,
+    rejectedUpload = rejection,
 )

@@ -51,6 +51,17 @@
     <string name="error_not_found">That is no longer available.</string>
     <string name="error_invalid_email">Enter a valid email address.</string>
 
+    <!-- M1: a queued change the server permanently refused and the queue dropped. -->
+    <string name="sync_rejected_change">A change to %1$s couldn’t be saved on the server and was undone (%2$s).</string>
+    <string name="sync_rejected_subject_patient">a patient</string>
+    <string name="sync_rejected_subject_profile">your name</string>
+    <string name="sync_rejected_subject_circle">the care circle name</string>
+    <string name="sync_rejected_subject_other">your family’s data</string>
+    <string name="sync_rejected_reason_not_allowed">not allowed</string>
+    <string name="sync_rejected_reason_invalid">invalid data</string>
+    <string name="sync_rejected_reason_other">another reason</string>
+    <string name="sync_rejected_dismiss">Dismiss</string>
+
     <!-- M2: patients. -->
     <string name="patients_title">Patients</string>
     <string name="patients_empty">No patients yet. Add the people whose medication and appointments you help with.</string>

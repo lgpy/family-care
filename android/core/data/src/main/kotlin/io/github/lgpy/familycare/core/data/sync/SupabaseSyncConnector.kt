@@ -6,11 +6,9 @@ import com.powersync.connectors.PowerSyncCredentials
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.status.SessionStatus
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
-import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Connect PowerSync to this app's own backend: Supabase Auth for credentials and
@@ -25,7 +23,7 @@ internal class SupabaseSyncConnector(
     private val supabase: SupabaseClient,
     private val endpoint: String,
     private val uploader: CrudUploader,
-    private val uploadFailure: MutableStateFlow<Boolean>,
+    private val rejections: UploadRejections,
     private val now: () -> Instant = { Clock.System.now() },
 ) : PowerSyncBackendConnector() {
 
@@ -55,29 +53,24 @@ internal class SupabaseSyncConnector(
     /**
      * Sends the queued local writes, oldest transaction first.
      *
-     * A permanent failure completes the transaction so the rest of the queue is
-     * not blocked behind a row the server will never accept, and raises the
-     * error flag instead. Everything else is rethrown for PowerSync to retry.
-     * Neither branch logs row data, and neither puts a token anywhere.
+     * [uploadTransaction] decides what each transaction means: a permanent
+     * failure completes the transaction so the rest of the queue is not blocked
+     * behind a row the server will never accept, and records the refusal for the
+     * user. Everything else is rethrown for PowerSync to retry. Neither branch
+     * logs row data, and neither puts a token anywhere.
      */
     override suspend fun uploadData(database: PowerSyncDatabase) {
         while (true) {
             val transaction = database.getNextCrudTransaction() ?: return
-            try {
+            uploadTransaction(
                 // Only the tables this app owns are sent; anything else in the
                 // transaction (a local-only table, or a stray memberships write)
-                // is completed below without reaching the server.
-                uploadWrites(transaction.crudWrites(), uploader)
-                uploadFailure.value = false
-                transaction.complete(null)
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (error: Exception) {
-                if (!UploadFailure.of(error).isPermanent) throw error
-
-                uploadFailure.value = true
-                transaction.complete(null)
-            }
+                // is completed without reaching the server.
+                writes = transaction.crudWrites(),
+                uploader = uploader,
+                rejections = rejections,
+                complete = { transaction.complete(null) },
+            )
         }
     }
 

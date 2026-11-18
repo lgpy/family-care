@@ -19,6 +19,7 @@ import io.github.lgpy.familycare.ui.circle.FamilyCircleViewModel
 import io.github.lgpy.familycare.ui.patients.PatientFormViewModel
 import io.github.lgpy.familycare.ui.patients.PatientsViewModel
 import io.github.lgpy.familycare.ui.profile.YourNameViewModel
+import io.github.lgpy.familycare.ui.sync.UploadRejectionViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
@@ -90,4 +91,8 @@ val appModule: Module = module {
     }
     viewModel { FamilyCircleViewModel(careCircleRepository = get()) }
     viewModel { YourNameViewModel(profileRepository = get()) }
+
+    // App shell: the message about a change the server refused. It only needs
+    // the sync state, which is a domain type.
+    viewModel { UploadRejectionViewModel(syncService = get()) }
 }

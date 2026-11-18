@@ -1,6 +1,9 @@
 package io.github.lgpy.familycare.core.data.sync
 
+import io.github.lgpy.familycare.core.domain.sync.RejectionReason
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -68,5 +71,37 @@ class UploadFailureTest {
         val failure = UploadFailure.of(java.io.IOException("no route to host"))
 
         assertFalse(failure.isPermanent)
+    }
+
+    @Test
+    fun aRefusalIsReportedInTheUsersTerms() {
+        // 42501 insufficient_privilege: a policy said no.
+        assertEquals(
+            RejectionReason.NOT_ALLOWED,
+            UploadFailure(statusCode = 403, postgresCode = "42501").rejectionReason(),
+        )
+        // Class 22 (data exception) and class 23 (constraint violation).
+        assertEquals(
+            RejectionReason.INVALID_DATA,
+            UploadFailure(statusCode = 400, postgresCode = "22P02").rejectionReason(),
+        )
+        assertEquals(
+            RejectionReason.INVALID_DATA,
+            UploadFailure(statusCode = 409, postgresCode = "23505").rejectionReason(),
+        )
+        // Any other permanent refusal: no more detail than "other".
+        assertEquals(
+            RejectionReason.OTHER,
+            UploadFailure(statusCode = 404, postgresCode = null).rejectionReason(),
+        )
+    }
+
+    @Test
+    fun aPostgrestInternalCodeIsNotMistakenForInvalidData() {
+        // PGRST116 is not a class 22/23 SQLSTATE, so the refusal stays "other".
+        assertEquals(
+            RejectionReason.OTHER,
+            UploadFailure(statusCode = 400, postgresCode = "PGRST116").rejectionReason(),
+        )
     }
 }

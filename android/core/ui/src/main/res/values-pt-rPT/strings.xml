@@ -51,6 +51,17 @@
     <string name="error_not_found">Isso já não está disponível.</string>
     <string name="error_invalid_email">Indique um endereço de email válido.</string>
 
+    <!-- M1: uma alteração em fila que o servidor recusou definitivamente. -->
+    <string name="sync_rejected_change">Uma alteração %1$s não pôde ser guardada no servidor e foi anulada (%2$s).</string>
+    <string name="sync_rejected_subject_patient">a uma pessoa</string>
+    <string name="sync_rejected_subject_profile">ao seu nome</string>
+    <string name="sync_rejected_subject_circle">ao nome do círculo familiar</string>
+    <string name="sync_rejected_subject_other">aos dados da sua família</string>
+    <string name="sync_rejected_reason_not_allowed">sem permissão</string>
+    <string name="sync_rejected_reason_invalid">dados inválidos</string>
+    <string name="sync_rejected_reason_other">outro motivo</string>
+    <string name="sync_rejected_dismiss">Dispensar</string>
+
     <!-- M2: pessoas. -->
     <string name="patients_title">Pessoas</string>
     <string name="patients_empty">Ainda não há pessoas. Adicione as pessoas cuja medicação e consultas ajuda a gerir.</string>

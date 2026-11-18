@@ -21,6 +21,7 @@ import io.github.lgpy.familycare.core.data.sync.PowerSyncSyncService
 import io.github.lgpy.familycare.core.data.sync.SupabaseCrudUploader
 import io.github.lgpy.familycare.core.data.sync.SupabaseSyncConnector
 import io.github.lgpy.familycare.core.data.sync.SyncService
+import io.github.lgpy.familycare.core.data.sync.UploadRejections
 import io.github.lgpy.familycare.core.data.sync.WrappedDatabaseKey
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
@@ -94,19 +95,21 @@ class DataLayer internal constructor(
             // would pull artifacts that demand a newer compileSdk.
             val httpClient = HttpClient(Android) { configureSyncHttpClient() }
 
-            val uploadFailure = MutableStateFlow(false)
+            val connectionFailed = MutableStateFlow(false)
+            val rejections = UploadRejections()
             val connector = SupabaseSyncConnector(
                 supabase = supabase,
                 endpoint = powerSyncUrl,
                 uploader = SupabaseCrudUploader(supabase.postgrest),
-                uploadFailure = uploadFailure,
+                rejections = rejections,
             )
             val sync = PowerSyncSyncService(
                 database = database,
                 connector = connector,
                 httpClient = httpClient,
                 authState = authRepository.state,
-                uploadFailure = uploadFailure,
+                connectionFailed = connectionFailed,
+                rejections = rejections,
                 scope = scope,
             )
 

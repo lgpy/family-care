@@ -181,9 +181,15 @@ class FakeSyncService(
     val stateFlow = MutableStateFlow(initial)
     override val state: StateFlow<SyncState> = stateFlow
     var started = false
+    var acknowledgedRejections = 0
 
     override fun start() {
         started = true
+    }
+
+    override fun acknowledgeRejectedUpload() {
+        acknowledgedRejections += 1
+        stateFlow.value = stateFlow.value.copy(rejectedUpload = null)
     }
 }
 

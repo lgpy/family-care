@@ -3,6 +3,7 @@ package io.github.lgpy.familycare.core.data.sync
 import com.powersync.db.crud.CrudEntry
 import com.powersync.db.crud.CrudTransaction
 import com.powersync.db.crud.UpdateType
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.json.JsonElement
 
 /**
@@ -54,17 +55,37 @@ internal fun CrudEntry.toCrudWrite(): CrudWrite? {
 internal fun CrudTransaction.crudWrites(): List<CrudWrite> =
     crud.mapNotNull { it.toCrudWrite() }
 
+/**
+ * The write an upload failed on, with the uploader's exception as [cause].
+ *
+ * The table is needed to tell the user what was undone, and only the writer
+ * knows it; the exception itself must not be rethrown wrapped, so that a
+ * transient failure still reaches PowerSync as the original error.
+ */
+internal class UploadWriteFailure(
+    val table: String,
+    cause: Throwable,
+) : Exception(cause)
+
 /** Sends the writes to the backend, in order. */
 internal suspend fun uploadWrites(
     writes: List<CrudWrite>,
     uploader: CrudUploader,
 ) {
-    writes.forEach { write ->
-        when (write.kind) {
-            CrudWriteKind.UPSERT -> uploader.upsert(write.table, write.id, write.values)
-            CrudWriteKind.UPDATE -> uploader.update(write.table, write.id, write.values)
-            CrudWriteKind.DELETE -> uploader.delete(write.table, write.id)
+    writes.forEach { write -> write.send(uploader) }
+}
+
+private suspend fun CrudWrite.send(uploader: CrudUploader) {
+    try {
+        when (kind) {
+            CrudWriteKind.UPSERT -> uploader.upsert(table, id, values)
+            CrudWriteKind.UPDATE -> uploader.update(table, id, values)
+            CrudWriteKind.DELETE -> uploader.delete(table, id)
         }
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (error: Exception) {
+        throw UploadWriteFailure(table, error)
     }
 }
 
