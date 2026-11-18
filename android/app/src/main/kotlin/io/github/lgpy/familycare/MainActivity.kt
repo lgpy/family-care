@@ -8,6 +8,7 @@ import io.github.lgpy.familycare.core.ui.lock.AppLockGate
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.navigation.FamilyCareApp
 import io.github.lgpy.familycare.ui.AuthGate
+import io.github.lgpy.familycare.ui.circle.CircleGate
 import org.koin.compose.koinInject
 
 /**
@@ -31,9 +32,12 @@ class MainActivity : FragmentActivity() {
                     activity = this@MainActivity,
                 ) {
                     // D12: the app lock comes first, then the Supabase session,
-                    // then the shell. Signed-out users never see app content.
+                    // then the care-circle gate (M2). A signed-out user, or one
+                    // who belongs to no family, never sees app content.
                     AuthGate(activity = this@MainActivity) {
-                        FamilyCareApp()
+                        CircleGate {
+                            FamilyCareApp()
+                        }
                     }
                 }
             }

@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,11 +40,13 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
- * Settings: account, language and app lock. The care-circle settings screens
- * are built in the M2 screen task on top of the core repositories.
+ * More: the family circle, the user's own name, account, language, app lock and
+ * About (docs/ux/screens.md §7).
  */
 @Composable
-fun SettingsScreen(
+fun MoreScreen(
+    onOpenFamilyCircle: () -> Unit,
+    onOpenYourName: () -> Unit,
     onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -64,9 +67,23 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = stringResource(R.string.settings_title),
+            text = stringResource(R.string.more_title),
             style = MaterialTheme.typography.headlineMedium,
         )
+
+        // M2: the care circle's people and invitations, and the user's own name.
+        MoreEntry(
+            title = R.string.more_family_circle,
+            body = R.string.more_family_circle_body,
+            onClick = onOpenFamilyCircle,
+        )
+        MoreEntry(
+            title = R.string.more_your_name,
+            body = R.string.more_your_name_body,
+            onClick = onOpenYourName,
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
         // D12: which Google account the session belongs to, and the way out.
         Text(
@@ -186,6 +203,29 @@ fun SettingsScreen(
                     Text(text = stringResource(R.string.cancel))
                 }
             },
+        )
+    }
+}
+
+@Composable
+private fun MoreEntry(
+    @StringRes title: Int,
+    @StringRes body: Int,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+    ) {
+        Text(
+            text = stringResource(title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = stringResource(body),
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
 }

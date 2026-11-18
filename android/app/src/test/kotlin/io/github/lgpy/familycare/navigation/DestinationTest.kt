@@ -12,8 +12,33 @@ class DestinationTest {
     }
 
     @Test
-    fun settingsIsPartOfTheShell() {
-        assertEquals("settings", Destination.Settings.route)
+    fun theBottomBarIsTodayPatientsAndMore() {
+        assertEquals(
+            listOf(Destination.Today, Destination.Patients, Destination.More),
+            Destination.topLevel,
+        )
+        assertEquals("patients", Destination.Patients.route)
+    }
+
+    @Test
+    fun settingsBecameMore() {
+        assertEquals("more", Destination.More.route)
+        assertTrue(Destination.entries.none { it.route == "settings" })
+    }
+
+    @Test
+    fun moreOpensTheCircleAndTheUsersName() {
+        assertEquals("more/family-circle", Destination.FamilyCircle.route)
+        assertEquals("more/your-name", Destination.YourName.route)
+        assertEquals("about", Destination.About.route)
+    }
+
+    @Test
+    fun thePatientEditRouteCarriesThePatientId() {
+        assertEquals("patients/{patientId}", Destination.PatientEdit.route)
+        assertEquals("patients/new", Destination.PatientNew.route)
+        assertEquals("patientId", PATIENT_ID_ARG)
+        assertEquals("patients/patient-1", Destination.patientEditRoute("patient-1"))
     }
 
     @Test
@@ -22,5 +47,11 @@ class DestinationTest {
 
         assertTrue(routes.all { it.isNotBlank() })
         assertEquals(routes.size, routes.toSet().size)
+    }
+
+    @Test
+    fun everyTopLevelDestinationIsPartOfTheShell() {
+        assertTrue(Destination.topLevel.all { it in Destination.entries })
+        assertEquals(3, Destination.topLevel.size)
     }
 }

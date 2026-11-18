@@ -1,15 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Family Care</string>
-    <string name="today_title">Today</string>
-    <string name="today_body">Care circle: %1$s</string>
-    <string name="about_open">About</string>
-    <string name="about_title">About</string>
-    <string name="about_body">Family Care is being built one step at a time. This screen exists to prove navigation works.</string>
+    <string name="loading">Loading…</string>
     <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
 
-    <string name="settings_title">Settings</string>
-    <string name="settings_open">Settings</string>
+    <!-- Bottom navigation (M2: Today, Patients, More). -->
+    <string name="nav_today">Today</string>
+    <string name="nav_patients">Patients</string>
+    <string name="nav_more">More</string>
+
+    <string name="today_title">Today</string>
+    <string name="today_greeting">Hello, %1$s</string>
+    <string name="today_circle">Family circle: %1$s</string>
+    <string name="today_role_owner">You are the owner of this circle.</string>
+    <string name="today_role_caregiver">You are a caregiver in this circle.</string>
+    <string name="today_role_viewer">You can read this circle’s data.</string>
+    <string name="today_placeholder">Patients, doses and appointments arrive in the next steps.</string>
+    <plurals name="today_patients_count">
+        <item quantity="one">%1$d person in your circle</item>
+        <item quantity="other">%1$d people in your circle</item>
+    </plurals>
+
+    <!-- M2: care circle setup gate. -->
+    <string name="circle_gate_loading_title">Loading your family…</string>
+    <string name="circle_gate_loading_offline">Connect to the internet to finish setting up Family Care.</string>
+    <string name="circle_gate_title">Your family circle</string>
+    <string name="circle_gate_body">Create a circle for your family, or join one with an invite code. Everything you add stays private to the people in it.</string>
+    <string name="circle_gate_create_title">Create a family circle</string>
+    <string name="circle_gate_create_name_label">Circle name</string>
+    <string name="circle_gate_create_action">Create circle</string>
+    <string name="circle_gate_join_title">Join with an invite code</string>
+    <string name="circle_gate_join_code_label">Invite code</string>
+    <string name="circle_gate_join_helper">Paste the code you were sent, for example ABCD2345-EFGH6789-JKMN2345-PQRS6789.</string>
+    <string name="circle_gate_join_action">Join circle</string>
+    <string name="circle_gate_sign_out">Sign in with another account</string>
+    <string name="circle_gate_busy">Working…</string>
+
+    <!-- Care circle errors, shared by the screens that call the core RPCs. -->
+    <string name="error_invalid_code">That invite code is not valid. It may have expired or already have been used.</string>
+    <string name="error_email_mismatch">This invite was sent to another email address. Sign in with the Google account that was invited.</string>
+    <string name="error_email_not_confirmed">Confirm the email address of your Google account first, then try again.</string>
+    <string name="error_invalid_name">Enter a name of up to 100 characters.</string>
+    <string name="error_offline">No connection. Try again when you are online.</string>
+    <string name="error_not_allowed">Your account is not allowed to do that.</string>
+    <string name="error_unknown">Something went wrong. Try again.</string>
+    <string name="error_last_owner">The circle needs at least one owner.</string>
+    <string name="error_already_accepted">That invitation was already used.</string>
+    <string name="error_not_found">That is no longer available.</string>
+    <string name="error_invalid_email">Enter a valid email address.</string>
+
+    <!-- M2: patients. -->
+    <string name="patients_title">Patients</string>
+    <string name="patients_empty">No patients yet. Add the people whose medication and appointments you help with.</string>
+    <string name="patients_add">Add patient</string>
+    <string name="patients_open">Open patient</string>
+    <string name="patients_primary_name">Primary: %1$s</string>
+    <string name="patients_policy_primary_with_escalation">Primary with escalation</string>
+    <string name="patients_policy_all_caregivers">All caregivers</string>
+    <string name="patients_policy_unavailable">Reminder policy not available</string>
+
+    <string name="patient_new_title">Add patient</string>
+    <string name="patient_edit_title">Patient</string>
+    <string name="patient_not_available">This patient is not available.</string>
+    <string name="patient_name_label">Name</string>
+    <string name="patient_linked_user_label">This patient is also an app user</string>
+    <string name="patient_linked_user_none">Not an app user</string>
+    <string name="patient_linked_user_self_primary">Reminders go to %1$s first, because they also use the app.</string>
+    <string name="patient_policy_label">Reminder policy</string>
+    <string name="patient_policy_helper">Who is reminded when a dose is due.</string>
+    <string name="patient_primary_label">Primary caregiver</string>
+    <string name="patient_primary_helper">Reminded first. Must be an owner or caregiver of the circle.</string>
+    <string name="patient_escalation_label">Escalation delay (minutes)</string>
+    <string name="patient_escalation_helper">After this long, the other caregivers are alerted.</string>
+    <string name="patient_missed_label">Missed window (minutes)</string>
+    <string name="patient_missed_helper">After this long, an unconfirmed dose is shown as missed.</string>
+    <string name="patient_note_label">Agreement note (optional)</string>
+    <string name="patient_note_helper">Optional. How the person agreed to their information being kept here, for example “Told Grandma about the app, she agreed — 16 Nov 2026”. It never blocks anything.</string>
+    <string name="patient_save">Save</string>
+    <string name="patient_read_only">You have read-only access to this circle.</string>
+
+    <string name="patient_error_name">Enter a name of up to 100 characters.</string>
+    <string name="patient_error_primary">Choose who is reminded first.</string>
+    <string name="patient_error_linked_user">Choose a member of this circle.</string>
+    <string name="patient_error_policy">This reminder policy is not available.</string>
+    <string name="patient_error_escalation">Enter a whole number of minutes between 0 and 1440.</string>
+    <string name="patient_error_missed">Enter a whole number of minutes between 1 and 1440.</string>
+    <string name="patient_error_note">Keep the note to 2000 characters or fewer.</string>
+
+    <!-- M2: More. -->
+    <string name="more_title">More</string>
+    <string name="more_family_circle">Family circle</string>
+    <string name="more_family_circle_body">Members, invitations and who is the owner.</string>
+    <string name="more_your_name">Your name</string>
+    <string name="more_your_name_body">The name the other members see.</string>
+
     <string name="settings_account_title">Account</string>
     <string name="settings_account_signed_in_as">Signed in as %1$s</string>
     <string name="settings_account_signed_out">Not signed in.</string>
@@ -18,7 +104,6 @@
     <string name="sign_out_confirm_title">Sign out?</string>
     <string name="sign_out_confirm_body">You will need to sign in with Google again to see your family’s health information.</string>
     <string name="sign_out_confirm_action">Sign out</string>
-    <string name="cancel">Cancel</string>
     <string name="settings_language_title">Language</string>
     <string name="settings_language_body">Applies to this device.</string>
     <string name="language_system">System default</string>
@@ -26,6 +111,49 @@
     <string name="language_english">English</string>
     <string name="settings_app_lock_title">App lock</string>
     <string name="settings_app_lock_body">Always on. A screen lock is required to open Family Care.</string>
+
+    <!-- M2: family circle screen. -->
+    <string name="family_circle_title">Family circle</string>
+    <string name="family_circle_members_title">Members</string>
+    <string name="family_circle_member_you">%1$s (you)</string>
+    <string name="family_circle_member_unnamed">Member</string>
+    <string name="family_circle_role_owner">Owner</string>
+    <string name="family_circle_role_caregiver">Caregiver</string>
+    <string name="family_circle_role_viewer">Viewer</string>
+    <string name="family_circle_remove">Remove</string>
+    <string name="family_circle_remove_member_title">Remove %1$s?</string>
+    <string name="family_circle_remove_member_body">They lose access to this circle and its data on their next sync.</string>
+    <string name="family_circle_remove_member_action">Remove</string>
+    <string name="family_circle_invite_title">Invite someone</string>
+    <string name="family_circle_invite_body">They join as a caregiver. The code works once and expires after seven days.</string>
+    <string name="family_circle_invite_email_label">Email address</string>
+    <string name="family_circle_invite_action">Create invite code</string>
+    <string name="family_circle_invite_dialog_title">Invite for %1$s</string>
+    <string name="family_circle_invite_dialog_body">This code is shown only once. Send it to %1$s.</string>
+    <string name="family_circle_invite_copy">Copy</string>
+    <string name="family_circle_invite_copied">Code copied.</string>
+    <string name="family_circle_invite_share">Share</string>
+    <string name="family_circle_invite_share_chooser">Share invite code</string>
+    <string name="family_circle_invite_share_message">Join my family circle on Family Care.\n\n1. Install Family Care.\n2. Sign in with the Google account %1$s.\n3. On the first screen, or in More, choose “Join with an invite code”.\n4. Paste this code: %2$s</string>
+    <string name="family_circle_pending_title">Pending invitations</string>
+    <string name="family_circle_pending_empty">No pending invitations.</string>
+    <string name="family_circle_pending_expires">Expires %1$s</string>
+    <string name="family_circle_pending_refresh">Refresh</string>
+    <string name="family_circle_revoke">Cancel invite</string>
+    <string name="family_circle_revoke_title">Cancel the invite for %1$s?</string>
+    <string name="family_circle_revoke_body">The code stops working.</string>
+
+    <string name="your_name_title">Your name</string>
+    <string name="your_name_body">This is the name the other members of your circle see.</string>
+    <string name="your_name_label">Name</string>
+    <string name="your_name_save">Save</string>
+    <string name="your_name_saved">Name saved.</string>
+    <string name="your_name_error">Enter a name of up to 100 characters.</string>
+    <string name="your_name_not_synced">Your name is not available yet. Connect to the internet and try again.</string>
+
+    <string name="about_open">About</string>
+    <string name="about_title">About</string>
+    <string name="about_body">Family Care is being built one step at a time. This screen exists to prove navigation works.</string>
 
     <string name="lock_title">Locked</string>
     <string name="lock_body">Unlock to see your family’s health information.</string>

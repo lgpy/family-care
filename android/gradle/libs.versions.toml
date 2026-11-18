@@ -20,6 +20,7 @@ kotlinx-coroutines = "1.11.0"
 junit4 = "4.13.2"
 junitJupiter = "5.14.4"
 junitPlatform = "1.14.4"
+turbine = "1.2.1"
 
 [libraries]
 # Plugins consumed by the included build-logic build only.
@@ -41,6 +42,9 @@ androidx-compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+# The small built-in icon set (Home, Person, Add, Share, …) for the bottom bar
+# and the patient FAB. Version comes from the Compose BOM.
+androidx-compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
 
 # Sign in with Google (D12): Credential Manager returns a Google ID token that
 # Supabase Auth verifies server-side.
@@ -77,6 +81,7 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "jun
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitPlatform" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
