@@ -454,6 +454,54 @@ audit trigger and publication membership. The appointment **change push**
   **hosted** projects they must also be added under
   Dashboard → Integrations → Data API → Settings → *Exposed schemas*, or every
   request gets `PGRST106 Invalid schema`.
+- Change push — `migrations/20261122130000_appointment_push.sql`
+  (docs/domain/appointments.md "Change push"). `appointments.notify_appointment_changed()`
+  (security definer, `search_path = ''`) is an AFTER INSERT/UPDATE trigger that
+  posts `{appointment_id, actor}` through the M4 `core.post_to_function` to the
+  URL in Vault under `appointment_changed_url`. On update it fires only when
+  `starts_local`, `time_zone`, `place`, `companion_user_id` or `cancelled_at`
+  changed, and it skips appointments that started more than a day ago
+  (`starts_local` read in the appointment's own `time_zone`). Like the dose
+  trigger it is best effort: no Vault, no pg_net or no secret is a silent
+  no-op, and it never raises.
+- `functions/appointment-changed/index.ts`: same shared-secret check and
+  service-role reads as `dose-confirmed`, plus `_shared/appointmentChanged.ts`
+  (pure planning, unit-tested). It reads the appointment → patient → circle,
+  takes the circle's owners and caregivers minus the actor (`created_by` on
+  insert, `updated_by` on update), sends a visible push per recipient in their
+  `preferred_language` — channel `appointment_updates`, tag
+  `appt-<appointment_id>`, `data` = `{"type":"appointment_changed"}` — deletes
+  dead tokens and returns counts. A missing appointment (cascade) returns zeros.
+
+### Deploying the M6 appointment-changed function (human steps)
+
+Do this on **dev** first, never against prod without the build-plan §5 gate.
+
+1. The secrets are the M4 ones: `ESCALATION_CRON_SECRET` and
+   `FCM_SERVICE_ACCOUNT_JSON` are already in the function environment, so
+   nothing new goes to `secrets set`.
+2. Store the function URL in Vault (SQL editor on dev). The shared secret is the
+   existing `push_cron_secret`, whose value is `ESCALATION_CRON_SECRET`:
+
+   ```sql
+   select vault.create_secret('https://<dev-ref>.supabase.co/functions/v1/appointment-changed', 'appointment_changed_url');
+   ```
+
+   Without `appointment_changed_url` the trigger is a silent no-op, which looks
+   like "the other phones were never told", not like an error.
+3. Deploy. `verify_jwt = false` is set for it in `config.toml` for the same
+   reason as the M4/M5 functions (pg_net cannot send a Supabase JWT; the
+   function checks the shared secret itself).
+
+   ```bash
+   npx supabase@latest functions deploy appointment-changed --project-ref <dev-ref>
+   ```
+
+4. Smoke test on dev: insert an appointment a few days ahead for a circle with
+   two devices and watch
+   `select * from net._http_response order by id desc limit 5;` plus the function
+   logs in the dashboard. An update of `notes` must produce no request; changing
+   `starts_local` must produce one.
 
 ## Tests
 
@@ -519,6 +567,14 @@ and follow-up (self and other patient refused) rules, `updated_by` on update,
 RLS per role (delete only for an owner), the exact sync-stream query as each
 user, and the audit rows for insert/update/delete.
 
+`appointment_push_test.sql` covers the M6 change push: the trigger is a no-op
+without Vault (the insert still succeeds, nothing is queued), an insert queues
+exactly one pg_net request to `appointment_changed_url` with the Vault secret
+header and `{appointment_id, actor}` (`actor` = `created_by`), a `notes`-only
+update queues nothing, `starts_local` and `cancelled_at` updates queue one each
+(`actor` = `updated_by`), and an appointment over a day in the past queues
+nothing.
+
 `info_test.sql` covers M6 patient info: forced RLS and privileges, `id =
 patient_id` and the one-row-per-patient rule, both immutability rules, every
 validator (allergy/condition counts and lengths, the SNS number, the phone
@@ -549,4 +605,4 @@ CI runs the same commands (the drift check, `supabase test db` and `db lint`) in
 the `database` job of `.github/workflows/ci.yml`, so a broken schema change or a
 stream/test mismatch fails the pull request. The `functions` job installs Deno,
 runs `deno test --allow-read` (the shared vectors, escalation selection, stock
-planning and FCM sender) and type-checks the three deployable functions.
+planning and FCM sender) and type-checks the four deployable functions.

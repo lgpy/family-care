@@ -406,10 +406,11 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
-# M4/M5 push functions. pg_net cannot send a Supabase JWT, so the gateway's JWT
+# M4-M6 push functions. pg_net cannot send a Supabase JWT, so the gateway's JWT
 # verification is off for these and they authenticate with the shared secret
 # header (X-Cron-Secret) themselves - see backend/README.md
-# "Deploying the M4 push functions" and "Deploying the M5 stock-low function".
+# "Deploying the M4 push functions", "Deploying the M5 stock-low function" and
+# "Deploying the M6 appointment-changed function".
 [functions.escalate]
 verify_jwt = false
 
@@ -417,6 +418,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.stock-low]
+verify_jwt = false
+
+[functions.appointment-changed]
 verify_jwt = false
 
 [analytics]
