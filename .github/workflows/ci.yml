@@ -109,8 +109,15 @@ jobs:
       - name: Start local database
         run: supabase db start
 
-      # pgTAP isolation tests (build-plan §4): owner-only rows, other users see
-      # nothing, anon denied, RLS on every core table, publication present.
+      # Sync Streams are the read half of access control (D13). This fails when a
+      # stream query in powersync/sync-config.yaml is not executed verbatim by
+      # the pgTAP tests, i.e. when the YAML and the tests drift apart.
+      - name: Check sync-stream tests cover sync-config.yaml
+        run: bash powersync/check-sync-tests.sh
+
+      # pgTAP isolation tests (build-plan §4): branch isolation per role, the
+      # mirrored Sync Streams queries, invitations, audit and append-only, RLS
+      # on every core table, publication present.
       - name: Run database tests
         run: supabase test db
 

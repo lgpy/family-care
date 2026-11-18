@@ -15,7 +15,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(30);
+select plan(31);
 
 -- --- Fixtures ---------------------------------------------------------------
 -- Two unrelated users: there is no care circle yet (that is M2), so in M1
@@ -201,6 +201,17 @@ select is(
   (select owner_id from core.sync_probe where id = '22222222-2222-4222-8222-222222222222'),
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
   'the other user''s row belongs to them'
+);
+
+-- The M1 Sync Streams query itself (backend/powersync/sync-config.yaml). The
+-- drift check (backend/powersync/check-sync-tests.sh) requires every stream
+-- query to be executed by a test somewhere; this is the probe's home.
+select is(
+  (select count(*)::int from (
+    SELECT * FROM "core"."sync_probe" WHERE owner_id = (select auth.uid())
+  ) stream_rows),
+  1,
+  'stream sync_probe: the signed-in user downloads only their own rows'
 );
 
 -- --- owner again: still isolated, and can delete ----------------------------

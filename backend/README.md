@@ -12,6 +12,7 @@ backend/
 │  └─ tests/              pgTAP database tests (access isolation, ...)
 └─ powersync/
    ├─ sync-config.yaml    what each phone downloads (Sync Streams)
+   ├─ check-sync-tests.sh  fails when a stream is not covered by a pgTAP test
    └─ README.md           how to deploy it + the manual replication-role SQL
 ```
 
@@ -54,24 +55,54 @@ Nothing in this repository links to a remote project: linking and `db push` are
 done by hand, on purpose, so a stray command cannot touch prod. Dev holds
 invented test data only — never real health data.
 
-## What exists so far (M1)
+## What exists so far (M1–M2)
+
+M1 (walking skeleton):
 
 - One schema per module, starting with `core` (identity, care circle, access —
   `docs/domain/care-circle.md`).
 - `core.sync_probe`: a throwaway table that proves the sign-in → Supabase →
-  PowerSync path and carries the first isolation tests. It is dropped once the
-  real `core` tables exist in M2.
-- Deny by default (D13): RLS enabled and forced on every `core` table, nothing
-  granted to `anon` or `PUBLIC`, owner-only policies for `authenticated`. The
-  tests in `supabase/tests/` check this, including a generic check over
-  `pg_class` so tables added later are covered automatically.
-- The `powersync` publication over `core.sync_probe` (PowerSync replicates from
-  it) and the Sync Streams config in `../powersync/`.
+  PowerSync path and carries the first isolation tests. The Android app still
+  uses it; the M2 Android step drops it.
+- The `powersync` publication and the Sync Streams config in `../powersync/`.
 - `core` is listed in `api.schemas` in `config.toml` so PostgREST can serve it;
   access is still governed by the grants and RLS above. Because `core` is not
   `public`, a REST client must name the schema in `Accept-Profile` (reads) and
-  `Content-Profile` (writes) headers. Verified against the local stack: inserting
-  as user A returns 201 with `owner_id` = A, and user B reads `[]`.
+  `Content-Profile` (writes) headers.
+
+M2 (care circle) — `migrations/20261118120000_core_care_circle.sql`:
+
+- Tables in `core`: `care_circles`, `memberships` (owner / caregiver / viewer),
+  `profiles` (auto-created from `auth.users` on signup), `patients` (linked
+  user, reminder policy, primary caregiver, delays, agreement note, archive
+  stamp), `invitations` and `patient_access_overrides` (modelled, unused), plus
+  the append-only `audit_log`.
+- One access function: `core.can(patient_id, action)` with actions `read`
+  (any member), `write` (owner/caregiver) and `manage` (owner). It delegates to
+  `core.can_circle(circle_id, action)` / `core.circle_role(circle_id)`, and every
+  patient-data policy calls it. The helpers are `security definer` with
+  `set search_path = ''`, which is what keeps the `memberships` policy from
+  recursing.
+- Writes: `patients` and `care_circles` (rename only) are direct DML through
+  PostgREST with RLS. `memberships` and `invitations` have **no** DML grant for
+  `authenticated`; they change only through the `security definer` RPCs
+  `core.create_circle`, `core.create_invitation`, `core.accept_invitation`,
+  `core.revoke_invitation`, `core.remove_member` and `core.set_member_role`.
+  Invitation codes are 160 random bits (Crockford base32, `XXXX-XXXX-XXXX-XXXX`),
+  returned once in plaintext; only `sha256` of the normalised code is stored,
+  and `authenticated` has no `SELECT` privilege on `token_hash`.
+- Audit (D14): generic triggers on all core data tables write `core.audit_log`
+  (actor, circle, patient, table, record, action, `old_data`/`new_data`;
+  `token_hash` is stripped). The log is append-only — no client write grants,
+  and a `BEFORE UPDATE/DELETE/TRUNCATE` guard raises for every role, including
+  the table owner. Circle owners can read their circle's rows; it is not synced.
+- Deny by default (D13) unchanged: RLS enabled **and forced** on every `core`
+  table, nothing granted to `anon` or `PUBLIC`, policies scoped
+  `to authenticated`. The tests check this generically over `pg_class`, so a
+  table added later is covered automatically.
+- The `powersync` publication covers the four synced tables
+  (`care_circles`, `memberships`, `profiles`, `patients`); invitations,
+  overrides and the audit log are server-only.
 
 ## Tests
 
@@ -80,5 +111,22 @@ a transaction that is rolled back. A file fails if any pgTAP assertion fails, an
 also if its `select plan(n)` does not match the number of assertions — so a test
 that silently stops running is itself a failure.
 
-CI runs the same two commands in the `database` job of
-`.github/workflows/ci.yml`, so a broken schema change fails the pull request.
+`core_care_circle_test.sql` covers the scenarios in security-and-privacy §3
+(caregiver sees the circle, other circles see nothing, a removed caregiver
+loses access immediately, viewers cannot write, only owners manage members and
+invitations), plus invitations (wrong email, expired, reused, revoked, hashed
+only, unreadable `token_hash`), the last-owner rule, patient linked/primary
+membership rules, and the audit log (rows written with actor and before/after;
+append-only against clients and the table owner).
+
+The same file also runs the **exact Sync Streams queries** from
+`../powersync/sync-config.yaml` as each test user, so the read half and the
+write half are tested against the same scenarios. `../powersync/check-sync-tests.sh`
+extracts every `query:` from the YAML and fails if any of them (with
+`auth.user_id()` replaced by `(select auth.uid())`) does not appear verbatim in a
+test file. CI runs it in the `database` job, so editing one side without the
+other fails the pull request.
+
+CI runs the same commands (the drift check, `supabase test db` and `db lint`) in
+the `database` job of `.github/workflows/ci.yml`, so a broken schema change or a
+stream/test mismatch fails the pull request.
