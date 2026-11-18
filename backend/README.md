@@ -95,10 +95,11 @@ M2 (care circle) — `migrations/20261118120000_core_care_circle.sql`:
   returned once in plaintext; only `sha256` of the normalised code is stored,
   and `authenticated` has no `SELECT` privilege on `token_hash`.
 - Audit (D14): generic triggers on all core data tables write `core.audit_log`
-  (actor, circle, patient, table, record, action, `old_data`/`new_data`;
-  `token_hash` is stripped). The log is append-only — no client write grants,
-  and a `BEFORE UPDATE/DELETE/TRUNCATE` guard raises for every role, including
-  the table owner. Circle owners can read their circle's rows; it is not synced.
+  (actor, circle, patient, table, record, action, `old_data`/`new_data`,
+  `event_kind`; `token_hash` is stripped). The log is append-only — no client
+  write grants, and a `BEFORE UPDATE/DELETE/TRUNCATE` guard raises for every
+  role, including the table owner; the only exception is the retention purge
+  below. Circle owners can read their circle's rows; it is not synced.
 - Deny by default (D13) unchanged: RLS enabled **and forced** on every `core`
   table, nothing granted to `anon` or `PUBLIC`, policies scoped
   `to authenticated`. The tests check this generically over `pg_class`, so a
@@ -148,6 +149,30 @@ M3 (medications) — `migrations/20261119120000_meds.sql`:
   `core.memberships`; `dose_log` is unbounded for now (a time window is noted
   in `powersync/sync-config.yaml`).
 
+M2 fixes — `migrations/20261118140000_core_m2_fixes.sql` (deployed after the
+care-circle migration; it uses `create or replace` and never edits the already
+applied file):
+
+- `core.remove_member` clears `primary_caregiver_id` / `linked_user_id` on the
+  circle's patients where they point at the removed user, in the same
+  transaction. The updates are ordinary audited patient changes; no replacement
+  primary is chosen, so the app asks the owner for one ("needs a primary
+  caregiver", D11).
+- D11 default: a `BEFORE INSERT` trigger (named so it runs before
+  `patients_check`) sets the primary caregiver to the linked user when the
+  policy is `primary_with_escalation`, the primary is empty and the linked user
+  is an owner or caregiver. A linked viewer leaves it null.
+- Security events: invitations and membership/role changes are classified
+  `event_kind = 'security'`; a trigger on `auth.sessions` logs `auth.sign_in`
+  and `auth.session_ended` (user, event, time only — no session id, tokens,
+  IP or user agent) and swallows exceptions so auth can never fail because of
+  the log. Failed logins and MFA changes happen in Google/GoTrue before the
+  database, so they are covered by Supabase Auth logs, not this table.
+- Retention (security-and-privacy §7): change history 6 years, security events
+  1 year. `core.purge_audit_log()` is security definer, not executable by any
+  API role, and is the only code path the append-only guard lets delete; pg_cron
+  runs it daily (`core_purge_audit_log`, 03:23 UTC).
+
 ## Tests
 
 `npx supabase@latest test db` runs every `*.sql` file in `supabase/tests/` inside
@@ -169,6 +194,13 @@ at a time, iterating `pg_class`: at least one table exists, RLS is enabled
 `authenticated` may use the schema, the `powersync` publication contains
 exactly the seven synced tables, and the M1 `sync_probe` table is gone while
 `core.set_updated_at()` remains.
+
+`core_m2_fixes_test.sql` covers the follow-up migration: removed-member cleanup
+(primary/linked cleared, other patients and circles untouched, change audited),
+both D11 default branches (caregiver set, viewer left null), sign-in/session-end
+security events, the 6-year/1-year retention purge and its privileges, the
+owner-only `patient_access_overrides` rules, circle rename by non-owners,
+cross-circle patient insert, and the invitation role/email rules.
 
 `meds_test.sql` covers the M3 tables: the same isolation scenarios (owner and
 caregiver read/write, another circle sees and writes nothing, a viewer reads but
