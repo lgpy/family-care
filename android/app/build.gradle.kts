@@ -38,6 +38,22 @@ val environmentValues: Map<String, String> = Properties()
 fun environmentValue(key: String): String = environmentValues[key]
     ?: throw GradleException("Missing '$key' in ${environmentFile.asFile} (familycare.env=$environmentName)")
 
+/*
+ * Release signing (build-plan §7, D18). The key and its passwords live in the
+ * password manager and an offline copy, never in the repository: a local,
+ * git-ignored android/keystore.properties points at the keystore file:
+ *
+ *   storeFile=C:/Users/<you>/family-care-release-key/family-care-release.jks
+ *   storePassword=...
+ *   keyAlias=family-care
+ *   keyPassword=...
+ *
+ * Without that file (CI, other machines) release builds are simply unsigned.
+ */
+val releaseSigning: Properties? = rootProject.layout.projectDirectory.file("keystore.properties")
+    .let { providers.fileContents(it).asText.orNull }
+    ?.let { text -> Properties().apply { text.reader().use { load(it) } } }
+
 /** A Java/Kotlin string literal safe to embed in generated BuildConfig code. */
 fun buildConfigString(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
@@ -62,6 +78,22 @@ android {
         )
         // Not used yet: PowerSync is the next M1 step and reads this value then.
         buildConfigField("String", "POWERSYNC_URL", buildConfigString(environmentValue("powersync.url")))
+    }
+
+    if (releaseSigning != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseSigning.getProperty("storeFile"))
+                storePassword = releaseSigning.getProperty("storePassword")
+                keyAlias = releaseSigning.getProperty("keyAlias")
+                keyPassword = releaseSigning.getProperty("keyPassword")
+            }
+        }
+        buildTypes {
+            getByName("release") {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
 
     buildFeatures {
