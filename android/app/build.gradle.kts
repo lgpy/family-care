@@ -3,6 +3,11 @@ import java.util.Properties
 plugins {
     id("familycare.android.application")
     id("familycare.android.compose")
+    // M4 push: turns android/app/google-services.json into the Firebase
+    // resources the FCM client reads. The file is committed because its values
+    // are public Firebase identifiers (like android/environments): the API key
+    // ships inside every APK anyway and grants only Firebase's own services.
+    alias(libs.plugins.google.services)
 }
 
 /*

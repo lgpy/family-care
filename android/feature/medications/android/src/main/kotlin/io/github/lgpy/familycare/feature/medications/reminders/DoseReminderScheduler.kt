@@ -241,6 +241,7 @@ class DoseReminderScheduler(
     private fun cancelNotification(id: Int) {
         NotificationManagerCompat.from(applicationContext).cancel(id)
         store.removePosted(id)
+        store.forgetNotification(id)
     }
 
     /**

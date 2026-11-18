@@ -156,6 +156,12 @@ fun RemindersScreen(
                 label = stringResource(R.string.reminders_alarms_scheduled, current.scheduledCount, current.plannedCount),
                 ok = current.alarmsInSync,
             ) { refresh(reschedule = true) }
+            // M4/D27: informational only — escalation is the server-side safety
+            // net, so an unregistered phone still reminds locally.
+            CheckRow(
+                label = stringResource(R.string.reminders_push_registered),
+                ok = current.pushRegistered,
+            )
             Text(
                 text = current.nextAlarmAt?.let { nextAlarmText(context, it) }
                     ?: stringResource(R.string.reminders_no_next_alarm),

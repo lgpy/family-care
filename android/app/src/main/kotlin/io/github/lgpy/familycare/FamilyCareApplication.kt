@@ -4,6 +4,8 @@ import android.app.Application
 import io.github.lgpy.familycare.core.data.sync.SyncService
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.di.appModule
+import io.github.lgpy.familycare.feature.medications.push.PushNotifications
+import io.github.lgpy.familycare.feature.medications.push.PushSession
 import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderSchedulerCoordinator
 import org.koin.android.ext.koin.androidContext
@@ -34,5 +36,11 @@ class FamilyCareApplication : Application() {
         // step with local/synced changes (D4/D19). Also creates the D26 channel.
         koin.get<DoseReminderScheduler>().ensureChannel()
         koin.get<ReminderSchedulerCoordinator>().start()
+
+        // M4 push (D4/D27): the escalation channel Android's settings show, plus
+        // token registration. Registration follows the session, so a start while
+        // signed in registers (or retries) without any screen being opened.
+        PushNotifications.ensureChannel(this)
+        koin.get<PushSession>().start()
     }
 }

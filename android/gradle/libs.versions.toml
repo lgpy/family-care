@@ -16,6 +16,15 @@ supabase = "3.8.0"
 # Newest PowerSync release whose AARs still accept compileSdk 36: 1.15.0 and
 # later declare minCompileSdk=37 (the build's compileSdk is fixed at 36).
 powersync = "1.14.1"
+# Push (M4, D4/D27). The BoM keeps firebase-messaging on a tested release; only
+# FCM is pulled in — no analytics, crash reporting or other Firebase services
+# (D17). The google-services plugin reads android/app/google-services.json,
+# whose values are public Firebase identifiers (D21/D27).
+firebaseBom = "34.19.0"
+googleServices = "4.4.4"
+# WorkManager retries token registration while offline and runs the short clear
+# job when a data-only push arrives with the app in the background (M4).
+androidx-work = "2.10.5"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 junit4 = "4.13.2"
@@ -54,6 +63,12 @@ androidx-compose-material-icons-core = { module = "androidx.compose.material:mat
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "androidx-credentials" }
 androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "androidx-credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+
+# Firebase Cloud Messaging only (D4/D27): escalation and clear pushes. The BoM
+# pins the release; no analytics or other Firebase product is a dependency.
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "androidx-work" }
 
 # Supabase client (build-plan: "PowerSync + Supabase setup"). The BOM keeps
 # auth/postgrest on the same release; PowerSync itself arrives in a later task.
@@ -98,3 +113,5 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# Generates the Firebase resources from android/app/google-services.json (M4 push).
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

@@ -13,6 +13,7 @@ import io.github.lgpy.familycare.core.data.circle.PowerSyncCareCircleRepository
 import io.github.lgpy.familycare.core.data.circle.PowerSyncPatientRepository
 import io.github.lgpy.familycare.core.data.circle.PowerSyncProfileRepository
 import io.github.lgpy.familycare.core.data.circle.SupabaseCareCircleRpc
+import io.github.lgpy.familycare.core.data.push.SupabasePushDeviceRepository
 import io.github.lgpy.familycare.core.data.sync.AndroidKeystoreCipher
 import io.github.lgpy.familycare.core.data.sync.CoreSyncedTables
 import io.github.lgpy.familycare.core.data.sync.DATABASE_FILE_NAME
@@ -29,6 +30,7 @@ import io.github.lgpy.familycare.core.domain.auth.AuthState
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.ProfileRepository
+import io.github.lgpy.familycare.core.domain.push.PushDeviceRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import java.io.File
@@ -63,6 +65,12 @@ class DataLayer internal constructor(
     val database: PowerSyncDatabase,
     /** Who is signed in, so a feature repository can scope its reads and writes. */
     val authState: StateFlow<AuthState>,
+    /**
+     * This install's FCM token on the server (D27). Part of the core because
+     * push registration is a core RPC and every module may need it; the token
+     * itself never leaves the push client.
+     */
+    val pushDeviceRepository: PushDeviceRepository,
 ) {
 
     companion object {
@@ -160,6 +168,7 @@ class DataLayer internal constructor(
                 ),
                 database = database,
                 authState = authRepository.state,
+                pushDeviceRepository = SupabasePushDeviceRepository(supabase.postgrest),
             )
         }
     }

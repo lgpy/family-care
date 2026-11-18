@@ -86,6 +86,13 @@ object ReminderNotifications {
 
         manager.notify(id, notification)
         store.addPosted(id)
+        // M4: a server `clear` finds the group notification through its slots.
+        store.addPostedSlots(
+            id,
+            group.slots.map { slot ->
+                ReminderContract.slotKey(slot.regimenId.value, slot.scheduledLocal)
+            },
+        )
         return id
     }
 
@@ -93,6 +100,30 @@ object ReminderNotifications {
     fun cancel(context: Context, id: Int, store: ScheduledRemindersStore) {
         NotificationManagerCompat.from(context).cancel(id)
         store.removePosted(id)
+        store.forgetNotification(id)
+    }
+
+    /**
+     * M4 `clear`: someone confirmed `(regimenId, scheduledLocal)` on another
+     * phone, so the notification of the group containing it goes.
+     *
+     * The lookup uses the slot index written in [post], so this needs no
+     * database. Returns whether a notification was showing: a clear for a slot
+     * this phone never posted is normal (the dose was confirmed before the
+     * alarm, or the reminder was already gone) and changes nothing.
+     */
+    fun cancelSlot(
+        context: Context,
+        regimenId: String,
+        scheduledLocal: java.time.LocalDateTime,
+        store: ScheduledRemindersStore,
+    ): Boolean {
+        val key = ReminderContract.slotKey(regimenId, scheduledLocal)
+        val id = store.notificationForSlot(key) ?: return false
+        NotificationManagerCompat.from(context).cancel(id)
+        store.removePosted(id)
+        store.forgetNotification(id)
+        return true
     }
 
     private fun contentIntent(context: Context, group: TimeSlotGroup, id: Int): PendingIntent {

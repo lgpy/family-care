@@ -18,7 +18,13 @@ local.properties
 *.p12
 *.pfx
 keystore.properties
+# google-services.json is NOT a secret (D21/D27): it holds the Firebase project
+# id, the app id and a public Android API key, exactly like the committed
+# android/environments values, and CI needs it to build the FCM client. Only
+# that one committed file is exempt; any other copy (another app module, a
+# downloaded variant, a local experiment) stays ignored.
 google-services.json
+!android/app/google-services.json
 .env
 .env.*
 !.env.example

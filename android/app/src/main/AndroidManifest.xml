@@ -17,6 +17,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FamilyCare">
 
+        <!-- M4/D17: FCM only. No analytics or other Firebase product is a
+             dependency, and these flags keep the (absent) analytics collector
+             off even if a transitive library ever tries to start it. -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
+        <meta-data
+            android:name="firebase_analytics_collection_deactivated"
+            android:value="true" />
+        <meta-data
+            android:name="google_analytics_automatic_screen_reporting_enabled"
+            android:value="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -52,6 +65,17 @@
                 <action android:name="io.github.lgpy.familycare.action.RESCHEDULE_REMINDERS" />
             </intent-filter>
         </receiver>
+
+        <!-- M4 push (D4/D27): escalation and clear messages from the two edge
+             functions. FCM calls it for new tokens and for data-only messages
+             (the clear); the system draws background escalations itself. -->
+        <service
+            android:name="io.github.lgpy.familycare.feature.medications.push.PushMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

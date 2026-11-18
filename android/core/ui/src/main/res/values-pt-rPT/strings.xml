@@ -359,6 +359,13 @@
         <item quantity="other">%1$d medicações</item>
     </plurals>
 
+    <!-- M4: server escalation pushes (D4/D27). -->
+    <string name="escalation_channel_name">Alertas de tomas</string>
+    <string name="escalation_channel_description">Alertas quando uma toma fica por confirmar. No ecrã bloqueado não dizem nada sobre a medicação.</string>
+    <string name="escalation_notification_title">Family Care</string>
+    <string name="escalation_notification_body">Uma toma precisa de atenção</string>
+    <string name="escalation_notification_public_text">Family Care · Há uma toma para dar</string>
+
     <string name="reminders_needs_attention_title">Precisa de atenção</string>
     <string name="reminders_needs_attention_line">%1$s · %2$s · %3$s · por confirmar</string>
     <string name="reminders_health_card_title">Os lembretes precisam de atenção</string>
@@ -379,6 +386,7 @@
     <string name="reminders_exact_alarms">Os alarmes podem ser exatos</string>
     <string name="reminders_battery">O Family Care não está sujeito à otimização da bateria</string>
     <string name="reminders_alarms_scheduled">Lembretes agendados: %1$d de %2$d</string>
+    <string name="reminders_push_registered">Alertas de escalonamento registados</string>
     <string name="reminders_next_alarm">Próximo lembrete: %1$s</string>
     <string name="reminders_no_next_alarm">Ainda não há lembretes agendados.</string>
     <string name="reminders_all_good">Os lembretes parecem fiáveis neste telemóvel.</string>

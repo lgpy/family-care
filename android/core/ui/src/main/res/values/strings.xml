@@ -359,6 +359,14 @@
         <item quantity="other">%1$d medications</item>
     </plurals>
 
+    <!-- M4: server escalation pushes (D4/D27). The channel name is what Android's
+         notification settings show; the text is generic — no names, no health data. -->
+    <string name="escalation_channel_name">Dose alerts</string>
+    <string name="escalation_channel_description">Alerts when a dose stayed unconfirmed. They say nothing about the medication on the lock screen.</string>
+    <string name="escalation_notification_title">Family Care</string>
+    <string name="escalation_notification_body">A dose needs attention</string>
+    <string name="escalation_notification_public_text">Family Care · A dose is due</string>
+
     <string name="reminders_needs_attention_title">Needs attention</string>
     <string name="reminders_needs_attention_line">%1$s · %2$s · %3$s · not confirmed</string>
     <string name="reminders_health_card_title">Reminders need attention</string>
@@ -379,6 +387,7 @@
     <string name="reminders_exact_alarms">Alarms can be exact</string>
     <string name="reminders_battery">Family Care is not battery-optimised</string>
     <string name="reminders_alarms_scheduled">Reminders scheduled: %1$d of %2$d</string>
+    <string name="reminders_push_registered">Escalation alerts registered</string>
     <string name="reminders_next_alarm">Next reminder: %1$s</string>
     <string name="reminders_no_next_alarm">No reminder is scheduled yet.</string>
     <string name="reminders_all_good">Reminders look reliable on this phone.</string>

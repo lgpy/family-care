@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "792893337272",
+    "project_id": "family-care-a4878",
+    "storage_bucket": "family-care-a4878.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:792893337272:android:70ff3a3ee0302bd1a24e4d",
+        "android_client_info": {
+          "package_name": "io.github.lgpy.familycare"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "792893337272-u3j0mu7mdhtiueq52nu80gbphgns7na5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxyg3bqITUcszK0F4ZWqJeT5qLHaSagrE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "792893337272-u3j0mu7mdhtiueq52nu80gbphgns7na5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -110,4 +110,15 @@ object ReminderContract {
             io.github.lgpy.familycare.feature.medications.MedicationsRoutes.encodeScheduledLocal(
                 group.scheduledLocal,
             )
+
+    /**
+     * The index key of one dose slot, used to find the group notification that
+     * shows it when a server `clear` arrives (M4): `regimenId|yyyy-MM-ddTHH:mm`.
+     *
+     * The wall clock is rendered without seconds, the same form the server's
+     * `scheduled_local` uses, so the key is a direct lookup — no database read
+     * is needed to cancel the reminder notification.
+     */
+    fun slotKey(regimenId: String, scheduledLocal: LocalDateTime): String =
+        "$regimenId|${io.github.lgpy.familycare.feature.medications.domain.PushMessages.formatScheduledLocal(scheduledLocal)}"
 }

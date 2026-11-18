@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.PowerManager
 import androidx.core.app.NotificationManagerCompat
+import io.github.lgpy.familycare.feature.medications.push.PushRegistrationStore
 import java.time.Instant
 
 /** One thing the reminder health check found wanting. */
@@ -28,6 +29,9 @@ enum class ReminderProblem {
  * @param scheduledCount Alarm request codes in the local index.
  * @param plannedCount Groups the plan wants right now.
  * @param nextAlarmAt The earliest alarm the last pass wrote.
+ * @param pushRegistered Whether this install's FCM token was registered with
+ *   the server at least once (D27). Informational: escalation is a safety net,
+ *   so a phone without push still reminds locally and nothing here fails.
  */
 data class ReminderHealth(
     val notificationsAllowed: Boolean,
@@ -37,11 +41,13 @@ data class ReminderHealth(
     val scheduledCount: Int,
     val plannedCount: Int,
     val nextAlarmAt: Instant?,
+    val pushRegistered: Boolean = false,
 ) {
 
     /** Whether the phone should reliably remind as planned. */
     val alarmsInSync: Boolean get() = scheduledCount == plannedCount
 
+    /** Local reliability only; [pushRegistered] is reported but never blocks. */
     val isHealthy: Boolean
         get() = notificationsAllowed &&
             channelEnabled &&
@@ -69,6 +75,7 @@ class ReminderHealthChecker(
     context: Context,
     private val scheduler: DoseReminderScheduler,
     private val store: ScheduledRemindersStore,
+    private val pushRegistration: PushRegistrationStore,
 ) {
 
     private val applicationContext = context.applicationContext
@@ -98,6 +105,8 @@ class ReminderHealthChecker(
             scheduledCount = store.scheduled().size,
             plannedCount = plan.orEmpty().size,
             nextAlarmAt = store.nextAlarmAt()?.let(Instant::ofEpochMilli),
+            // Informational only (D27): escalation is the server-side safety net.
+            pushRegistered = pushRegistration.registered,
         )
     }
 }

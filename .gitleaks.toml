@@ -10,7 +10,7 @@ title = "Family Care"
 # Keep the built-in rules and their defaults.
 useDefault = true
 
-[allowlist]
+[[allowlists]]
 description = "Design docs quote placeholder credentials; build output and caches are never committed."
 
 paths = [
@@ -34,4 +34,16 @@ regexes = [
   # any other credential in that file is still reported; the file must never
   # hold a secret (no service-role key, keystore password or private key).
   '''^sb_publishable_[A-Za-z0-9_-]{20,}$''',
+]
+
+# One file, one allowance (M4): android/app/google-services.json carries the
+# Firebase project id, the Android app id and the "current_key" Android API key.
+# That key is a public Firebase identifier — it is compiled into every APK — and
+# the file is committed on purpose so CI can build the FCM client (D21/D27).
+# Scoped to this exact path and nothing else: every other file, including any
+# other copy of google-services.json, is still scanned by the full rule set.
+[[allowlists]]
+description = "Committed Firebase Android config: public identifiers only, no secret."
+paths = [
+  '''^android/app/google-services\.json$''',
 ]

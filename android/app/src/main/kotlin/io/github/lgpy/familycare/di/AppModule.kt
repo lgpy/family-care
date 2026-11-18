@@ -4,12 +4,14 @@ import android.os.SystemClock
 import android.app.AlarmManager
 import io.github.lgpy.familycare.BuildConfig
 import io.github.lgpy.familycare.auth.GoogleSignIn
+import io.github.lgpy.familycare.auth.PushAwareAuthRepository
 import io.github.lgpy.familycare.core.data.DataLayer
 import io.github.lgpy.familycare.core.data.auth.AuthRepository
 import io.github.lgpy.familycare.core.data.sync.SyncService
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.ProfileRepository
+import io.github.lgpy.familycare.core.domain.push.PushDeviceRepository
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCards
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
@@ -22,6 +24,12 @@ import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationsData
 import io.github.lgpy.familycare.feature.medications.medicationsModule
+import io.github.lgpy.familycare.feature.medications.push.FcmTokenSource
+import io.github.lgpy.familycare.feature.medications.push.FirebaseTokenSource
+import io.github.lgpy.familycare.feature.medications.push.PushRegistrationStore
+import io.github.lgpy.familycare.feature.medications.push.PushSession
+import io.github.lgpy.familycare.feature.medications.push.PushTokenRegistrar
+import io.github.lgpy.familycare.feature.medications.push.SharedPreferencesPushRegistrationStore
 import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealthChecker
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderSchedulerCoordinator
@@ -70,8 +78,7 @@ val appModule: Module = module {
     // Feature modules contribute their synced tables here (D5): the medications
     // module adds `medications`, `regimens` and `dose_log` with their upload
     // rules, and core/data merges them with the core's own tables.
-    single {
-        DataLayer.create(
+    single { DataLayer.create(
             context = androidContext(),
             supabaseUrl = BuildConfig.SUPABASE_URL,
             publishableKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY,
@@ -79,7 +86,14 @@ val appModule: Module = module {
             featureTables = listOf(MedicationsData.syncedTables),
         )
     }
-    single<AuthRepository> { get<DataLayer>().authRepository }
+    single<AuthRepository> {
+        // M4/D27: every sign-out unregisters this install's push token before
+        // the session is cleared, whichever screen started it.
+        PushAwareAuthRepository(
+            delegate = get<DataLayer>().authRepository,
+            push = get(),
+        )
+    }
     single<SyncService> { get<DataLayer>().sync }
 
     // M2 care circle. Reads are local and offline-first; membership changes go
@@ -123,7 +137,7 @@ val appModule: Module = module {
             alarmManager = androidContext().getSystemService(AlarmManager::class.java),
         )
     }
-    single { ReminderHealthChecker(androidContext(), get(), get()) }
+    single { ReminderHealthChecker(androidContext(), get(), get(), get()) }
     single {
         ReminderSchedulerCoordinator(
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
@@ -139,6 +153,30 @@ val appModule: Module = module {
     // The medications module's view models. Included here so the app stays the
     // only place that knows which modules exist.
     includes(medicationsModule)
+
+    // M4 push (D4/D27): the device registration that makes escalation and clear
+    // reach this phone. The token is fetched by Firebase and never logged; the
+    // registration is retried by WorkManager while offline, and the session
+    // (above) is what triggers it.
+    single<PushDeviceRepository> { get<DataLayer>().pushDeviceRepository }
+    single<PushRegistrationStore> { SharedPreferencesPushRegistrationStore(androidContext()) }
+    single<FcmTokenSource> { FirebaseTokenSource() }
+    single {
+        PushTokenRegistrar(
+            repository = get(),
+            authState = get<DataLayer>().authState,
+            tokens = get(),
+            store = get(),
+        )
+    }
+    single {
+        PushSession(
+            context = androidContext(),
+            registrar = get(),
+            authState = get<DataLayer>().authState,
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        )
+    }
 
     // Needs an Activity at call time, so it is a plain collaborator rather than
     // a singleton holding one.

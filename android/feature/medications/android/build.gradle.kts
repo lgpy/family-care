@@ -31,6 +31,14 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
+    // M4 push (D4/D27): escalation and clear messages, plus the short jobs that
+    // run the clear while the app is in the background. `firebase-messaging`
+    // only: no analytics or other Firebase product (D17). The google-services
+    // plugin is applied by the app module, which owns the generated resources.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+    implementation(libs.androidx.work.runtime.ktx)
+
     testImplementation(libs.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
