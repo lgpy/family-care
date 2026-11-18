@@ -55,7 +55,7 @@ Nothing in this repository links to a remote project: linking and `db push` are
 done by hand, on purpose, so a stray command cannot touch prod. Dev holds
 invented test data only — never real health data.
 
-## What exists so far (M1–M2)
+## What exists so far (M1–M3)
 
 M1 (walking skeleton):
 
@@ -68,10 +68,10 @@ M1 (walking skeleton):
   `powersync` publication and drops it; the schema-wide security checks it
   introduced live on in `tests/core_security_test.sql`.
 - The `powersync` publication and the Sync Streams config in `../powersync/`.
-- `core` is listed in `api.schemas` in `config.toml` so PostgREST can serve it;
-  access is still governed by the grants and RLS above. Because `core` is not
-  `public`, a REST client must name the schema in `Accept-Profile` (reads) and
-  `Content-Profile` (writes) headers.
+- `core` and `meds` are listed in `api.schemas` in `config.toml` so PostgREST
+  can serve them; access is still governed by the grants and RLS. Because they
+  are not `public`, a REST client must name the schema in `Accept-Profile`
+  (reads) and `Content-Profile` (writes) headers.
 
 M2 (care circle) — `migrations/20261118120000_core_care_circle.sql`:
 
@@ -103,11 +103,50 @@ M2 (care circle) — `migrations/20261118120000_core_care_circle.sql`:
   table, nothing granted to `anon` or `PUBLIC`, policies scoped
   `to authenticated`. The tests check this generically over `pg_class`, so a
   table added later is covered automatically.
-- The `powersync` publication covers the four synced tables (`care_circles`,
-  `memberships`, `profiles`, `patients`); invitations, overrides and the audit
-  log are server-only. `migrations/20261118130000_core_drop_sync_probe.sql`
-  removes the M1 probe from the publication and drops the table, keeping
-  `core.set_updated_at()` (the M2 tables use it).
+- The `powersync` publication covers the four synced core tables
+  (`care_circles`, `memberships`, `profiles`, `patients`); invitations,
+  overrides and the audit log are server-only.
+  `migrations/20261118130000_core_drop_sync_probe.sql` removes the M1 probe
+  from the publication and drops the table, keeping
+  `core.set_updated_at()` (the M2 and M3 tables use it).
+
+M3 (medications) — `migrations/20261119120000_meds.sql`:
+
+- Schema `meds`: `medications` (patient, name, active ingredient, strength,
+  form, stock unit, instructions, prescription validity, low-stock threshold in
+  days, optional reminder-policy override and primary-caregiver override,
+  stopped stamp), `regimens` (versioned schedule) and `dose_log` (append-only
+  outcome records). Stock, low-stock and shopping are **M5** and do not exist
+  yet. Enums `medication_form`, `schedule_type`, `skip_reason` and
+  `dose_outcome` use the names the Kotlin domain maps.
+- **Versioned regimens (D9):** every column except `end_date` is immutable; a
+  trigger also allows only setting `end_date` or moving it earlier, never
+  clearing it, and refuses overlapping date ranges for one medication
+  (inclusive, open end = infinity). `times` is a 1..12 element ascending jsonb
+  array of `{"time":"HH:MM","quantity":n}` with at most 3 decimals; the ISO
+  weekday bitmask (Monday=1 … Sunday=64) and `interval_days` must match the
+  schedule type; the IANA `time_zone` is validated against `pg_timezone_names`.
+- **Append-only dose log (D6):** only `SELECT`/`INSERT` are granted, a `BEFORE
+  UPDATE` trigger raises for every role (cascades still delete), `confirmed_by`
+  must be the caller, `medication_id` must match the regimen, `given_by_user_id`
+  must be a circle member, `given_by_user_id`/`given_by_other` are exclusive,
+  `skip_reason` is required exactly for skipped doses, and a correction must
+  reference an entry with the same regimen and slot. Nothing is edited or
+  deleted by the app; corrections are new rows.
+- RLS mirrors the M2 rules: `core.can(patient_id, action)` on medications;
+  regimens and the dose log resolve the patient through
+  `meds.patient_of_medication()` (security definer). Any member reads,
+  owner/caregiver writes, only an owner deletes a medication; there is no
+  client `DELETE` on regimens or the dose log.
+- Audit (D14): `meds.audit_row_change()` writes `core.audit_log` with the
+  derived patient and circle for all three tables, including dose log inserts.
+  It lives in `meds` (not `core`) to keep the module direction core ← feature:
+  the core function only knows how to derive a circle from a `circle_id`
+  column, which these tables do not have.
+- The `powersync` publication adds `meds.medications`, `meds.regimens` and
+  `meds.dose_log`. The streams walk medications → `core.patients` →
+  `core.memberships`; `dose_log` is unbounded for now (a time window is noted
+  in `powersync/sync-config.yaml`).
 
 ## Tests
 
@@ -128,16 +167,24 @@ append-only against clients and the table owner).
 at a time, iterating `pg_class`: at least one table exists, RLS is enabled
 **and forced** on every `core` table, nothing is granted to `PUBLIC` or `anon`,
 `authenticated` may use the schema, the `powersync` publication contains
-exactly the four synced tables, and the M1 `sync_probe` table is gone while
+exactly the seven synced tables, and the M1 `sync_probe` table is gone while
 `core.set_updated_at()` remains.
 
-The same file also runs the **exact Sync Streams queries** from
-`../powersync/sync-config.yaml` as each test user, so the read half and the
-write half are tested against the same scenarios. `../powersync/check-sync-tests.sh`
-extracts every `query:` from the YAML and fails if any of them (with
-`auth.user_id()` replaced by `(select auth.uid())`) does not appear verbatim in a
-test file. CI runs it in the `database` job, so editing one side without the
-other fails the pull request.
+`meds_test.sql` covers the M3 tables: the same isolation scenarios (owner and
+caregiver read/write, another circle sees and writes nothing, a viewer reads but
+cannot write, a removed caregiver loses access, anon is denied), medication and
+primary-caregiver checks, regimen versioning/end-date/overlap rules, the
+schedule shape and `times` validation, the append-only dose log (no
+update/delete, confirmation spoofing, medication/regimen mismatch, skip-reason
+and given-by rules, correction slots) and the audit rows' actor/patient/circle.
+
+`core_care_circle_test.sql` and `meds_test.sql` also run the **exact Sync
+Streams queries** from `../powersync/sync-config.yaml` as each test user, so the
+read half and the write half are tested against the same scenarios.
+`../powersync/check-sync-tests.sh` extracts every `query:` from the YAML and
+fails if any of them (with `auth.user_id()` replaced by `(select auth.uid())`)
+does not appear verbatim in a test file. CI runs it in the `database` job, so
+editing one side without the other fails the pull request.
 
 CI runs the same commands (the drift check, `supabase test db` and `db lint`) in
 the `database` job of `.github/workflows/ci.yml`, so a broken schema change or a

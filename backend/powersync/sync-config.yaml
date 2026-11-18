@@ -45,6 +45,28 @@ streams:
     auto_subscribe: true
     query: SELECT * FROM "core"."patients" WHERE circle_id IN (SELECT circle_id FROM "core"."memberships" WHERE user_id = auth.user_id())
 
+  # M3 medications: the medication rows of every patient in the user's circles.
+  # One line per stream (check-sync-tests.sh); the nested IN subqueries walk
+  # medications -> core.patients -> core.memberships, the same access path as
+  # core.can() in the database.
+  medications:
+    auto_subscribe: true
+    query: SELECT * FROM "meds"."medications" WHERE patient_id IN (SELECT id FROM "core"."patients" WHERE circle_id IN (SELECT circle_id FROM "core"."memberships" WHERE user_id = auth.user_id()))
+
+  # Regimens of those medications. A regimen row is immutable apart from
+  # end_date, so a dose change arrives as an insert plus an end_date update.
+  regimens:
+    auto_subscribe: true
+    query: SELECT * FROM "meds"."regimens" WHERE medication_id IN (SELECT id FROM "meds"."medications" WHERE patient_id IN (SELECT id FROM "core"."patients" WHERE circle_id IN (SELECT circle_id FROM "core"."memberships" WHERE user_id = auth.user_id())))
+
+  # The dose log of those medications. Synced without a time window for now: a
+  # future milestone should add `AND scheduled_local > ...` (a few months) so a
+  # long-lived circle does not download its whole history. The append-only table
+  # keeps growing, so the window is the only thing that bounds this stream.
+  dose_log:
+    auto_subscribe: true
+    query: SELECT * FROM "meds"."dose_log" WHERE medication_id IN (SELECT id FROM "meds"."medications" WHERE patient_id IN (SELECT id FROM "core"."patients" WHERE circle_id IN (SELECT circle_id FROM "core"."memberships" WHERE user_id = auth.user_id())))
+
   # Deliberately NOT synced: core.invitations (bearer codes / emails stay on the
   # server), core.patient_access_overrides (not used in the MVP) and
   # core.audit_log (server-side, owner-only Activity screen).
