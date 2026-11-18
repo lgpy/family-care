@@ -25,8 +25,9 @@ project, [`backup.sh`](backup.sh):
    key in [`recipients.txt`](recipients.txt);
 4. uploads only the `.age` file with `aws s3api put-object` to
    `family-care-backups` (`<env>/daily/YYYY/MM/family-care-<env>-<stamp>.tar.gz.age`,
-   plus a monthly copy on the 1st of the month), then checks the object is
-   visible with `head-object` or `list-objects-v2`.
+   plus a monthly copy on the 1st of the month) with a `Content-MD5` header,
+   and checks that the returned ETag equals the file's MD5. The key is
+   write-only (no read, no list), so the upload response is the verification.
 
 The plaintext dumps and the unencrypted tar exist only in a private temporary
 directory and are removed by an EXIT trap, successful run or not. They are never

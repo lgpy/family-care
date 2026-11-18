@@ -180,37 +180,30 @@ export AWS_RESPONSE_CHECKSUM_VALIDATION="${AWS_RESPONSE_CHECKSUM_VALIDATION:-whe
 command -v openssl >/dev/null 2>&1 || die "openssl not found (needed for Content-MD5)"
 content_md5="$(openssl dgst -md5 -binary "$encrypted" | openssl base64 -A)"
 
+content_md5_hex="$(openssl dgst -md5 -r "$encrypted" | cut -d' ' -f1)"
+
+# The key is write-only (no readFiles, no listFiles), so it cannot look the
+# object up afterwards. Verification is the upload itself: B2 rejects the put
+# if the bytes do not match Content-MD5, and the returned ETag (the object's
+# MD5 for a single-part upload) must equal ours.
 upload_object() {
-  local key="$1"
+  local key="$1" etag
   log "uploading $key"
-  aws s3api put-object \
+  etag="$(aws s3api put-object \
     --endpoint-url "$endpoint" \
     --bucket "$BUCKET" \
     --key "$key" \
     --content-md5 "$content_md5" \
-    --body "$encrypted" >/dev/null
-}
-
-verify_object() {
-  local key="$1"
-  # head-object needs readFiles, which this key deliberately does not have, so
-  # fall back to listing the exact key. A key that is not visible is a failure.
-  if aws s3api head-object --endpoint-url "$endpoint" --bucket "$BUCKET" --key "$key" >/dev/null 2>&1; then
-    return 0
-  fi
-  local found
-  found="$(aws s3api list-objects-v2 \
-    --endpoint-url "$endpoint" \
-    --bucket "$BUCKET" \
-    --prefix "$key" \
-    --query "Contents[?Key=='$key'].Key" \
-    --output text)"
-  [[ "$found" == "$key" ]] || die "$key is not visible in the bucket after upload"
+    --body "$encrypted" \
+    --query ETag --output text)"
+  etag="${etag//\"/}"
+  [[ "$etag" == "$content_md5_hex" ]] ||
+    die "$key: B2 returned ETag $etag, expected $content_md5_hex"
+  log "verified $key (md5 $content_md5_hex)"
 }
 
 daily_key="$backup_env/daily/${created_at:0:4}/${created_at:5:2}/$(basename -- "$encrypted")"
 upload_object "$daily_key"
-verify_object "$daily_key"
 
 # On the first of the month the same file also becomes that month's copy, which
 # the lifecycle rules keep for a year (retention is B2's job; this job cannot
@@ -218,7 +211,6 @@ verify_object "$daily_key"
 if [[ "${created_at:8:2}" == "01" ]]; then
   monthly_key="$backup_env/monthly/${created_at:0:4}/family-care-$backup_env-${created_at:0:4}${created_at:5:2}.tar.gz.age"
   upload_object "$monthly_key"
-  verify_object "$monthly_key"
 fi
 
 log "done"
