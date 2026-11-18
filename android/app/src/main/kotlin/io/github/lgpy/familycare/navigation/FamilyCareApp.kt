@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -32,6 +33,7 @@ import io.github.lgpy.familycare.feature.medications.doses.DoseSlotScreen
 import io.github.lgpy.familycare.feature.medications.form.MedicationFormScreen
 import io.github.lgpy.familycare.feature.medications.list.PatientMedicationsScreen
 import io.github.lgpy.familycare.feature.medications.regimen.ChangeRegimenScreen
+import io.github.lgpy.familycare.feature.medications.shopping.ShoppingScreen
 import io.github.lgpy.familycare.ui.AboutScreen
 import io.github.lgpy.familycare.ui.MoreScreen
 import io.github.lgpy.familycare.ui.TodayScreen
@@ -44,16 +46,16 @@ import io.github.lgpy.familycare.ui.sync.UploadRejectionBanner
 
 /**
  * The app shell once the user belongs to a circle: a bottom bar with Today,
- * Patients and More, and the screens those open.
+ * Patients, Shopping and More, and the screens those open.
  *
  * The top bar is the persistent message about a change the server refused and
  * the queue discarded (see `UploadRejectionBanner`); it is empty while there is
  * no such change, including during offline or transient sync trouble.
  *
- * Agenda and Shopping are later milestones and are deliberately not shown as
- * placeholders. The care-circle gate lives outside this composable (see
- * `CircleGate`), so removing the last membership takes the user back there
- * without the shell needing to know.
+ * Agenda is a later milestone and is deliberately not shown as a placeholder.
+ * The care-circle gate lives outside this composable (see `CircleGate`), so
+ * removing the last membership takes the user back there without the shell
+ * needing to know.
  */
 @Composable
 fun FamilyCareApp(
@@ -117,6 +119,15 @@ fun FamilyCareApp(
                     onOpenMedications = { patientId ->
                         navController.navigate(
                             Destination.patientMedicationsRoute(patientId),
+                        )
+                    },
+                )
+            }
+            composable(Destination.Shopping.route) {
+                ShoppingScreen(
+                    onOpenMedication = { patientId, medicationId ->
+                        navController.navigate(
+                            MedicationsRoutes.medicationDetail(patientId, medicationId),
                         )
                     },
                 )
@@ -273,6 +284,7 @@ private fun NavHostController.navigateToTopLevel(destination: Destination) {
 private fun Destination.icon(): ImageVector = when (this) {
     Destination.Today -> Icons.Filled.Home
     Destination.Patients -> Icons.Filled.Person
+    Destination.Shopping -> Icons.Filled.ShoppingCart
     Destination.More -> Icons.Filled.MoreVert
     else -> Icons.Filled.MoreVert
 }
@@ -281,6 +293,7 @@ private fun Destination.icon(): ImageVector = when (this) {
 private fun Destination.labelRes(): Int = when (this) {
     Destination.Today -> R.string.nav_today
     Destination.Patients -> R.string.nav_patients
+    Destination.Shopping -> R.string.nav_shopping
     Destination.More -> R.string.nav_more
     else -> R.string.nav_more
 }

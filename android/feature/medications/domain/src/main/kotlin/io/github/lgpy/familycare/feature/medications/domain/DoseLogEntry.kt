@@ -179,10 +179,19 @@ object DoseLogRules {
     fun effectiveEntries(
         slot: DoseSlotId,
         entries: List<DoseLogEntry>,
-    ): List<DoseLogEntry> {
+    ): List<DoseLogEntry> = effectiveEntries(entries).filter { it.slotId == slot }
+
+    /**
+     * Every effective entry of a whole medication, oldest first.
+     *
+     * The stock ledger needs this: a dose deducts unless another entry names it
+     * in [DoseLogEntry.correctsEntryId] (D28), and the voiding rule is exactly
+     * the one above — not a second implementation of it.
+     */
+    fun effectiveEntries(entries: List<DoseLogEntry>): List<DoseLogEntry> {
         val voided = entries.mapNotNullTo(mutableSetOf()) { it.correctsEntryId }
         return entries
-            .filter { it.slotId == slot && it.id !in voided }
+            .filter { it.id !in voided }
             .sortedWith(compareBy({ it.actualAt }, { it.id.value }))
     }
 

@@ -22,6 +22,8 @@ import io.github.lgpy.familycare.feature.medications.data.MedsResult
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationWithRegimens
 import io.github.lgpy.familycare.feature.medications.data.PatientDoseSettings
+import io.github.lgpy.familycare.feature.medications.data.StockOverview
+import io.github.lgpy.familycare.feature.medications.data.StockRepository
 import io.github.lgpy.familycare.feature.medications.data.TodayDoseGroup
 import io.github.lgpy.familycare.feature.medications.domain.DoseLogEntry
 import io.github.lgpy.familycare.feature.medications.domain.DoseLogEntryId
@@ -37,7 +39,11 @@ import io.github.lgpy.familycare.feature.medications.domain.MedicationId
 import io.github.lgpy.familycare.feature.medications.domain.Regimen
 import io.github.lgpy.familycare.feature.medications.domain.RegimenId
 import io.github.lgpy.familycare.feature.medications.domain.ScheduleType
+import io.github.lgpy.familycare.feature.medications.domain.ShoppingStatus
 import io.github.lgpy.familycare.feature.medications.domain.SkipReason
+import io.github.lgpy.familycare.feature.medications.domain.StockMovement
+import io.github.lgpy.familycare.feature.medications.domain.StockMovementId
+import io.github.lgpy.familycare.feature.medications.domain.StockSummary
 import io.github.lgpy.familycare.feature.medications.domain.TimeSlotGroup
 import java.math.BigDecimal
 import java.time.Instant
@@ -220,7 +226,7 @@ class FakeMedicationRepository : MedicationRepository {
 
     override val activeMedications: Flow<List<MedicationWithRegimens>> = activeFlow
 
-    val created = mutableListOf<Pair<Medication, Regimen>>()
+    val created = mutableListOf<CreateCall>()
     var createResult: MedsResult<MedicationId>? = null
     val updated = mutableListOf<Medication>()
     var updateResult: MedsResult<MedicationId>? = null
@@ -249,8 +255,9 @@ class FakeMedicationRepository : MedicationRepository {
     override suspend fun create(
         medication: Medication,
         firstRegimen: Regimen,
+        openingQuantity: BigDecimal?,
     ): MedsResult<MedicationId> {
-        created += medication to firstRegimen
+        created += CreateCall(medication, firstRegimen, openingQuantity)
         return createResult ?: MedsResult.Success(medication.id)
     }
 
@@ -292,6 +299,13 @@ data class RegimenChangeCall(
 )
 
 data class StopCall(val medication: Medication, val regimen: Regimen, val lastDay: LocalDate)
+
+/** One recorded [MedicationRepository.create] call, with its opening count (D28). */
+data class CreateCall(
+    val medication: Medication,
+    val regimen: Regimen,
+    val openingQuantity: BigDecimal?,
+)
 
 class FakeDoseLogRepository : DoseLogRepository {
 
@@ -342,8 +356,101 @@ class FakeDoseLogRepository : DoseLogRepository {
     }
 }
 
-class FakeCareCircleRepository : CareCircleRepository {
+/** A stock summary with the numbers a screen test wants to see (D28). */
+fun stockSummary(
+    stock: String = "30",
+    dailyConsumption: String = "1",
+    daysRemaining: Int? = 30,
+    low: Boolean = false,
+    shoppingStatus: ShoppingStatus? = null,
+): StockSummary = StockSummary(
+    stock = BigDecimal(stock),
+    dailyConsumption = BigDecimal(dailyConsumption),
+    daysRemaining = daysRemaining,
+    low = low,
+    shoppingStatus = shoppingStatus,
+)
 
+fun stockOverview(
+    item: MedicationWithRegimens = withRegimens(),
+    summary: StockSummary = stockSummary(),
+    movements: List<StockMovement> = emptyList(),
+): StockOverview = StockOverview(item = item, movements = movements, summary = summary)
+
+/** One recorded [StockRepository.recordCount] call. */
+data class CountCall(
+    val medicationId: MedicationId,
+    val quantity: BigDecimal,
+    val note: String?,
+)
+
+/** One recorded [StockRepository.recordRefill] call. */
+data class RefillCall(val medicationId: MedicationId, val quantity: BigDecimal)
+
+/** One recorded [StockRepository.recordDiscard] call. */
+data class DiscardCall(
+    val medicationId: MedicationId,
+    val quantity: BigDecimal,
+    val reason: String,
+)
+
+class FakeStockRepository : StockRepository {
+
+    val overviewFlows = mutableMapOf<String, MutableStateFlow<StockOverview?>>()
+    val movementFlows = mutableMapOf<String, MutableStateFlow<List<StockMovement>>>()
+    val overviewsFlow = MutableStateFlow<List<StockOverview>>(emptyList())
+
+    override val overviews: Flow<List<StockOverview>> = overviewsFlow
+
+    val counts = mutableListOf<CountCall>()
+    var countResult: MedsResult<StockMovementId> = MedsResult.Success(StockMovementId("stock-count"))
+
+    val refills = mutableListOf<RefillCall>()
+    var refillResult: MedsResult<StockMovementId> = MedsResult.Success(StockMovementId("stock-refill"))
+
+    val discards = mutableListOf<DiscardCall>()
+    var discardResult: MedsResult<StockMovementId> = MedsResult.Success(StockMovementId("stock-discard"))
+
+    override fun observeOverview(medicationId: MedicationId): Flow<StockOverview?> =
+        overviewFlows.getOrPut(medicationId.value) { MutableStateFlow(null) }
+
+    fun setOverview(overview: StockOverview) {
+        overviewFlows.getOrPut(overview.medication.id.value) { MutableStateFlow(null) }.value = overview
+        overviewsFlow.value = overviewsFlow.value.filterNot { it.medication.id == overview.medication.id } +
+            overview
+    }
+
+    override fun observeMovements(medicationId: MedicationId): Flow<List<StockMovement>> =
+        movementFlows.getOrPut(medicationId.value) { MutableStateFlow(emptyList()) }
+
+    override suspend fun recordCount(
+        medicationId: MedicationId,
+        quantity: BigDecimal,
+        note: String?,
+    ): MedsResult<StockMovementId> {
+        counts += CountCall(medicationId, quantity, note)
+        return countResult
+    }
+
+    override suspend fun recordRefill(
+        medicationId: MedicationId,
+        quantity: BigDecimal,
+    ): MedsResult<StockMovementId> {
+        refills += RefillCall(medicationId, quantity)
+        return refillResult
+    }
+
+    override suspend fun recordDiscard(
+        medicationId: MedicationId,
+        quantity: BigDecimal,
+        reason: String,
+    ): MedsResult<StockMovementId> {
+        discards += DiscardCall(medicationId, quantity, reason)
+        return discardResult
+    }
+}
+
+class FakeCareCircleRepository : CareCircleRepository {
     val circleFlow = MutableStateFlow<CareCircle?>(testCircle)
     override val circle: Flow<CareCircle?> = circleFlow
 

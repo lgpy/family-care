@@ -5,9 +5,9 @@ package io.github.lgpy.familycare.feature.medications.data
  * database.
  *
  * Everything here is the module's own tables (`medications`, `regimens`,
- * `dose_log`) plus read-only joins onto the core's `patients` and `memberships`
- * — never a write to a core table, and never a query another feature's tables
- * (D5, architecture "Rules": a module owns its tables).
+ * `dose_log`, `stock_movements`) plus read-only joins onto the core's `patients`
+ * and `memberships` — never a write to a core table, and never a query another
+ * feature's tables (D5, architecture "Rules": a module owns its tables).
  *
  * Parameters are always bound (`?`), never interpolated: names and ids are data.
  *
@@ -20,8 +20,8 @@ package io.github.lgpy.familycare.feature.medications.data
  * PowerSync tables are SQLite **views** with `INSTEAD OF` triggers, and SQLite
  * refuses `INSERT ... ON CONFLICT DO UPDATE` on a view. Saves are therefore an
  * existence check plus a plain INSERT or UPDATE inside one write transaction,
- * which is also what makes a multi-row change (medication + first regimen, an
- * ended version + a new one) one queued transaction.
+ * which is also what makes a multi-row change (medication + first regimen +
+ * opening stock count, an ended version + a new one) one queued transaction.
  *
  * `created_at`/`updated_at`/`created_by` are never written locally: the server
  * stamps them and they arrive through sync.
@@ -210,4 +210,18 @@ internal const val INSERT_DOSE_LOG = """
         actual_at, actual_quantity, confirmed_by, given_by_user_id, given_by_other,
         given_by_name, corrects_entry_id
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"""
+
+/** Every stock movement of one medication, oldest first (the repository re-sorts). */
+internal const val SELECT_MEDICATION_STOCK_MOVEMENTS = """
+    SELECT id, medication_id, kind, quantity, reason, occurred_at
+    FROM stock_movements
+    WHERE medication_id = ?
+    ORDER BY occurred_at, id
+"""
+
+/** Inserts one append-only stock movement (D6/D28); `created_*` are the server's. */
+internal const val INSERT_STOCK_MOVEMENT = """
+    INSERT INTO stock_movements (id, medication_id, kind, quantity, reason, occurred_at)
+    VALUES (?, ?, ?, ?, ?, ?)
 """

@@ -39,8 +39,11 @@ class FamilyCareApplication : Application() {
 
         // M4 push (D4/D27): the escalation channel Android's settings show, plus
         // token registration. Registration follows the session, so a start while
-        // signed in registers (or retries) without any screen being opened.
+        // signed in registers (or retries) without any screen being opened. M5
+        // adds the low-stock channel beside it so a background alert has somewhere
+        // to land (D28).
         PushNotifications.ensureChannel(this)
+        PushNotifications.ensureStockChannel(this)
         koin.get<PushSession>().start()
     }
 }

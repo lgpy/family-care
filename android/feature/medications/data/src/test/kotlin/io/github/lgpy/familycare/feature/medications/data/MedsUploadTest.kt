@@ -29,9 +29,9 @@ class MedsUploadTest {
         MedicationsSyncedTables.tables.associateBy { it.table.name }
 
     @Test
-    fun `the module contributes the three meds tables in the meds schema`() {
+    fun `the module contributes the four meds tables in the meds schema`() {
         assertEquals(
-            setOf(MEDICATIONS_TABLE, REGIMENS_TABLE, DOSE_LOG_TABLE),
+            setOf(MEDICATIONS_TABLE, REGIMENS_TABLE, DOSE_LOG_TABLE, STOCK_MOVEMENTS_TABLE),
             tables.keys,
         )
         assertTrue(tables.values.all { it.schema == MEDS_SCHEMA })

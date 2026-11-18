@@ -46,6 +46,13 @@ enum class MedicationField {
     DOSE_GIVEN_BY,
     DOSE_NOTE,
     DOSE_CORRECTION,
+
+    // --- Stock ledger (D28) ------------------------------------------------
+    /** The quantity of a stock movement: ≥ 0 for a count, > 0 for refill/discard. */
+    STOCK_QUANTITY,
+
+    /** The reason of a discard: required and up to 500 characters. */
+    STOCK_REASON,
 }
 
 /**

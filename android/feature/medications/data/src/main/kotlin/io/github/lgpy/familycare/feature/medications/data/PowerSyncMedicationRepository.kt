@@ -18,6 +18,10 @@ import io.github.lgpy.familycare.feature.medications.domain.RegimenId
 import io.github.lgpy.familycare.feature.medications.domain.RegimenRules
 import io.github.lgpy.familycare.feature.medications.domain.RegimenStop
 import io.github.lgpy.familycare.feature.medications.domain.ScheduleType
+import io.github.lgpy.familycare.feature.medications.domain.StockMovement
+import io.github.lgpy.familycare.feature.medications.domain.StockMovementId
+import io.github.lgpy.familycare.feature.medications.domain.StockMovementKind
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -98,11 +102,26 @@ internal class PowerSyncMedicationRepository(
             }
         }
 
-    override suspend fun create(medication: Medication, firstRegimen: Regimen): MedsResult<MedicationId> {
+    override suspend fun create(
+        medication: Medication,
+        firstRegimen: Regimen,
+        openingQuantity: BigDecimal?,
+    ): MedsResult<MedicationId> {
         val normalized = medication.normalized()
         val regimen = firstRegimen.normalized()
 
+        val openingMovement = openingQuantity?.let { quantity ->
+            StockMovement(
+                id = StockMovementId(newId()),
+                medicationId = normalized.id,
+                kind = StockMovementKind.COUNT,
+                quantity = quantity,
+                occurredAt = now(),
+            ).normalized()
+        }
+
         val errors = normalized.validate().errors + regimen.validate().errors +
+            openingMovement?.validate()?.errors.orEmpty() +
             if (regimen.medicationId != normalized.id) {
                 // The regimen is stored under the medication being created; a
                 // mismatch would attach it to the wrong one.
@@ -123,6 +142,9 @@ internal class PowerSyncMedicationRepository(
         return writeInOneTransaction(normalized.id) { tx ->
             tx.execute(INSERT_MEDICATION, medicationParameters(normalized))
             tx.execute(INSERT_REGIMEN, regimenParameters(regimen))
+            // D28: the opening balance is part of creation, so the medication
+            // can never exist for a moment without the stock it was counted in.
+            openingMovement?.let { tx.execute(INSERT_STOCK_MOVEMENT, stockMovementParameters(it)) }
         }
     }
 

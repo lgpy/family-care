@@ -17,12 +17,14 @@ import io.github.lgpy.familycare.core.ui.dashboard.DashboardCards
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
+import io.github.lgpy.familycare.feature.medications.dashboard.LowStockDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.MedicationsDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.ReminderHealthDashboardCard
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationsData
+import io.github.lgpy.familycare.feature.medications.data.StockRepository
 import io.github.lgpy.familycare.feature.medications.medicationsModule
 import io.github.lgpy.familycare.feature.medications.push.FcmTokenSource
 import io.github.lgpy.familycare.feature.medications.push.FirebaseTokenSource
@@ -112,12 +114,24 @@ val appModule: Module = module {
         val data = get<DataLayer>()
         MedicationsData.doseLogRepository(data.database, data.authState)
     }
+    // M5/D28: the stock ledger derives its summaries from the medication and the
+    // dose log, so it reuses the two repositories above.
+    single<StockRepository> {
+        val data = get<DataLayer>()
+        MedicationsData.stockRepository(
+            database = data.database,
+            authState = data.authState,
+            medicationRepository = get(),
+            doseLogRepository = get(),
+        )
+    }
 
     // The dashboard extension point (architecture.md §5): a feature contributes a
     // card, the shell renders whatever was registered, in order. Today imports no
     // feature module to do it.
     single<DashboardCard> { MedicationsDashboardCard() }
     single<DashboardCard> { NeedsAttentionDashboardCard() }
+    single<DashboardCard> { LowStockDashboardCard() }
     single<DashboardCard> { ReminderHealthDashboardCard() }
     single { DashboardCards(getAll<DashboardCard>()) }
 

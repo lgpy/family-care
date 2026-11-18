@@ -20,6 +20,9 @@ import io.github.lgpy.familycare.feature.medications.domain.Regimen
 import io.github.lgpy.familycare.feature.medications.domain.RegimenId
 import io.github.lgpy.familycare.feature.medications.domain.ScheduleType
 import io.github.lgpy.familycare.feature.medications.domain.SkipReason
+import io.github.lgpy.familycare.feature.medications.domain.StockMovement
+import io.github.lgpy.familycare.feature.medications.domain.StockMovementId
+import io.github.lgpy.familycare.feature.medications.domain.StockMovementKind
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -280,6 +283,47 @@ internal fun SqlCursor.toDoseLogRow(): DoseLogRow = DoseLogRow(
 
 /** Rows to domain entries, dropping anything this app cannot read. */
 internal fun List<DoseLogRow>.toEntries(): List<DoseLogEntry> = mapNotNull { it.toEntry() }
+
+/** One `stock_movements` row, before it becomes a domain [StockMovement]. */
+internal data class StockMovementRow(
+    val id: String,
+    val medicationId: String,
+    val kind: String,
+    val quantity: String,
+    val reason: String?,
+    val occurredAt: String,
+) {
+
+    /** The domain movement, or null when a value this app cannot read is present. */
+    fun toMovement(): StockMovement? {
+        val movementKind = StockMovementKind.fromServer(kind) ?: return null
+        val amount = parseQuantity(quantity) ?: return null
+        val at = parseServerInstant(occurredAt)?.toJavaInstant() ?: return null
+
+        return StockMovement(
+            id = StockMovementId(id),
+            medicationId = MedicationId(medicationId),
+            kind = movementKind,
+            quantity = amount,
+            occurredAt = at,
+            reason = reason,
+        )
+    }
+}
+
+/** Reads one row of any `SELECT_*_STOCK_MOVEMENT*` query. */
+internal fun SqlCursor.toStockMovementRow(): StockMovementRow = StockMovementRow(
+    id = getString("id"),
+    medicationId = getString("medication_id"),
+    kind = getString("kind"),
+    quantity = getString("quantity"),
+    reason = getStringOptional("reason"),
+    occurredAt = getString("occurred_at"),
+)
+
+/** Rows to domain movements, dropping anything this app cannot read. */
+internal fun List<StockMovementRow>.toMovements(): List<StockMovement> =
+    mapNotNull { it.toMovement() }
 
 /*
  * The text forms below are the contract with the server. Each value is written

@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.feature.medications
 
 import io.github.lgpy.familycare.feature.medications.dashboard.DosesTodayViewModel
+import io.github.lgpy.familycare.feature.medications.dashboard.LowStockViewModel
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionViewModel
 import io.github.lgpy.familycare.feature.medications.dashboard.ReminderHealthViewModel
 import io.github.lgpy.familycare.feature.medications.detail.MedicationDetailViewModel
@@ -8,6 +9,7 @@ import io.github.lgpy.familycare.feature.medications.doses.DoseSlotViewModel
 import io.github.lgpy.familycare.feature.medications.form.MedicationFormViewModel
 import io.github.lgpy.familycare.feature.medications.list.PatientMedicationsViewModel
 import io.github.lgpy.familycare.feature.medications.regimen.ChangeRegimenViewModel
+import io.github.lgpy.familycare.feature.medications.shopping.ShoppingViewModel
 import java.time.LocalDateTime
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
@@ -42,6 +44,9 @@ val medicationsModule: Module = module {
 
     viewModel { ReminderHealthViewModel(checker = get()) }
 
+    // M5/D28: the Today card that digests the low-stock list.
+    viewModel { LowStockViewModel(stockRepository = get()) }
+
     viewModel { (patientId: String, scheduledLocal: String) ->
         DoseSlotViewModel(
             patientId = patientId,
@@ -67,6 +72,7 @@ val medicationsModule: Module = module {
             patientId = patientId,
             medicationId = medicationId.ifBlank { null },
             medicationRepository = get(),
+            stockRepository = get(),
             patientRepository = get(),
             careCircleRepository = get(),
         )
@@ -85,6 +91,15 @@ val medicationsModule: Module = module {
             medicationId = medicationId,
             medicationRepository = get(),
             doseLogRepository = get(),
+            stockRepository = get(),
+            careCircleRepository = get(),
+        )
+    }
+
+    viewModel {
+        ShoppingViewModel(
+            stockRepository = get(),
+            medicationRepository = get(),
             careCircleRepository = get(),
         )
     }
