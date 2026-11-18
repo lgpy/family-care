@@ -9,12 +9,16 @@ import io.github.lgpy.familycare.core.data.sync.SyncService
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.ProfileRepository
+import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
+import io.github.lgpy.familycare.core.ui.dashboard.DashboardCards
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
+import io.github.lgpy.familycare.feature.medications.dashboard.MedicationsDashboardCard
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationsData
+import io.github.lgpy.familycare.feature.medications.medicationsModule
 import io.github.lgpy.familycare.ui.MoreViewModel
 import io.github.lgpy.familycare.ui.SignInViewModel
 import io.github.lgpy.familycare.ui.TodayViewModel
@@ -75,8 +79,7 @@ val appModule: Module = module {
     single<ProfileRepository> { get<DataLayer>().profileRepository }
 
     // M3 medications. The module builds its repositories from the same local
-    // database; screens inject only the interfaces. Not used by a screen yet,
-    // so they are created on first injection rather than at start-up.
+    // database; screens inject only the interfaces.
     single<MedicationRepository> {
         val data = get<DataLayer>()
         MedicationsData.medicationRepository(data.database, data.authState)
@@ -85,6 +88,16 @@ val appModule: Module = module {
         val data = get<DataLayer>()
         MedicationsData.doseLogRepository(data.database, data.authState)
     }
+
+    // The dashboard extension point (architecture.md §5): a feature contributes a
+    // card, the shell renders whatever was registered, in order. Today imports no
+    // feature module to do it.
+    single<DashboardCard> { MedicationsDashboardCard() }
+    single { DashboardCards(getAll<DashboardCard>()) }
+
+    // The medications module's view models. Included here so the app stays the
+    // only place that knows which modules exist.
+    includes(medicationsModule)
 
     // Needs an Activity at call time, so it is a plain collaborator rather than
     // a singleton holding one.

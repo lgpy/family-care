@@ -1,0 +1,454 @@
+package io.github.lgpy.familycare.feature.medications.form
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
+import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.feature.medications.domain.MedicationField
+import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
+import io.github.lgpy.familycare.feature.medications.ui.FieldError
+import io.github.lgpy.familycare.feature.medications.ui.ScheduleFields
+import io.github.lgpy.familycare.feature.medications.ui.labelRes
+import io.github.lgpy.familycare.feature.medications.ui.messageRes
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
+
+/**
+ * The add-medication flow, three steps (stock is M5):
+ * what → when and how much → who is reminded. In edit mode ([medicationId] not
+ * null) it is the "Edit details" screen: one step, saving with
+ * `MedicationRepository.update`, which leaves the regimen untouched.
+ */
+@Composable
+fun MedicationFormScreen(
+    patientId: String,
+    medicationId: String?,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val viewModel = koinViewModel<MedicationFormViewModel>(
+        parameters = { parametersOf(patientId, medicationId ?: "") },
+    )
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uiState.saved) {
+        if (uiState.saved) onBack()
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                )
+            }
+            Column {
+                Text(
+                    text = stringResource(
+                        if (uiState.isEdit) R.string.meds_edit_title else R.string.meds_add_title,
+                    ),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                if (!uiState.isEdit) {
+                    Text(
+                        text = stringResource(
+                            R.string.meds_step_of,
+                            uiState.stepNumber,
+                            MedicationFormUiState.STEP_COUNT,
+                        ) + stringResource(R.string.meds_list_separator) +
+                            stringResource(uiState.stepTitleRes()),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+
+        when {
+            !uiState.loaded -> CircularProgressIndicator()
+            uiState.notFound -> Text(
+                text = stringResource(R.string.meds_not_found),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+
+            else -> {
+                if (!uiState.canWrite) {
+                    Text(
+                        text = stringResource(R.string.patient_read_only),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
+                when {
+                    uiState.isEdit -> DetailsStep(viewModel, uiState)
+                    uiState.step == 0 -> DetailsStep(viewModel, uiState)
+                    uiState.step == 1 -> ScheduleStep(viewModel, uiState)
+                    else -> RemindersStep(viewModel, uiState)
+                }
+
+                uiState.error?.let { error ->
+                    Text(
+                        text = stringResource(error.messageRes()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
+                if (uiState.canWrite) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        if (!uiState.isEdit && uiState.step > 0) {
+                            OutlinedButton(
+                                onClick = viewModel::previous,
+                                enabled = !uiState.saving,
+                                modifier = Modifier.weight(1f),
+                            ) { Text(text = stringResource(R.string.meds_previous)) }
+                        }
+                        val saves = uiState.isEdit || uiState.step == MedicationFormUiState.STEP_COUNT - 1
+                        Button(
+                            onClick = { if (saves) viewModel.save() else viewModel.next() },
+                            enabled = !uiState.saving,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    when {
+                                        uiState.saving -> R.string.meds_step_busy
+                                        saves -> R.string.meds_save
+                                        else -> R.string.meds_next
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun MedicationFormUiState.stepTitleRes(): Int = when (step) {
+    0 -> R.string.meds_step_what
+    1 -> R.string.meds_step_when
+    else -> R.string.meds_step_who
+}
+
+@Composable
+private fun DetailsStep(viewModel: MedicationFormViewModel, state: MedicationFormUiState) {
+    val enabled = state.canWrite
+    val errors = state.errors
+
+    OutlinedTextField(
+        value = state.name,
+        onValueChange = viewModel::onNameChanged,
+        label = { Text(text = stringResource(R.string.meds_name_label)) },
+        enabled = enabled,
+        isError = MedicationField.MEDICATION_NAME in errors,
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    FieldError(MedicationField.MEDICATION_NAME in errors, R.string.meds_error_name)
+
+    OutlinedTextField(
+        value = state.activeIngredient,
+        onValueChange = viewModel::onActiveIngredientChanged,
+        label = { Text(text = stringResource(R.string.meds_ingredient_label)) },
+        enabled = enabled,
+        isError = MedicationField.MEDICATION_ACTIVE_INGREDIENT in errors,
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    FieldError(
+        MedicationField.MEDICATION_ACTIVE_INGREDIENT in errors,
+        R.string.meds_error_ingredient,
+    )
+
+    OutlinedTextField(
+        value = state.strength,
+        onValueChange = viewModel::onStrengthChanged,
+        label = { Text(text = stringResource(R.string.meds_strength_label)) },
+        supportingText = { Text(text = stringResource(R.string.meds_strength_helper)) },
+        enabled = enabled,
+        isError = MedicationField.MEDICATION_STRENGTH in errors,
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    FieldError(MedicationField.MEDICATION_STRENGTH in errors, R.string.meds_error_strength)
+
+    Text(
+        text = stringResource(R.string.meds_form_label),
+        style = MaterialTheme.typography.titleSmall,
+    )
+    MedicationForm.entries.forEach { form ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = state.form == form,
+                    enabled = enabled,
+                    role = Role.RadioButton,
+                    onClick = { viewModel.onFormChanged(form) },
+                )
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = state.form == form, onClick = null, enabled = enabled)
+            Text(
+                text = stringResource(form.labelRes()),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
+    }
+
+    OutlinedTextField(
+        value = state.stockUnit,
+        onValueChange = viewModel::onStockUnitChanged,
+        label = { Text(text = stringResource(R.string.meds_stock_unit_label)) },
+        supportingText = { Text(text = stringResource(R.string.meds_stock_unit_helper)) },
+        enabled = enabled,
+        isError = MedicationField.MEDICATION_STOCK_UNIT in errors,
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    FieldError(MedicationField.MEDICATION_STOCK_UNIT in errors, R.string.meds_error_stock_unit)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = state.requiresPrescription,
+                enabled = enabled,
+                role = Role.Checkbox,
+                onClick = { viewModel.onRequiresPrescriptionChanged(!state.requiresPrescription) },
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = state.requiresPrescription,
+            onCheckedChange = { viewModel.onRequiresPrescriptionChanged(it) },
+            enabled = enabled,
+        )
+        Text(
+            text = stringResource(R.string.meds_prescription_label),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(start = 8.dp),
+        )
+    }
+
+    OutlinedTextField(
+        value = state.prescriptionValidUntil,
+        onValueChange = viewModel::onPrescriptionValidUntilChanged,
+        label = { Text(text = stringResource(R.string.meds_prescription_valid_label)) },
+        supportingText = { Text(text = stringResource(R.string.meds_date_helper)) },
+        enabled = enabled && state.requiresPrescription,
+        isError = MedicationField.MEDICATION_PRESCRIPTION_VALID_UNTIL in errors,
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    FieldError(
+        MedicationField.MEDICATION_PRESCRIPTION_VALID_UNTIL in errors,
+        R.string.meds_error_start,
+    )
+
+    OutlinedTextField(
+        value = state.instructions,
+        onValueChange = viewModel::onInstructionsChanged,
+        label = { Text(text = stringResource(R.string.meds_instructions_label)) },
+        enabled = enabled,
+        isError = MedicationField.MEDICATION_INSTRUCTIONS in errors,
+        minLines = 2,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    FieldError(MedicationField.MEDICATION_INSTRUCTIONS in errors, R.string.meds_error_instructions)
+}
+
+@Composable
+private fun ScheduleStep(viewModel: MedicationFormViewModel, state: MedicationFormUiState) {
+    ScheduleFields(
+        state = state.schedule,
+        errors = state.errors,
+        enabled = state.canWrite,
+        onScheduleType = viewModel::onScheduleTypeChanged,
+        onWeekdayToggled = viewModel::onWeekdayToggled,
+        onIntervalDays = viewModel::onIntervalDaysChanged,
+        onTimeChanged = viewModel::onTimeChanged,
+        onQuantityStep = viewModel::onQuantityStep,
+        onAddTime = viewModel::onAddTime,
+        onRemoveTime = viewModel::onRemoveTime,
+        onStartDateChanged = viewModel::onStartDateChanged,
+        onEndDateChanged = viewModel::onEndDateChanged,
+    )
+}
+
+@Composable
+private fun RemindersStep(viewModel: MedicationFormViewModel, state: MedicationFormUiState) {
+    val enabled = state.canWrite
+
+    Text(
+        text = stringResource(R.string.meds_step_who),
+        style = MaterialTheme.typography.titleSmall,
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = state.inheritReminders,
+                enabled = enabled,
+                role = Role.RadioButton,
+                onClick = { viewModel.onInheritRemindersChanged(true) },
+            )
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = state.inheritReminders, onClick = null, enabled = enabled)
+        Text(
+            text = state.patientName?.let {
+                stringResource(R.string.meds_reminders_same, it)
+            } ?: stringResource(R.string.meds_reminders_same_unknown),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(start = 8.dp),
+        )
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = !state.inheritReminders,
+                enabled = enabled,
+                role = Role.RadioButton,
+                onClick = { viewModel.onInheritRemindersChanged(false) },
+            )
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = !state.inheritReminders, onClick = null, enabled = enabled)
+        Text(
+            text = stringResource(R.string.meds_reminders_override),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(start = 8.dp),
+        )
+    }
+
+    if (!state.inheritReminders) {
+        HorizontalDivider()
+        Text(
+            text = stringResource(R.string.patient_policy_label),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        ReminderPolicy.offered.forEach { policy ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = state.reminderPolicy == policy,
+                        enabled = enabled,
+                        role = Role.RadioButton,
+                        onClick = { viewModel.onReminderPolicyChanged(policy) },
+                    )
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(
+                    selected = state.reminderPolicy == policy,
+                    onClick = null,
+                    enabled = enabled,
+                )
+                Text(
+                    text = stringResource(policy.labelRes()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+        }
+        FieldError(
+            MedicationField.MEDICATION_REMINDER_POLICY in state.errors,
+            R.string.meds_error_policy,
+        )
+
+        Text(
+            text = stringResource(R.string.patient_primary_label),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        state.members.forEach { member ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = state.primaryCaregiverId == member.userId,
+                        enabled = enabled,
+                        role = Role.RadioButton,
+                        onClick = { viewModel.onPrimaryCaregiverChanged(member.userId) },
+                    )
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(
+                    selected = state.primaryCaregiverId == member.userId,
+                    onClick = null,
+                    enabled = enabled,
+                )
+                Text(
+                    text = member.displayName
+                        ?: stringResource(R.string.family_circle_member_unnamed),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+        }
+        FieldError(
+            MedicationField.MEDICATION_PRIMARY_CAREGIVER in state.errors,
+            R.string.meds_error_primary,
+        )
+    }
+
+    Text(
+        text = stringResource(R.string.meds_reminders_hint),
+        style = MaterialTheme.typography.bodySmall,
+    )
+}
+
+/** The policy label, the same words the patient form uses. */
+@Composable
+private fun ReminderPolicy.labelRes(): Int = when (this) {
+    ReminderPolicy.PRIMARY_WITH_ESCALATION -> R.string.patients_policy_primary_with_escalation
+    ReminderPolicy.ALL_CAREGIVERS -> R.string.patients_policy_all_caregivers
+    ReminderPolicy.ROTA -> R.string.patients_policy_unavailable
+}

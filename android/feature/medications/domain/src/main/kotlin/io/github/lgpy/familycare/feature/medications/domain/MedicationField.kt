@@ -16,6 +16,12 @@ enum class MedicationField {
     MEDICATION_STRENGTH,
     MEDICATION_STOCK_UNIT,
     MEDICATION_INSTRUCTIONS,
+    /**
+     * The free-text prescription validity date a form asks for. The domain keeps
+     * a past date valid on purpose (it is a shopping-list state), so this marks
+     * only an unparseable one; the column itself has no server-side field name.
+     */
+    MEDICATION_PRESCRIPTION_VALID_UNTIL,
     MEDICATION_LOW_STOCK_THRESHOLD,
     MEDICATION_REMINDER_POLICY,
     MEDICATION_PRIMARY_CAREGIVER,

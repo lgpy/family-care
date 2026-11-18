@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,6 +39,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun PatientsScreen(
     onAddPatient: () -> Unit,
     onOpenPatient: (String) -> Unit,
+    onOpenMedications: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel = koinViewModel<PatientsViewModel>()
@@ -92,6 +94,7 @@ fun PatientsScreen(
                     PatientListRow(
                         row = row,
                         onClick = { onOpenPatient(row.patient.id.value) },
+                        onOpenMedications = { onOpenMedications(row.patient.id.value) },
                     )
                     HorizontalDivider()
                 }
@@ -104,6 +107,7 @@ fun PatientsScreen(
 private fun PatientListRow(
     row: PatientRowUi,
     onClick: () -> Unit,
+    onOpenMedications: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -116,7 +120,10 @@ private fun PatientListRow(
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             Text(
                 text = row.patient.displayName,
                 style = MaterialTheme.typography.bodyLarge,
@@ -133,6 +140,10 @@ private fun PatientListRow(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
+        }
+        // M3 entry point; the full patient profile with tabs is M6.
+        TextButton(onClick = onOpenMedications) {
+            Text(text = stringResource(R.string.meds_open_medications))
         }
     }
 }
