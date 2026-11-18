@@ -12,6 +12,14 @@ import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.ProfileRepository
 import io.github.lgpy.familycare.core.domain.push.PushDeviceRepository
+import io.github.lgpy.familycare.core.notifications.FcmTokenSource
+import io.github.lgpy.familycare.core.notifications.FirebaseTokenSource
+import io.github.lgpy.familycare.core.notifications.PushHandler
+import io.github.lgpy.familycare.core.notifications.PushHandlers
+import io.github.lgpy.familycare.core.notifications.PushRegistrationStore
+import io.github.lgpy.familycare.core.notifications.PushSession
+import io.github.lgpy.familycare.core.notifications.PushTokenRegistrar
+import io.github.lgpy.familycare.core.notifications.SharedPreferencesPushRegistrationStore
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCards
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
@@ -26,12 +34,7 @@ import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationsData
 import io.github.lgpy.familycare.feature.medications.data.StockRepository
 import io.github.lgpy.familycare.feature.medications.medicationsModule
-import io.github.lgpy.familycare.feature.medications.push.FcmTokenSource
-import io.github.lgpy.familycare.feature.medications.push.FirebaseTokenSource
-import io.github.lgpy.familycare.feature.medications.push.PushRegistrationStore
-import io.github.lgpy.familycare.feature.medications.push.PushSession
-import io.github.lgpy.familycare.feature.medications.push.PushTokenRegistrar
-import io.github.lgpy.familycare.feature.medications.push.SharedPreferencesPushRegistrationStore
+import io.github.lgpy.familycare.feature.medications.push.MedicationsPushHandler
 import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealthChecker
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderSchedulerCoordinator
@@ -135,6 +138,12 @@ val appModule: Module = module {
     single<DashboardCard> { ReminderHealthDashboardCard() }
     single { DashboardCards(getAll<DashboardCard>()) }
 
+    // The push extension point (D29): a feature claims the message `type`s it
+    // owns, and the core's single FCM service routes each payload by `type`. The
+    // registry rejects a type claimed twice when it is built (at start-up).
+    single<PushHandler> { MedicationsPushHandler() }
+    single { PushHandlers(getAll<PushHandler>()) }
+
     // M4 dose reminders (D4/D19/D25). The scheduler, its local alarm index and
     // the health check are app-wide singletons: receivers reach them through
     // Koin after `FamilyCareApplication` has started it.
@@ -168,10 +177,10 @@ val appModule: Module = module {
     // only place that knows which modules exist.
     includes(medicationsModule)
 
-    // M4 push (D4/D27): the device registration that makes escalation and clear
-    // reach this phone. The token is fetched by Firebase and never logged; the
-    // registration is retried by WorkManager while offline, and the session
-    // (above) is what triggers it.
+    // M4 push (D4/D27, D29): the device registration that makes pushes reach
+    // this phone. The types and the jobs live in :core:notifications. The token
+    // is fetched by Firebase and never logged; the registration is retried by
+    // WorkManager while offline, and the session (above) is what triggers it.
     single<PushDeviceRepository> { get<DataLayer>().pushDeviceRepository }
     single<PushRegistrationStore> { SharedPreferencesPushRegistrationStore(androidContext()) }
     single<FcmTokenSource> { FirebaseTokenSource() }

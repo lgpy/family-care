@@ -1,4 +1,4 @@
-package io.github.lgpy.familycare.feature.medications.push
+package io.github.lgpy.familycare.core.notifications
 
 import io.github.lgpy.familycare.core.domain.auth.AuthState
 import io.github.lgpy.familycare.core.domain.push.PushDeviceRepository

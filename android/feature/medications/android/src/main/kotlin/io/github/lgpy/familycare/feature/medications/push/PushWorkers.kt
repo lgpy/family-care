@@ -1,11 +1,7 @@
 package io.github.lgpy.familycare.feature.medications.push
 
 import android.content.Context
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -17,57 +13,23 @@ import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderSched
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderNotifications
 import io.github.lgpy.familycare.feature.medications.reminders.ScheduledRemindersStore
 import java.time.LocalDateTime
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
 import org.koin.core.context.GlobalContext
 
 /**
- * The WorkManager side of push (M4).
+ * The WorkManager side of the medications `clear` message (M4; D29 keeps it in
+ * the feature, because it needs the local database and reminders).
  *
- * Two short jobs, both idempotent:
- * - **registration** — needs the network, so it is a constrained one-off that
- *   retries with backoff: a sign-in in airplane mode registers when the phone
- *   reconnects, even if the app was killed meanwhile (the brief's "retry later
- *   if offline").
- * - **clear** — local work only (database + notifications). A data-only,
- *   high-priority message wakes the app briefly; WorkManager gives that work a
- *   process that outlives `onMessageReceived` and survives the encrypted
- *   database's first init.
- *
- * Both reach Koin through [GlobalContext], like the reminder receivers: this is
- * the same process, started by the system with `FamilyCareApplication.onCreate`.
+ * A data-only, high-priority message wakes the app briefly; WorkManager gives
+ * that work a process that outlives `onMessageReceived` and survives the
+ * encrypted database's first init. It reaches Koin through [GlobalContext], like
+ * the reminder receivers: this is the same process, started by the system with
+ * `FamilyCareApplication.onCreate`.
  */
 object PushWork {
 
-    private const val REGISTRATION_WORK = "push-register-device"
-    private const val BACKOFF_SECONDS = 30L
-
     const val KEY_REGIMEN_ID = "regimen_id"
     const val KEY_SCHEDULED_LOCAL = "scheduled_local"
-
-    /** Queues one registration attempt; a pending one is kept (it re-reads the token). */
-    fun enqueueRegistration(context: Context) {
-        val request = OneTimeWorkRequestBuilder<PushRegistrationWorker>()
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build(),
-            )
-            .setBackoffCriteria(
-                BackoffPolicy.EXPONENTIAL,
-                BACKOFF_SECONDS,
-                TimeUnit.SECONDS,
-            )
-            .build()
-
-        WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
-            REGISTRATION_WORK,
-            // KEEP: the pending attempt reads the current session and token when
-            // it runs, so it is equally correct for a new token or another user.
-            ExistingWorkPolicy.KEEP,
-            request,
-        )
-    }
 
     /** Queues the notification cancellation for one cleared slot. */
     fun enqueueClear(
@@ -88,26 +50,6 @@ object PushWork {
         // Every clear is kept: two slots can map to one group notification, and
         // cancelling is idempotent.
         WorkManager.getInstance(context.applicationContext).enqueue(request)
-    }
-}
-
-/**
- * Registers this install's FCM token for the signed-in user.
- *
- * A retry is a transient failure (no network, server hiccup). Being signed out
- * is success: the next sign-in queues a fresh attempt.
- */
-class PushRegistrationWorker(
-    appContext: Context,
-    params: WorkerParameters,
-) : CoroutineWorker(appContext, params) {
-
-    override suspend fun doWork(): Result {
-        val koin = GlobalContext.getOrNull() ?: return Result.retry()
-        val registered: kotlin.Result<Unit> = runCatching {
-            koin.get<PushTokenRegistrar>().registerNow()
-        }.getOrElse { error -> kotlin.Result.failure(error) }
-        return if (registered.isSuccess) Result.success() else Result.retry()
     }
 }
 
