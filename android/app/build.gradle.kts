@@ -125,6 +125,12 @@ dependencies {
     // app wires the module; no feature depends on another (D5).
     implementation(project(":feature:medications:android"))
 
+    // The patient-info module's data layer (its `info.patient_info` table joins
+    // the synced schema and its repository is exposed to Koin) and its screens
+    // (M6/D29: the profile's allergies banner, Info tab and edit form).
+    implementation(project(":feature:patient-info:data"))
+    implementation(project(":feature:patient-info:android"))
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)

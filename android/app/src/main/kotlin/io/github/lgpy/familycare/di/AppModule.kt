@@ -49,6 +49,11 @@ import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderSched
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealthChecker
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderSchedulerCoordinator
 import io.github.lgpy.familycare.feature.medications.reminders.ScheduledRemindersStore
+import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoData
+import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoRepository
+import io.github.lgpy.familycare.feature.patientinfo.patientInfoModule
+import io.github.lgpy.familycare.feature.patientinfo.profile.AllergiesPatientHeader
+import io.github.lgpy.familycare.feature.patientinfo.profile.InfoPatientTab
 import io.github.lgpy.familycare.ui.MoreViewModel
 import io.github.lgpy.familycare.ui.SignInViewModel
 import io.github.lgpy.familycare.ui.TodayViewModel
@@ -93,13 +98,17 @@ val appModule: Module = module {
     //
     // Feature modules contribute their synced tables here (D5): the medications
     // module adds `medications`, `regimens` and `dose_log` with their upload
-    // rules, and core/data merges them with the core's own tables.
+    // rules, patient-info adds `info.patient_info`, and core/data merges them
+    // with the core's own tables.
     single { DataLayer.create(
             context = androidContext(),
             supabaseUrl = BuildConfig.SUPABASE_URL,
             publishableKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY,
             powerSyncUrl = BuildConfig.POWERSYNC_URL,
-            featureTables = listOf(MedicationsData.syncedTables),
+            featureTables = listOf(
+                MedicationsData.syncedTables,
+                PatientInfoData.syncedTables,
+            ),
         )
     }
     single<AuthRepository> {
@@ -140,6 +149,13 @@ val appModule: Module = module {
         )
     }
 
+    // M6 patient info. One row per patient (`id = patient_id`), read by the
+    // profile's allergies banner and Info tab and written by its edit form.
+    single<PatientInfoRepository> {
+        val data = get<DataLayer>()
+        PatientInfoData.repository(data.database, data.authState)
+    }
+
     // The dashboard extension point (architecture.md §5): a feature contributes a
     // card, the shell renders whatever was registered, in order. Today imports no
     // feature module to do it.
@@ -151,12 +167,14 @@ val appModule: Module = module {
 
     // The patient profile extension point (D29, docs/ux/screens.md §3). The app
     // hosts the screen and its History tab; a feature contributes the pieces
-    // inside it, exactly like a DashboardCard. Patient-info will register a
-    // PatientHeader (allergies banner); medications registers its tab and its
+    // inside it, exactly like a DashboardCard. Patient-info registers the
+    // allergies banner and its Info tab; medications registers its tab and its
     // timeline source. Registries are built from getAll() so the shell names no
     // feature module (D5).
     single<TimelineText> { ResourcesTimelineText(androidContext()) }
+    single<PatientHeader> { AllergiesPatientHeader() }
     single<PatientTab> { MedicationsPatientTab() }
+    single<PatientTab> { InfoPatientTab() }
     single<TimelineSource> {
         MedicationsTimelineSource(medicationRepository = get(), text = get())
     }
@@ -202,6 +220,10 @@ val appModule: Module = module {
     // The medications module's view models. Included here so the app stays the
     // only place that knows which modules exist.
     includes(medicationsModule)
+
+    // The patient-info module's view models (the profile banner and Info tab,
+    // and the edit form).
+    includes(patientInfoModule)
 
     // M4 push (D4/D27, D29): the device registration that makes pushes reach
     // this phone. The types and the jobs live in :core:notifications. The token

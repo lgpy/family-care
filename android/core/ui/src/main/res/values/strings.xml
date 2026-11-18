@@ -115,6 +115,45 @@
     <string name="patient_timeline_medication_changed_detail">New dose or schedule</string>
     <string name="patient_timeline_medication_stopped">Stopped %1$s</string>
 
+    <!-- M6/D29: patient info (docs/domain/patient-info.md). -->
+    <string name="patient_info_tab_title">Info</string>
+    <string name="patient_info_allergies_banner">Allergies: %1$s</string>
+    <string name="patient_info_conditions_line">Conditions: %1$s</string>
+    <string name="patient_info_list_separator">" · "</string>
+    <string name="patient_info_allergies_title">Allergies</string>
+    <string name="patient_info_conditions_title">Conditions</string>
+    <string name="patient_info_sns_label">SNS number</string>
+    <string name="patient_info_doctor_label">Family doctor</string>
+    <string name="patient_info_centre_label">Health centre</string>
+    <string name="patient_info_centre_phone_label">Health centre phone</string>
+    <string name="patient_info_contacts_title">Emergency contacts</string>
+    <string name="patient_info_notes_title">Notes</string>
+    <string name="patient_info_empty">No medical information recorded yet.</string>
+    <string name="patient_info_edit">Edit</string>
+    <string name="patient_info_edit_title">Edit info</string>
+    <string name="patient_info_save">Save</string>
+    <string name="patient_info_add">Add</string>
+    <string name="patient_info_remove">Remove %1$s</string>
+    <string name="patient_info_add_allergy">Add allergy</string>
+    <string name="patient_info_add_condition">Add condition</string>
+    <string name="patient_info_add_contact">Add contact</string>
+    <string name="patient_info_contact">Contact %1$d</string>
+    <string name="patient_info_remove_contact">Remove this contact</string>
+    <string name="patient_info_contact_name">Name</string>
+    <string name="patient_info_contact_relationship">Relationship (optional)</string>
+    <string name="patient_info_contact_phone">Phone</string>
+    <string name="patient_info_not_allowed">Only owners and caregivers can edit this information.</string>
+    <string name="patient_info_save_failed">Could not save. Try again.</string>
+    <string name="patient_info_error_allergies">Use up to 30 allergies of 100 characters each.</string>
+    <string name="patient_info_error_conditions">Use up to 30 conditions of 200 characters each.</string>
+    <string name="patient_info_error_sns">Enter the 9 digits of the SNS number.</string>
+    <string name="patient_info_error_text_length">Keep this to %1$d characters or fewer.</string>
+    <string name="patient_info_error_phone">Use digits, spaces, +, -, ( and ), up to 30 characters.</string>
+    <string name="patient_info_error_contacts">Add at most 5 contacts.</string>
+    <string name="patient_info_error_contact_name">Enter a name of up to 100 characters.</string>
+    <string name="patient_info_error_relationship">Keep the relationship to 50 characters or fewer.</string>
+    <string name="patient_info_error_notes">Keep the notes to 2000 characters or fewer.</string>
+
     <!-- M2: More. -->
     <string name="more_title">More</string>
     <string name="more_family_circle">Family circle</string>

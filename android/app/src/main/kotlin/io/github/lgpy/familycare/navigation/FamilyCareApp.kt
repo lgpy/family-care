@@ -34,6 +34,8 @@ import io.github.lgpy.familycare.feature.medications.form.MedicationFormScreen
 import io.github.lgpy.familycare.feature.medications.list.PatientMedicationsScreen
 import io.github.lgpy.familycare.feature.medications.regimen.ChangeRegimenScreen
 import io.github.lgpy.familycare.feature.medications.shopping.ShoppingScreen
+import io.github.lgpy.familycare.feature.patientinfo.PatientInfoRoutes
+import io.github.lgpy.familycare.feature.patientinfo.edit.PatientInfoEditScreen
 import io.github.lgpy.familycare.ui.AboutScreen
 import io.github.lgpy.familycare.ui.MoreScreen
 import io.github.lgpy.familycare.ui.TodayScreen
@@ -153,6 +155,17 @@ fun FamilyCareApp(
             ) { entry ->
                 PatientFormScreen(
                     patientId = entry.arguments?.getString(PATIENT_ID_ARG),
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            // Patient info's edit form, contributed by the patient-info module:
+            // the profile's Info tab opens it through onNavigate (D29).
+            composable(
+                route = PatientInfoRoutes.EDIT,
+                arguments = listOf(navArgument(PATIENT_ID_ARG) { type = NavType.StringType }),
+            ) { entry ->
+                PatientInfoEditScreen(
+                    patientId = entry.arguments?.getString(PATIENT_ID_ARG).orEmpty(),
                     onBack = { navController.popBackStack() },
                 )
             }
