@@ -149,6 +149,15 @@ Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
 - **Why:** the alternative to moving push into the core was duplicating it per feature, which Android does not allow for the FCM service. The patient screen is the place the MVP doc always described (tabs + History), and contributions keep the app shell ignorant of features (D5). Separate schemas keep each module's tables, grants and tests together, as M3 did for `meds`.
 - **Trade-off accepted:** both caregivers get reminders for every appointment unless a companion is set; patient info is last-write-wins.
 
+### D30 — M7: archive is enforced read-only, erasure goes through one RPC, export happens on the phone
+- **Archive** (owner only) makes a patient read-only in the database for every role and hides it from Today, Agenda, Shopping, reminders and server pushes; it stays synced so it can be unarchived.
+- **Erase** is `core.erase_patient()`, the only way to delete a patient: it suppresses auditing of the patient's rows, deletes their earlier audit rows and writes one minimal `patient.erased` security event. Before M7 a delete would have left the full health record in `core.audit_log.old_data` for six years, contradicting security-and-privacy §7.
+- **Export** (owners and caregivers) is built on the phone from synced data as JSON and a doctor-readable PDF, shared through a FileProvider; it is logged first through `core.log_patient_export()`, so it needs a connection.
+- **Activity** (owners) reads the audit log through `core.circle_activity()`, which returns short labels only — never `old_data`/`new_data` — and includes members' sign-in events.
+- **Why:** the audit log is the one place health data could outlive an erasure; routing deletes through a single function makes that rule testable. Exporting on the phone works with the data the user can already see and needs no new server surface beyond the audit call.
+- **Trade-off accepted:** export requires a connection (to log it); backups keep erased data until they expire (at most a year).
+- Details: `docs/domain/patient-lifecycle.md`.
+
 ---
 
 
