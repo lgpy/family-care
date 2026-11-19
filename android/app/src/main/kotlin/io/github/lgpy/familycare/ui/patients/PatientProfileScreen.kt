@@ -866,6 +866,9 @@ private fun ProfileTabRow(
         }
         val selectedIndex = tabs.indexOfFirst { it.id == selectedId }.coerceAtLeast(0)
 
+        // Fixed tabs keep tight padding so four fit; scrolling tabs need the
+        // usual gap so neighbouring labels don't run together.
+        val labelPadding = if (fixed) FixedTabLabelGap / 2 else 16.dp
         val tabContent: @Composable () -> Unit = {
             tabs.forEach { tab ->
                 val selected = tab.id == selectedId
@@ -877,7 +880,7 @@ private fun ProfileTabRow(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .heightIn(min = 64.dp)
-                            .padding(horizontal = FixedTabLabelGap / 2, vertical = 8.dp),
+                            .padding(horizontal = labelPadding, vertical = 8.dp),
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Icon(
