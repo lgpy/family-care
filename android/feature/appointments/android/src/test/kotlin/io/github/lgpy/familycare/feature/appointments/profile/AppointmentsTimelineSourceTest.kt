@@ -39,7 +39,7 @@ class AppointmentsTimelineSourceTest {
         assertEquals("Cardiologia", entry.title)
         assertEquals("Hospital · Dra. Silva", entry.detail)
         assertEquals(Instant.parse("2026-11-20T10:30:00Z"), entry.at)
-        assertEquals(TimelineKind.APPOINTMENT, entry.kind)
+        assertEquals(TimelineKind.APPOINTMENT_CONSULTATION, entry.kind)
         assertEquals("appointments/appointment-1", entry.route)
     }
 

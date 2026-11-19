@@ -8,14 +8,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -24,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -42,17 +44,22 @@ import io.github.lgpy.familycare.core.domain.circle.CoreField
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.domain.circle.canWrite
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.SectionHeader
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * The patient screen (docs/ux/screens.md §3): name, linked app user, reminder
- * policy, primary caregiver, escalation and missed-window minutes, and the
- * optional agreement note. One screen for adding and editing.
+ * The patient screen (docs/ux/screens.md §3, screens v2): name and year of
+ * birth, linked app user, reminder policy, primary caregiver, escalation and
+ * missed-window minutes, and the optional agreement note. One screen for adding
+ * and editing.
  *
- * Viewers see the same values without the ability to change them; the save
- * button is only shown when [MemberRole.canWrite], and the repository refuses a
- * write from a viewer anyway.
+ * Screens v2 restyle: a close button and title in the top bar, labelled sections
+ * with icons, and the save action as a full-width bar at the bottom. Viewers see
+ * the same values without the ability to change them; the save bar is only shown
+ * when [MemberRole.canWrite], and the repository refuses a write from a viewer
+ * anyway.
  */
 @Composable
 fun PatientFormScreen(
@@ -69,18 +76,17 @@ fun PatientFormScreen(
         if (uiState.saved) onBack()
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.back),
+                    imageVector = FcIcons.Close,
+                    contentDescription = stringResource(R.string.close),
                 )
             }
             Text(
@@ -88,20 +94,32 @@ fun PatientFormScreen(
                     if (uiState.isNew) R.string.patient_new_title else R.string.patient_edit_title,
                 ),
                 style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(start = 4.dp),
             )
         }
 
-        when {
-            !uiState.loaded -> CircularProgressIndicator()
-            uiState.notFound -> Text(
-                text = stringResource(R.string.patient_not_available),
-                style = MaterialTheme.typography.bodyLarge,
-            )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            when {
+                !uiState.loaded -> CircularProgressIndicator(modifier = Modifier.padding(24.dp))
+                uiState.notFound -> Text(
+                    text = stringResource(R.string.patient_not_available),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
 
-            else -> PatientFormFields(viewModel = viewModel, uiState = uiState)
+                else -> PatientFormFields(viewModel = viewModel, uiState = uiState)
+            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        if (uiState.loaded && !uiState.notFound && uiState.canWrite) {
+            PatientFormSaveBar(saving = uiState.saving, onSave = viewModel::save)
+        }
     }
 }
 
@@ -135,7 +153,7 @@ private fun PatientFormFields(
         modifier = Modifier.fillMaxWidth(),
         enabled = canWrite,
         singleLine = true,
-        label = { Text(text = stringResource(R.string.patient_name_label)) },
+        label = { FieldLabel(R.string.patient_name_label, FcIcons.Person) },
         isError = CoreField.PATIENT_DISPLAY_NAME in uiState.errors,
         supportingText = errorSupport(
             show = CoreField.PATIENT_DISPLAY_NAME in uiState.errors,
@@ -144,12 +162,31 @@ private fun PatientFormFields(
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
     )
 
+    // D33: only the year is stored; it is used to show the age and nothing else.
+    OutlinedTextField(
+        value = uiState.birthYear,
+        onValueChange = viewModel::onBirthYearChanged,
+        modifier = Modifier.fillMaxWidth(),
+        enabled = canWrite,
+        singleLine = true,
+        label = { FieldLabel(R.string.patient_birth_year_label, FcIcons.CalendarToday) },
+        isError = CoreField.PATIENT_BIRTH_YEAR in uiState.errors,
+        supportingText = {
+            if (CoreField.PATIENT_BIRTH_YEAR in uiState.errors) {
+                ErrorText(stringResource(R.string.patient_error_birth_year))
+            } else {
+                Text(text = stringResource(R.string.patient_birth_year_helper))
+            }
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    )
+
     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
     // "This patient is also an app user": a member, or nobody.
-    Text(
-        text = stringResource(R.string.patient_linked_user_label),
-        style = MaterialTheme.typography.titleMedium,
+    SectionHeader(
+        title = stringResource(R.string.patient_linked_user_label),
+        icon = FcIcons.Contacts,
     )
     ChoiceRow(
         selected = uiState.linkedUserId == null,
@@ -171,9 +208,9 @@ private fun PatientFormFields(
 
     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-    Text(
-        text = stringResource(R.string.patient_policy_label),
-        style = MaterialTheme.typography.titleMedium,
+    SectionHeader(
+        title = stringResource(R.string.patient_policy_label),
+        icon = FcIcons.NotificationsActive,
     )
     Text(
         text = stringResource(R.string.patient_policy_helper),
@@ -193,9 +230,9 @@ private fun PatientFormFields(
 
     if (uiState.reminderPolicy == ReminderPolicy.PRIMARY_WITH_ESCALATION) {
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = stringResource(R.string.patient_primary_label),
-            style = MaterialTheme.typography.titleMedium,
+        SectionHeader(
+            title = stringResource(R.string.patient_primary_label),
+            icon = FcIcons.Person,
         )
         Text(
             text = stringResource(R.string.patient_primary_helper),
@@ -230,6 +267,7 @@ private fun PatientFormFields(
 
     MinuteField(
         label = R.string.patient_escalation_label,
+        icon = FcIcons.Schedule,
         helper = R.string.patient_escalation_helper,
         value = uiState.escalationDelay,
         enabled = canWrite,
@@ -241,6 +279,7 @@ private fun PatientFormFields(
 
     MinuteField(
         label = R.string.patient_missed_label,
+        icon = FcIcons.Alarm,
         helper = R.string.patient_missed_helper,
         value = uiState.missedWindow,
         enabled = canWrite,
@@ -258,7 +297,7 @@ private fun PatientFormFields(
         modifier = Modifier.fillMaxWidth(),
         enabled = canWrite,
         minLines = 3,
-        label = { Text(text = stringResource(R.string.patient_note_label)) },
+        label = { FieldLabel(R.string.patient_note_label, FcIcons.StickyNote2) },
         isError = CoreField.PATIENT_AGREEMENT_NOTE in uiState.errors,
         supportingText = {
             if (CoreField.PATIENT_AGREEMENT_NOTE in uiState.errors) {
@@ -273,20 +312,57 @@ private fun PatientFormFields(
     uiState.error?.let { error ->
         ErrorText(stringResource(error.messageRes()))
     }
+}
 
-    if (canWrite) {
+/** The save action as a full-width bar, pinned below the scrolling fields. */
+@Composable
+private fun PatientFormSaveBar(
+    saving: Boolean,
+    onSave: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 3.dp,
+    ) {
         Button(
-            onClick = viewModel::save,
-            enabled = !uiState.saving,
+            onClick = onSave,
+            enabled = !saving,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .heightIn(min = 52.dp),
         ) {
+            Icon(
+                imageVector = FcIcons.Check,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(text = stringResource(R.string.patient_save))
         }
+    }
+}
+
+/** A field label with its icon, as the other one-screen forms have. */
+@Composable
+private fun FieldLabel(@StringRes text: Int, icon: ImageVector) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(text = stringResource(text))
     }
 }
 
 @Composable
 private fun MinuteField(
     @StringRes label: Int,
+    icon: ImageVector,
     @StringRes helper: Int,
     value: String,
     enabled: Boolean,
@@ -301,7 +377,7 @@ private fun MinuteField(
         modifier = Modifier.fillMaxWidth(),
         enabled = enabled,
         singleLine = true,
-        label = { Text(text = stringResource(label)) },
+        label = { FieldLabel(label, icon) },
         isError = hasError,
         supportingText = {
             if (hasError) {

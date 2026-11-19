@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.patient.TimelineKind
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentKind
 import java.util.Locale
@@ -48,6 +49,21 @@ fun AppointmentKind.icon(): ImageVector = when (this) {
     AppointmentKind.EXAM -> FcIcons.Radiology
     AppointmentKind.CHECKUP -> FcIcons.Stethoscope
     AppointmentKind.OTHER -> FcIcons.Event
+}
+
+/**
+ * The kind an appointment's History entry carries, so the app's History tab
+ * draws the same picture as the Agenda row ([icon]).
+ *
+ * The mapping lives here, beside the pictures, because this module owns the
+ * appointment kinds; the shell only knows the core `TimelineKind`.
+ */
+fun AppointmentKind.timelineKind(): TimelineKind = when (this) {
+    AppointmentKind.BLOOD_TEST -> TimelineKind.APPOINTMENT_BLOOD_TEST
+    AppointmentKind.CONSULTATION -> TimelineKind.APPOINTMENT_CONSULTATION
+    AppointmentKind.EXAM -> TimelineKind.APPOINTMENT_EXAM
+    AppointmentKind.CHECKUP -> TimelineKind.APPOINTMENT_CHECKUP
+    AppointmentKind.OTHER -> TimelineKind.APPOINTMENT_OTHER
 }
 
 /** The 40 dp rounded tile with the appointment type's icon. */

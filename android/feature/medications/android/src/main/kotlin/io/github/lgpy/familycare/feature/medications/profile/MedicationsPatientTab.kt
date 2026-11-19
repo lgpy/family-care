@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.patient.PatientTab
+import io.github.lgpy.familycare.core.ui.patient.PatientTabIcon
 import io.github.lgpy.familycare.feature.medications.MedicationsRoutes
 import io.github.lgpy.familycare.feature.medications.list.PatientMedicationsSection
 
@@ -23,6 +24,9 @@ class MedicationsPatientTab : PatientTab {
     override val order: Int = 10
 
     override val titleRes: Int = R.string.meds_tab_title
+
+    /** Medicines get the medicines symbol; filled while selected. */
+    override val icon: PatientTabIcon = PatientTabIcon.MEDICATION
 
     @Composable
     override fun Content(patientId: PatientId, onNavigate: (String) -> Unit) {

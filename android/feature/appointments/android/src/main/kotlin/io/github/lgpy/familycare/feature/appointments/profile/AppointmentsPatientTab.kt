@@ -24,6 +24,7 @@ import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.patient.PatientTab
+import io.github.lgpy.familycare.core.ui.patient.PatientTabIcon
 import io.github.lgpy.familycare.feature.appointments.AppointmentsRoutes
 import io.github.lgpy.familycare.feature.appointments.agenda.AgendaDay
 import io.github.lgpy.familycare.feature.appointments.ui.AppointmentDayHeader
@@ -49,6 +50,9 @@ class AppointmentsPatientTab : PatientTab {
     override val order: Int = 20
 
     override val titleRes: Int = R.string.appointments_tab_title
+
+    /** Visits get the event symbol; filled while selected. */
+    override val icon: PatientTabIcon = PatientTabIcon.EVENT
 
     @Composable
     override fun Content(patientId: PatientId, onNavigate: (String) -> Unit) {

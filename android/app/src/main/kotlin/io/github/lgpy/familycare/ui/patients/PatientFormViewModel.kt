@@ -14,6 +14,7 @@ import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRules
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.domain.circle.canWrite
+import java.time.Year
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,6 +77,7 @@ class PatientFormViewModel(
                     members = members,
                     displayName = existing.displayName,
                     linkedUserId = existing.linkedUserId,
+                    birthYear = existing.birthYear?.toString().orEmpty(),
                     reminderPolicy = existing.reminderPolicy,
                     primaryCaregiverId = existing.primaryCaregiverId,
                     escalationDelay = existing.escalationDelayMinutes.toString(),
@@ -117,6 +119,20 @@ class PatientFormViewModel(
                 errors = it.errors -
                     CoreField.PATIENT_LINKED_USER -
                     CoreField.PATIENT_PRIMARY_CAREGIVER,
+            )
+        }
+    }
+
+    /**
+     * Keeps the half-typed year as text; [save] parses it. The rule is 1900 up
+     * to the current year: a year of birth in the future is a typo, even though
+     * the database's wider 1900..2100 range would accept it.
+     */
+    fun onBirthYearChanged(value: String) {
+        _uiState.update {
+            it.copy(
+                birthYear = value,
+                errors = it.errors - CoreField.PATIENT_BIRTH_YEAR,
             )
         }
     }
@@ -192,6 +208,14 @@ class PatientFormViewModel(
             errors += CoreField.PATIENT_MISSED_WINDOW
         }
 
+        val birthYearText = state.birthYear.trim()
+        val birthYear = birthYearText.toIntOrNull()
+        if (birthYearText.isNotEmpty() &&
+            (birthYear == null || birthYear !in PatientRules.MIN_BIRTH_YEAR..Year.now().value)
+        ) {
+            errors += CoreField.PATIENT_BIRTH_YEAR
+        }
+
         val primary = PatientRules.defaultPrimaryCaregiver(
             linkedUserId = state.linkedUserId,
             chosenPrimaryCaregiverId = state.primaryCaregiverId,
@@ -215,6 +239,7 @@ class PatientFormViewModel(
         val patient = loadedPatient?.copy(
             displayName = name,
             linkedUserId = state.linkedUserId,
+            birthYear = birthYear,
             reminderPolicy = state.reminderPolicy,
             primaryCaregiverId = primary,
             escalationDelayMinutes = escalation,
@@ -224,6 +249,7 @@ class PatientFormViewModel(
             circleId = circle,
             displayName = name,
             linkedUserId = state.linkedUserId,
+            birthYear = birthYear,
             chosenPrimaryCaregiverId = state.primaryCaregiverId,
             reminderPolicy = state.reminderPolicy,
             escalationDelayMinutes = escalation,
@@ -269,6 +295,8 @@ data class PatientFormUiState(
     val canWrite: Boolean = false,
     val members: List<CircleMember> = emptyList(),
     val displayName: String = "",
+    /** The year of birth as typed; empty when it is not recorded (optional). */
+    val birthYear: String = "",
     val linkedUserId: String? = null,
     val reminderPolicy: ReminderPolicy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
     val primaryCaregiverId: String? = null,

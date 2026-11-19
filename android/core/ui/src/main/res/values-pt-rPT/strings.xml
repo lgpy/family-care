@@ -62,6 +62,14 @@
     <string name="patients_policy_primary_with_escalation">Principal com escalonamento</string>
     <string name="patients_policy_all_caregivers">Todos os cuidadores</string>
     <string name="patients_policy_unavailable">Política de lembretes indisponível</string>
+    <string name="patients_reminders_line">lembretes: %1$s</string>
+    <string name="patients_tag_allergies">Alergias</string>
+    <string name="patients_summary_low_stock">%1$s a acabar</string>
+    <string name="patients_summary_next_appointment">%1$s · %2$s</string>
+    <plurals name="patients_summary_medicines">
+        <item quantity="one">%1$d medicamento</item>
+        <item quantity="other">%1$d medicamentos</item>
+    </plurals>
 
     <string name="patient_new_title">Adicionar pessoa</string>
     <string name="patient_edit_title">Pessoa</string>
@@ -90,6 +98,13 @@
     <string name="patient_error_escalation">Indique um número inteiro de minutos entre 0 e 1440.</string>
     <string name="patient_error_missed">Indique um número inteiro de minutos entre 1 e 1440.</string>
     <string name="patient_error_note">Mantenha a nota com 2000 caracteres ou menos.</string>
+    <string name="patient_birth_year_label">Ano de nascimento (opcional)</string>
+    <string name="patient_birth_year_helper">Usado apenas para mostrar a idade.</string>
+    <string name="patient_error_birth_year">Indique um ano entre 1900 e o ano atual.</string>
+    <plurals name="patient_age_years">
+        <item quantity="one">%1$d ano</item>
+        <item quantity="other">%1$d anos</item>
+    </plurals>
     <string name="patient_needs_primary">Precisa de um cuidador principal — escolha quem recebe os lembretes.</string>
 
     <!-- M6/D29: o perfil da pessoa, com os separadores contribuídos e o Histórico. -->
@@ -125,7 +140,6 @@
     <!-- M6/D29: informação do doente (docs/domain/patient-info.md). -->
     <string name="patient_info_tab_title">Informação</string>
     <string name="patient_info_allergies_banner">Alergias: %1$s</string>
-    <string name="patient_info_conditions_line">Doenças: %1$s</string>
     <string name="patient_info_list_separator">" · "</string>
     <string name="patient_info_allergies_title">Alergias</string>
     <string name="patient_info_conditions_title">Doenças</string>

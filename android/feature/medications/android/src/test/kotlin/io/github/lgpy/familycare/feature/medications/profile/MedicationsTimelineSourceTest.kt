@@ -83,7 +83,9 @@ class MedicationsTimelineSourceTest {
         assertEquals("New dose or schedule", entries[1].detail)
         assertEquals("Stopped Metformin", entries[2].title)
         assertEquals(Instant.parse("2026-11-01T09:00:00Z"), entries[2].at)
-        assertEquals(TimelineKind.MEDICATION, entries[2].kind)
+        assertEquals(TimelineKind.MEDICATION_STARTED, entries[0].kind)
+        assertEquals(TimelineKind.MEDICATION_CHANGED, entries[1].kind)
+        assertEquals(TimelineKind.MEDICATION_STOPPED, entries[2].kind)
     }
 
     @Test

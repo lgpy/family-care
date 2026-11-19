@@ -62,6 +62,14 @@
     <string name="patients_policy_primary_with_escalation">Primary with escalation</string>
     <string name="patients_policy_all_caregivers">All caregivers</string>
     <string name="patients_policy_unavailable">Reminder policy not available</string>
+    <string name="patients_reminders_line">reminders: %1$s</string>
+    <string name="patients_tag_allergies">Allergies</string>
+    <string name="patients_summary_low_stock">%1$s low</string>
+    <string name="patients_summary_next_appointment">%1$s · %2$s</string>
+    <plurals name="patients_summary_medicines">
+        <item quantity="one">%1$d medicine</item>
+        <item quantity="other">%1$d medicines</item>
+    </plurals>
 
     <string name="patient_new_title">Add patient</string>
     <string name="patient_edit_title">Patient</string>
@@ -90,6 +98,13 @@
     <string name="patient_error_escalation">Enter a whole number of minutes between 0 and 1440.</string>
     <string name="patient_error_missed">Enter a whole number of minutes between 1 and 1440.</string>
     <string name="patient_error_note">Keep the note to 2000 characters or fewer.</string>
+    <string name="patient_birth_year_label">Year of birth (optional)</string>
+    <string name="patient_birth_year_helper">Used only to show the age.</string>
+    <string name="patient_error_birth_year">Enter a year between 1900 and this year.</string>
+    <plurals name="patient_age_years">
+        <item quantity="one">%1$d year</item>
+        <item quantity="other">%1$d years</item>
+    </plurals>
     <string name="patient_needs_primary">Needs a primary caregiver — choose who gets the reminders.</string>
 
     <!-- M6/D29: the patient profile with its contributed tabs and History. -->
@@ -125,7 +140,6 @@
     <!-- M6/D29: patient info (docs/domain/patient-info.md). -->
     <string name="patient_info_tab_title">Info</string>
     <string name="patient_info_allergies_banner">Allergies: %1$s</string>
-    <string name="patient_info_conditions_line">Conditions: %1$s</string>
     <string name="patient_info_list_separator">" · "</string>
     <string name="patient_info_allergies_title">Allergies</string>
     <string name="patient_info_conditions_title">Conditions</string>

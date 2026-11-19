@@ -2,6 +2,7 @@ package io.github.lgpy.familycare.core.ui.patient
 
 import android.content.Context
 import android.content.res.Resources
+import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import io.github.lgpy.familycare.core.domain.circle.PatientId
@@ -42,6 +43,21 @@ interface PatientHeader {
 }
 
 /**
+ * The icon a contributed tab shows above its label (docs/ux/design-system.md
+ * §6). The shell draws the outlined variant, and a filled variant while the
+ * tab is selected, so emphasis keeps meaning.
+ *
+ * The contract carries a key rather than an `ImageVector` because a tab is
+ * built outside composition; the shell owns the actual drawable.
+ */
+enum class PatientTabIcon {
+    MEDICATION,
+    EVENT,
+    BADGE,
+    HISTORY,
+}
+
+/**
  * One tab of the patient profile, contributed by a feature module.
  *
  * The app adds its own **History** tab after every contributed tab, so
@@ -60,6 +76,12 @@ interface PatientTab {
     @get:StringRes
     val titleRes: Int
 
+    /**
+     * The icon drawn above the label; [PatientTabIcon.EVENT] when a module does
+     * not pick one, so an older contribution still gets a picture.
+     */
+    val icon: PatientTabIcon get() = PatientTabIcon.EVENT
+
     /** The tab's content, drawn below the tab row. */
     @Composable
     fun Content(patientId: PatientId, onNavigate: (String) -> Unit)
@@ -67,8 +89,26 @@ interface PatientTab {
 
 /** What an entry of the History tab is, so the shell can pick its icon. */
 enum class TimelineKind {
-    MEDICATION,
-    APPOINTMENT,
+    /** A regimen began (the first version of a medication). */
+    MEDICATION_STARTED,
+
+    /** A later regimen version replaced the previous one. */
+    MEDICATION_CHANGED,
+
+    /** A medication was stopped. */
+    MEDICATION_STOPPED,
+
+    /** Stock came in, was counted or was discarded. */
+    STOCK,
+
+    /** An appointment of each kind gets that kind's picture. */
+    APPOINTMENT_CONSULTATION,
+    APPOINTMENT_BLOOD_TEST,
+    APPOINTMENT_EXAM,
+    APPOINTMENT_CHECKUP,
+    APPOINTMENT_OTHER,
+
+    /** Anything a module does not classify. */
     OTHER,
 }
 
@@ -180,4 +220,111 @@ class TimelineSources(val sources: List<TimelineSource>) {
             perSource.flatMap { it }.sortedByDescending { entry -> entry.at }
         }
     }
+}
+
+/*
+ * The Patients list's summary extension point (D5, D29).
+ *
+ * A row of the Patients tab shows a line of facts and, below it, the tags that
+ * need attention. Those facts belong to the modules that know them (medication
+ * count and low stock, the next appointment, allergies), but the app shell must
+ * not import a feature (D5). A module therefore registers a
+ * [PatientSummarySource]; the shell merges whatever was registered, in [order].
+ */
+
+/** The picture of a Patients-list summary item; the shell maps it to an icon. */
+enum class PatientSummaryIcon {
+    MEDICATION,
+    EVENT,
+    STOCK,
+    WARNING,
+    ERROR,
+}
+
+/**
+ * How much a summary item asks of the reader: [NEUTRAL] is joined into the meta
+ * line, [ATTENTION] and [CRITICAL] become tags, amber and red respectively
+ * (docs/ux/design-system.md §1).
+ */
+enum class PatientSummaryTone {
+    NEUTRAL,
+    ATTENTION,
+    CRITICAL,
+}
+
+/**
+ * One fact about a patient, shown on their row of the Patients list.
+ *
+ * @param icon The picture beside the text; a tag uses it too.
+ * @param text Already localized by the module that knows the fact.
+ * @param tone Whether the fact is plain meta text or a tag.
+ */
+data class PatientSummaryItem(
+    val icon: PatientSummaryIcon,
+    val text: String,
+    val tone: PatientSummaryTone = PatientSummaryTone.NEUTRAL,
+)
+
+/**
+ * A module's contribution to the Patients list, as a flow that re-emits when
+ * the module's local data changes.
+ *
+ * A source returns already-localized text through a [PatientSummaryText], like
+ * [TimelineSource] does, so it can be unit-tested on the JVM without Android's
+ * `Resources`.
+ */
+interface PatientSummarySource {
+
+    /** Lower sorts first on the row; equal orders keep registration order. */
+    val order: Int
+
+    /** This module's facts for [patientId], in display order. */
+    fun summary(patientId: PatientId): Flow<List<PatientSummaryItem>>
+}
+
+/**
+ * Every module's summary source, merged in order.
+ *
+ * [summary] combines the sources, so any module's local write refreshes the
+ * row; a source that fails is left to the caller's coroutine scope, because the
+ * list's view model owns the collection.
+ */
+class PatientSummarySources(sources: List<PatientSummarySource>) {
+
+    /** The sources, lowest order first; equal orders keep registration order. */
+    val ordered: List<PatientSummarySource> = sources.sortedBy { it.order }
+
+    /** Every source's items for [patientId], concatenated in source order. */
+    fun summary(patientId: PatientId): Flow<List<PatientSummaryItem>> {
+        if (ordered.isEmpty()) return flowOf(emptyList())
+        val flows = ordered.map { it.summary(patientId) }
+        return combine(flows) { perSource -> perSource.flatMap { it } }
+    }
+}
+
+/**
+ * The string lookup a [PatientSummarySource] uses, resolved by the app from
+ * `Context.resources`.
+ *
+ * Like [TimelineText], it is a seam rather than `Resources` directly: a unit
+ * test can supply a fake, and [quantity] lets a count use Android plurals.
+ */
+interface PatientSummaryText {
+
+    /** `resources.getString(id, *args)`, already localized. */
+    fun get(@StringRes id: Int, vararg args: Any?): String
+
+    /** `resources.getQuantityString(id, quantity, *args)`, already localized. */
+    fun quantity(@PluralsRes id: Int, quantity: Int, vararg args: Any?): String
+}
+
+/** The production [PatientSummaryText]: the app's `Resources`, in the user's language. */
+class ResourcesPatientSummaryText(private val resources: Resources) : PatientSummaryText {
+
+    constructor(context: Context) : this(context.resources)
+
+    override fun get(id: Int, vararg args: Any?): String = resources.getString(id, *args)
+
+    override fun quantity(id: Int, quantity: Int, vararg args: Any?): String =
+        resources.getQuantityString(id, quantity, *args)
 }

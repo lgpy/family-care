@@ -6,6 +6,10 @@ import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.core.domain.circle.Patient
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
+import io.github.lgpy.familycare.core.ui.patient.PatientSummaryIcon
+import io.github.lgpy.familycare.core.ui.patient.PatientSummaryItem
+import io.github.lgpy.familycare.core.ui.patient.PatientSummarySource
+import io.github.lgpy.familycare.core.ui.patient.PatientSummarySources
 import io.github.lgpy.familycare.ui.FakeCareCircleRepository
 import io.github.lgpy.familycare.ui.FakePatientRepository
 import io.github.lgpy.familycare.ui.awaitWhere
@@ -14,6 +18,8 @@ import io.github.lgpy.familycare.ui.ownerMember
 import io.github.lgpy.familycare.ui.testCircle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -82,6 +88,46 @@ class PatientsViewModelTest {
     }
 
     @Test
+    fun theRowMergesEverySummarySourceInSourceOrder() = runTest {
+        patients.patientsFlow.value = listOf(
+            Patient(
+                id = PatientId("patient-1"),
+                circleId = CareCircleId("circle-1"),
+                displayName = "Avó",
+            ),
+        )
+        val appointment = FakeSummary(
+            order = 20,
+            item = PatientSummaryItem(PatientSummaryIcon.EVENT, "appointment"),
+        )
+        val medicines = FakeSummary(
+            order = 10,
+            item = PatientSummaryItem(PatientSummaryIcon.MEDICATION, "medicines"),
+        )
+        val allergies = FakeSummary(
+            order = 30,
+            item = PatientSummaryItem(PatientSummaryIcon.WARNING, "allergies"),
+        )
+
+        val viewModel = PatientsViewModel(
+            patientRepository = patients,
+            careCircleRepository = circles,
+            summarySources = PatientSummarySources(listOf(appointment, allergies, medicines)),
+        )
+
+        viewModel.uiState.test {
+            val state = awaitWhere {
+                it.patients.singleOrNull()?.summary?.size == 3
+            }
+
+            assertEquals(
+                listOf("medicines", "appointment", "allergies"),
+                state.patients.single().summary.map { it.text },
+            )
+        }
+    }
+
+    @Test
     fun aViewerGetsNoAddButton() = runTest {
         circles.setCircle(
             circle = testCircle,
@@ -94,5 +140,14 @@ class PatientsViewModelTest {
         viewModel.uiState.test {
             assertFalse(awaitWhere { it.loaded }.canWrite)
         }
+    }
+
+    /** One module's fixed contribution, in place of its flow. */
+    private class FakeSummary(
+        override val order: Int,
+        private val item: PatientSummaryItem,
+    ) : PatientSummarySource {
+        override fun summary(patientId: PatientId): Flow<List<PatientSummaryItem>> =
+            flowOf(listOf(item))
     }
 }

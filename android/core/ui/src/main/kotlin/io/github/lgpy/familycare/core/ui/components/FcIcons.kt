@@ -83,6 +83,7 @@ object FcIcons {
     val Group: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_group)
     val Groups: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_groups)
     val Badge: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_badge)
+    val BadgeFilled: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_badge_fill1)
 
     // ---- Medicines, doses and stock --------------------------------------
 
@@ -136,8 +137,10 @@ object FcIcons {
     // ---- Appointments, history and places --------------------------------
 
     val Event: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_event)
+    val EventFilled: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_event_fill1)
     val CalendarToday: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_calendar_today)
     val History: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_history)
+    val HistoryFilled: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_history_fill1)
     val ManageHistory: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_manage_history)
     val LocationOn: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_location_on)
 
@@ -196,6 +199,7 @@ object FcIcons {
         "Group" to Group,
         "Groups" to Groups,
         "Badge" to Badge,
+        "BadgeFilled" to BadgeFilled,
         // Medicines, doses and stock.
         "Medication" to Medication,
         "MedicationFilled" to MedicationFilled,
@@ -239,8 +243,10 @@ object FcIcons {
         "LunchDining" to LunchDining,
         // Appointments, history and places.
         "Event" to Event,
+        "EventFilled" to EventFilled,
         "CalendarToday" to CalendarToday,
         "History" to History,
+        "HistoryFilled" to HistoryFilled,
         "ManageHistory" to ManageHistory,
         "LocationOn" to LocationOn,
         // Everything else.

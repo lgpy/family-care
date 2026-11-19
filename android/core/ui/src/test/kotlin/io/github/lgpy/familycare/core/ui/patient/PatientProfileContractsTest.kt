@@ -74,6 +74,11 @@ class PatientProfileContractsTest {
     }
 
     @Test
+    fun aTabWithoutAnIconDefaultsToEvent() {
+        assertEquals(PatientTabIcon.EVENT, tab(id = "info", order = 10).icon)
+    }
+
+    @Test
     fun noContributionsIsAnEmptyRegistry() {
         assertTrue(PatientHeaders(emptyList()).ordered.isEmpty())
         assertTrue(PatientTabs(emptyList()).ordered.isEmpty())
@@ -111,8 +116,43 @@ class PatientProfileContractsTest {
     @Test
     fun everyKindHasADistinctConstant() {
         assertEquals(
-            listOf(TimelineKind.MEDICATION, TimelineKind.APPOINTMENT, TimelineKind.OTHER),
+            listOf(
+                TimelineKind.MEDICATION_STARTED,
+                TimelineKind.MEDICATION_CHANGED,
+                TimelineKind.MEDICATION_STOPPED,
+                TimelineKind.STOCK,
+                TimelineKind.APPOINTMENT_CONSULTATION,
+                TimelineKind.APPOINTMENT_BLOOD_TEST,
+                TimelineKind.APPOINTMENT_EXAM,
+                TimelineKind.APPOINTMENT_CHECKUP,
+                TimelineKind.APPOINTMENT_OTHER,
+                TimelineKind.OTHER,
+            ),
             TimelineKind.entries,
         )
+    }
+
+    @Test
+    fun summarySourcesMergeInOrderAndTiesKeepRegistrationOrder() = runBlocking {
+        val late = FakeSummary(order = 20, text = "appointment")
+        val early = FakeSummary(order = 10, text = "medicines")
+        val tied = FakeSummary(order = 10, text = "allergies")
+
+        val summary = PatientSummarySources(listOf(late, early, tied)).summary(patient).first()
+
+        assertEquals(listOf("medicines", "allergies", "appointment"), summary.map { it.text })
+    }
+
+    @Test
+    fun noSummarySourcesMeansAnEmptySummary() = runBlocking {
+        assertTrue(PatientSummarySources(emptyList()).summary(patient).first().isEmpty())
+    }
+
+    private class FakeSummary(
+        override val order: Int,
+        private val text: String,
+    ) : PatientSummarySource {
+        override fun summary(patientId: PatientId): Flow<List<PatientSummaryItem>> =
+            flowOf(listOf(PatientSummaryItem(PatientSummaryIcon.MEDICATION, text)))
     }
 }

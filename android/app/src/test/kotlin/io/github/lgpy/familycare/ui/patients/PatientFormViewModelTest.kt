@@ -271,6 +271,7 @@ class PatientFormViewModelTest {
             circleId = CareCircleId("circle-1"),
             displayName = "Avô Zé",
             linkedUserId = null,
+            birthYear = 1940,
             reminderPolicy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
             primaryCaregiverId = ownerMember.userId,
             escalationDelayMinutes = 45,
@@ -282,6 +283,7 @@ class PatientFormViewModelTest {
         val viewModel = viewModel(patientId = "patient-1")
 
         assertEquals("Avô Zé", viewModel.uiState.value.displayName)
+        assertEquals("1940", viewModel.uiState.value.birthYear)
         assertEquals("45", viewModel.uiState.value.escalationDelay)
         assertEquals("90", viewModel.uiState.value.missedWindow)
         assertEquals("Falámos com ele.", viewModel.uiState.value.agreementNote)
@@ -293,6 +295,7 @@ class PatientFormViewModelTest {
         val saved = patients.saved.single()
         assertEquals("patient-1", saved.id.value)
         assertEquals("Avô José", saved.displayName)
+        assertEquals(1940, saved.birthYear)
         assertEquals(45, saved.escalationDelayMinutes)
         assertEquals("Falámos com ele.", saved.agreementNote)
     }

@@ -8,6 +8,7 @@ import io.github.lgpy.familycare.core.domain.circle.CoreResult
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.PatientExportFormat
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
+import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.domain.circle.canManage
 import io.github.lgpy.familycare.core.domain.circle.canWrite
 import io.github.lgpy.familycare.core.ui.export.PatientExportOutcome
@@ -50,6 +51,12 @@ data class PatientProfileUiState(
     /** The id was given but the patient is not in the local database (anymore). */
     val notFound: Boolean = false,
     val displayName: String = "",
+    /** The year of birth the head derives the age from; null when unknown. */
+    val birthYear: Int? = null,
+    /** The reminder line under the name, from the patient's policy. */
+    val reminderPolicy: ReminderPolicy? = null,
+    /** The name of the caregiver reminded first, when there is one. */
+    val primaryCaregiverName: String? = null,
     val canWrite: Boolean = false,
     val canManage: Boolean = false,
     val isArchived: Boolean = false,
@@ -109,13 +116,19 @@ class PatientProfileViewModel(
     val uiState: StateFlow<PatientProfileUiState> = combine(
         patientRepository.observe(id),
         careCircleRepository.myRole,
+        careCircleRepository.members,
         timelineSources.entries(id),
         action,
-    ) { patient, role, entries, actionState ->
+    ) { patient, role, members, entries, actionState ->
         PatientProfileUiState(
             loaded = true,
             notFound = patient == null,
             displayName = patient?.displayName.orEmpty(),
+            birthYear = patient?.birthYear,
+            reminderPolicy = patient?.reminderPolicy,
+            primaryCaregiverName = patient?.primaryCaregiverId?.let { primaryId ->
+                members.firstOrNull { it.userId == primaryId }?.displayName
+            },
             canWrite = patient != null && role.canWrite(patient),
             canManage = role.canManage,
             isArchived = patient?.isArchived == true,

@@ -50,7 +50,7 @@ class MedicationsTimelineSource(
                     at = at,
                     title = text.get(R.string.patient_timeline_medication_started, displayName),
                     detail = null,
-                    kind = TimelineKind.MEDICATION,
+                    kind = TimelineKind.MEDICATION_STARTED,
                     route = route,
                 )
             } else {
@@ -59,7 +59,7 @@ class MedicationsTimelineSource(
                     at = at,
                     title = text.get(R.string.patient_timeline_medication_changed, medication.name),
                     detail = text.get(R.string.patient_timeline_medication_changed_detail),
-                    kind = TimelineKind.MEDICATION,
+                    kind = TimelineKind.MEDICATION_CHANGED,
                     route = route,
                 )
             }
@@ -71,7 +71,7 @@ class MedicationsTimelineSource(
                 at = stoppedAt,
                 title = text.get(R.string.patient_timeline_medication_stopped, medication.name),
                 detail = null,
-                kind = TimelineKind.MEDICATION,
+                kind = TimelineKind.MEDICATION_STOPPED,
                 route = route,
             )
         }

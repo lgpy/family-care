@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.patient.PatientTab
+import io.github.lgpy.familycare.core.ui.patient.PatientTabIcon
 import io.github.lgpy.familycare.feature.patientinfo.PatientInfoRoutes
 
 /**
@@ -23,6 +24,9 @@ class InfoPatientTab : PatientTab {
     override val order: Int = 30
 
     override val titleRes: Int = R.string.patient_info_tab_title
+
+    /** The patient's record gets the badge symbol; filled while selected. */
+    override val icon: PatientTabIcon = PatientTabIcon.BADGE
 
     @Composable
     override fun Content(patientId: PatientId, onNavigate: (String) -> Unit) {

@@ -33,8 +33,12 @@ import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
 import io.github.lgpy.familycare.core.ui.patient.PatientAlerts
 import io.github.lgpy.familycare.core.ui.patient.PatientHeader
 import io.github.lgpy.familycare.core.ui.patient.PatientHeaders
+import io.github.lgpy.familycare.core.ui.patient.PatientSummarySource
+import io.github.lgpy.familycare.core.ui.patient.PatientSummarySources
+import io.github.lgpy.familycare.core.ui.patient.PatientSummaryText
 import io.github.lgpy.familycare.core.ui.patient.PatientTab
 import io.github.lgpy.familycare.core.ui.patient.PatientTabs
+import io.github.lgpy.familycare.core.ui.patient.ResourcesPatientSummaryText
 import io.github.lgpy.familycare.core.ui.patient.ResourcesTimelineText
 import io.github.lgpy.familycare.core.ui.patient.TimelineSource
 import io.github.lgpy.familycare.core.ui.patient.TimelineSources
@@ -44,6 +48,7 @@ import io.github.lgpy.familycare.feature.appointments.dashboard.NextSevenDaysDas
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentRepository
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentsData
 import io.github.lgpy.familycare.feature.appointments.profile.AppointmentsPatientTab
+import io.github.lgpy.familycare.feature.appointments.profile.AppointmentsPatientSummarySource
 import io.github.lgpy.familycare.feature.appointments.profile.AppointmentsTimelineSource
 import io.github.lgpy.familycare.feature.appointments.push.AppointmentsPushHandler
 import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentReminderCoordinator
@@ -57,6 +62,7 @@ import io.github.lgpy.familycare.feature.medications.data.MedicationsData
 import io.github.lgpy.familycare.feature.medications.data.StockRepository
 import io.github.lgpy.familycare.feature.medications.medicationsModule
 import io.github.lgpy.familycare.feature.medications.profile.MedicationsPatientTab
+import io.github.lgpy.familycare.feature.medications.profile.MedicationsPatientSummarySource
 import io.github.lgpy.familycare.feature.medications.profile.MedicationsTimelineSource
 import io.github.lgpy.familycare.feature.medications.push.MedicationsPushHandler
 import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
@@ -69,6 +75,7 @@ import io.github.lgpy.familycare.feature.patientinfo.patientInfoModule
 import io.github.lgpy.familycare.feature.patientinfo.profile.AllergiesPatientHeader
 import io.github.lgpy.familycare.feature.patientinfo.profile.InfoPatientTab
 import io.github.lgpy.familycare.feature.patientinfo.profile.PatientInfoAlerts
+import io.github.lgpy.familycare.feature.patientinfo.profile.PatientInfoPatientSummarySource
 import io.github.lgpy.familycare.ui.MoreViewModel
 import io.github.lgpy.familycare.ui.SignInViewModel
 import io.github.lgpy.familycare.ui.activity.ActivityViewModel
@@ -215,6 +222,21 @@ val appModule: Module = module {
     single { PatientHeaders(getAll<PatientHeader>()) }
     single { PatientTabs(getAll<PatientTab>()) }
     single { TimelineSources(getAll<TimelineSource>()) }
+
+    // The Patients list's summary extension point (screens v2, D5). Each module
+    // contributes the facts it owns; the shell draws them in `order` and names
+    // no module.
+    single<PatientSummaryText> { ResourcesPatientSummaryText(androidContext()) }
+    single<PatientSummarySource>(named("MedicationsPatientSummarySource")) {
+        MedicationsPatientSummarySource(stockRepository = get(), text = get())
+    }
+    single<PatientSummarySource>(named("AppointmentsPatientSummarySource")) {
+        AppointmentsPatientSummarySource(appointmentRepository = get(), text = get())
+    }
+    single<PatientSummarySource>(named("PatientInfoPatientSummarySource")) {
+        PatientInfoPatientSummarySource(repository = get(), text = get())
+    }
+    single { PatientSummarySources(getAll<PatientSummarySource>()) }
 
     // The patient alerts extension point (D5): patient-info owns the allergies,
     // and the Give screen in medications reads them through the core contract.
@@ -378,7 +400,13 @@ val appModule: Module = module {
             syncState = get<SyncService>().state,
         )
     }
-    viewModel { PatientsViewModel(patientRepository = get(), careCircleRepository = get()) }
+    viewModel {
+        PatientsViewModel(
+            patientRepository = get(),
+            careCircleRepository = get(),
+            summarySources = get(),
+        )
+    }
     viewModel { (patientId: String) ->
         PatientFormViewModel(
             patientId = patientId.ifBlank { null },

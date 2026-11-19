@@ -1,25 +1,26 @@
 package io.github.lgpy.familycare.ui.patients
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -42,18 +43,23 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.CoreError
 import io.github.lgpy.familycare.core.domain.circle.PatientExportFormat
 import io.github.lgpy.familycare.core.domain.circle.PatientId
+import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.core.ui.patient.PatientHeaders
+import io.github.lgpy.familycare.core.ui.patient.PatientTabIcon
 import io.github.lgpy.familycare.core.ui.patient.PatientTabs
 import io.github.lgpy.familycare.core.ui.patient.TimelineEntry
 import io.github.lgpy.familycare.core.ui.patient.TimelineKind
@@ -159,6 +165,11 @@ fun PatientProfileScreen(
             PatientProfileHead(
                 patientId = patient,
                 displayName = uiState.displayName,
+                age = patientAge(uiState.birthYear),
+                reminderLine = reminderLine(
+                    policy = uiState.reminderPolicy,
+                    primaryCaregiverName = uiState.primaryCaregiverName,
+                ),
             )
         }
 
@@ -214,20 +225,35 @@ fun PatientProfileScreen(
                 // The profile's tabs span the screen and scroll to its edges;
                 // 16 dp edge padding lines the first tab up with the head above,
                 // and a long label is never clipped inside a content padding.
+                // Each tab carries its icon above the label, filled while
+                // selected (screens v2, design-system §6).
                 PrimaryScrollableTabRow(
                     selectedTabIndex = tabIndex,
                     edgePadding = 16.dp,
                 ) {
                     contributed.forEach { tab ->
+                        val selected = !historySelected && tab.id == selectedTabId
                         Tab(
-                            selected = !historySelected && tab.id == selectedTabId,
+                            selected = selected,
                             onClick = { selectedTabId = tab.id },
+                            icon = {
+                                Icon(
+                                    imageVector = tab.icon.image(selected),
+                                    contentDescription = null,
+                                )
+                            },
                             text = { Text(text = stringResource(tab.titleRes)) },
                         )
                     }
                     Tab(
                         selected = historySelected,
                         onClick = { selectedTabId = HISTORY_TAB_ID },
+                        icon = {
+                            Icon(
+                                imageVector = PatientTabIcon.HISTORY.image(historySelected),
+                                contentDescription = null,
+                            )
+                        },
                         text = { Text(text = stringResource(R.string.patient_tab_history)) },
                     )
                 }
@@ -430,16 +456,25 @@ private fun PatientProfileTopBar(
     ) {
         IconButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = FcIcons.ArrowBack,
                 contentDescription = stringResource(R.string.back),
             )
         }
         Spacer(modifier = Modifier.weight(1f))
+        // Screens v2: editing is an icon in the top bar, not only a menu item.
+        if (canWrite) {
+            IconButton(onClick = onEdit) {
+                Icon(
+                    imageVector = FcIcons.Edit,
+                    contentDescription = stringResource(R.string.patient_profile_edit),
+                )
+            }
+        }
         if (canWrite || canManage || canExport) {
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
-                        imageVector = Icons.Filled.MoreVert,
+                        imageVector = FcIcons.MoreVert,
                         contentDescription = stringResource(R.string.patient_profile_actions),
                     )
                 }
@@ -447,15 +482,6 @@ private fun PatientProfileTopBar(
                     expanded = menuOpen,
                     onDismissRequest = { menuOpen = false },
                 ) {
-                    if (canWrite) {
-                        DropdownMenuItem(
-                            text = { Text(text = stringResource(R.string.patient_profile_edit)) },
-                            onClick = {
-                                menuOpen = false
-                                onEdit()
-                            },
-                        )
-                    }
                     if (canManage) {
                         DropdownMenuItem(
                             text = {
@@ -498,15 +524,25 @@ private fun PatientProfileTopBar(
 }
 
 /**
- * The profile head (docs/ux/mockups/scaling.html): the 56 dp identity avatar
- * beside the patient's name. The age line is omitted: the domain patient has no
- * date of birth, and inventing one would be clinical information.
+ * The profile head (screens v2): the 60 dp identity avatar beside the patient's
+ * name, and one line under it with the age and how reminders are routed.
+ *
+ * The line is built from the patient's own values: the age only when a year of
+ * birth is recorded (D33: the full date is deliberately not stored), and the
+ * reminder text from the same policy wording the list used to show.
  */
 @Composable
 private fun PatientProfileHead(
     patientId: PatientId,
     displayName: String,
+    age: Int?,
+    reminderLine: String?,
 ) {
+    val details = listOfNotNull(
+        age?.let { years -> pluralStringResource(R.plurals.patient_age_years, years, years) },
+        reminderLine,
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -517,15 +553,52 @@ private fun PatientProfileHead(
         PatientAvatar(
             patientId = patientId,
             name = displayName,
-            size = 56.dp,
+            size = 60.dp,
         )
-        Text(
-            text = displayName,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+        Column(
             modifier = Modifier.weight(1f),
-        )
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = displayName,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            if (details.isNotEmpty()) {
+                Text(
+                    text = details.joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
+}
+
+/**
+ * "reminders: Primary with escalation · Primary: Mom", the same policy wording
+ * the patient form and the list use; null when the patient is not loaded.
+ */
+@Composable
+private fun reminderLine(
+    policy: ReminderPolicy?,
+    primaryCaregiverName: String?,
+): String? {
+    if (policy == null) return null
+    val label = stringResource(policy.labelRes())
+    val hint = primaryCaregiverName
+        ?.let { name -> label + " · " + stringResource(R.string.patients_primary_name, name) }
+        ?: label
+    return stringResource(R.string.patients_reminders_line, hint)
+}
+
+/** The outlined icon of a tab, and its filled variant while it is selected. */
+@Composable
+private fun PatientTabIcon.image(selected: Boolean): ImageVector = when (this) {
+    PatientTabIcon.MEDICATION -> if (selected) FcIcons.MedicationFilled else FcIcons.Medication
+    PatientTabIcon.EVENT -> if (selected) FcIcons.EventFilled else FcIcons.Event
+    PatientTabIcon.BADGE -> if (selected) FcIcons.BadgeFilled else FcIcons.Badge
+    PatientTabIcon.HISTORY -> if (selected) FcIcons.HistoryFilled else FcIcons.History
 }
 
 /** The History tab: every module's events, grouped by month, newest first. */
@@ -552,9 +625,9 @@ private fun HistoryList(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(24.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        contentPadding = PaddingValues(start = 24.dp, top = 8.dp, end = 24.dp, bottom = 24.dp),
     ) {
+        val lastEntryId = history.lastOrNull()?.entries?.lastOrNull()?.id
         history.forEach { group ->
             item(key = "month-${group.month}") {
                 Text(
@@ -564,39 +637,97 @@ private fun HistoryList(
                 )
             }
             items(group.entries, key = { it.id }) { entry ->
-                TimelineRow(entry = entry, onNavigate = onNavigate)
+                TimelineRow(
+                    entry = entry,
+                    last = entry.id == lastEntryId,
+                    onNavigate = onNavigate,
+                )
             }
         }
     }
 }
 
+/**
+ * One History event (screens v2): a 36 dp round icon tile, the title and detail,
+ * the date, and the line that connects it to the next event.
+ *
+ * The tile is the entry's kind, so the timeline is scannable without reading;
+ * the line is drawn under the tile and stops at the last entry.
+ */
 @Composable
-private fun TimelineRow(entry: TimelineEntry, onNavigate: (String) -> Unit) {
+private fun TimelineRow(
+    entry: TimelineEntry,
+    last: Boolean,
+    onNavigate: (String) -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val promoted = entry.kind.isPromoted()
     val route = entry.route
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(IntrinsicSize.Min)
             .then(
                 if (route == null) Modifier else Modifier.clickable { onNavigate(route) },
-            )
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            ),
+        verticalAlignment = Alignment.Top,
     ) {
-        Icon(
-            imageVector = entry.kind.icon(),
-            contentDescription = null,
-            modifier = Modifier.padding(end = 12.dp),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = entry.title, style = MaterialTheme.typography.bodyLarge)
+        Column(
+            modifier = Modifier
+                .width(36.dp)
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (promoted) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = entry.kind.icon(),
+                    contentDescription = null,
+                    tint = if (promoted) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            if (!last) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(top = 4.dp)
+                        .width(2.dp)
+                        .background(scheme.outlineVariant),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(bottom = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
+        ) {
+            Text(
+                text = entry.title,
+                style = MaterialTheme.typography.titleSmall,
+            )
             entry.detail?.let { detail ->
-                Text(text = detail, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                )
             }
         }
         Text(
             text = relativeDate(entry.at),
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(start = 12.dp),
+            color = scheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 12.dp, bottom = 14.dp),
         )
     }
 }
@@ -631,8 +762,30 @@ private fun relativeDate(at: Instant): String {
     }
 }
 
+/** The tile's picture: one per timeline kind (screens v2). */
+@Composable
 private fun TimelineKind.icon(): ImageVector = when (this) {
-    TimelineKind.MEDICATION -> Icons.Filled.Favorite
-    TimelineKind.APPOINTMENT -> Icons.Filled.DateRange
-    TimelineKind.OTHER -> Icons.Filled.Info
+    TimelineKind.MEDICATION_STARTED -> FcIcons.AddCircle
+    TimelineKind.MEDICATION_CHANGED -> FcIcons.Medication
+    TimelineKind.MEDICATION_STOPPED -> FcIcons.Block
+    TimelineKind.STOCK -> FcIcons.Inventory2
+    TimelineKind.APPOINTMENT_CONSULTATION -> FcIcons.Stethoscope
+    TimelineKind.APPOINTMENT_BLOOD_TEST -> FcIcons.Bloodtype
+    TimelineKind.APPOINTMENT_EXAM -> FcIcons.Radiology
+    TimelineKind.APPOINTMENT_CHECKUP -> FcIcons.Stethoscope
+    TimelineKind.APPOINTMENT_OTHER -> FcIcons.Event
+    TimelineKind.OTHER -> FcIcons.Info
+}
+
+/**
+ * Whether the entry is a change the person should notice (a regimen started or
+ * changed), which gets the primary-container tile; everything else stays
+ * neutral (screens v2, the mockup's `tile pri`).
+ */
+private fun TimelineKind.isPromoted(): Boolean = when (this) {
+    TimelineKind.MEDICATION_STARTED,
+    TimelineKind.MEDICATION_CHANGED,
+    -> true
+
+    else -> false
 }

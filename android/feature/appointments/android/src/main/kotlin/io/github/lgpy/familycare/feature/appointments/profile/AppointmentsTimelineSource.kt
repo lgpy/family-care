@@ -3,13 +3,13 @@ package io.github.lgpy.familycare.feature.appointments.profile
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.patient.TimelineEntry
-import io.github.lgpy.familycare.core.ui.patient.TimelineKind
 import io.github.lgpy.familycare.core.ui.patient.TimelineSource
 import io.github.lgpy.familycare.core.ui.patient.TimelineText
 import io.github.lgpy.familycare.feature.appointments.AppointmentsRoutes
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentRepository
 import io.github.lgpy.familycare.feature.appointments.domain.Appointment
 import io.github.lgpy.familycare.feature.appointments.ui.labelRes
+import io.github.lgpy.familycare.feature.appointments.ui.timelineKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -50,7 +50,7 @@ class AppointmentsTimelineSource(
             at = appointment.startInstant(),
             title = title,
             detail = detail,
-            kind = TimelineKind.APPOINTMENT,
+            kind = appointment.kind.timelineKind(),
             route = AppointmentsRoutes.appointmentDetail(appointment.id.value),
         )
     }
