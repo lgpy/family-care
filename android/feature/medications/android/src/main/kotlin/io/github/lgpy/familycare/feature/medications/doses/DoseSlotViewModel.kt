@@ -7,6 +7,7 @@ import io.github.lgpy.familycare.core.domain.circle.CircleMember
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.canWrite
+import io.github.lgpy.familycare.core.domain.medication.PillLook
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.GivenBy
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
@@ -14,6 +15,7 @@ import io.github.lgpy.familycare.feature.medications.data.TodayDoseGroup
 import io.github.lgpy.familycare.feature.medications.domain.DoseLogEntry
 import io.github.lgpy.familycare.feature.medications.domain.DoseOutcome
 import io.github.lgpy.familycare.feature.medications.domain.DoseSlot
+import io.github.lgpy.familycare.feature.medications.domain.Medication
 import io.github.lgpy.familycare.feature.medications.domain.SkipReason
 import io.github.lgpy.familycare.feature.medications.ui.MedsUiError
 import io.github.lgpy.familycare.feature.medications.ui.MemberOrder
@@ -30,10 +32,34 @@ import kotlinx.coroutines.launch
 /** Who the "Given by" picker points at. */
 enum class GivenByChoice { Me, Member, SomeoneElse }
 
+/**
+ * What the bottom bar's one button will do, derived from the toggles.
+ *
+ * Kept as a value (not a formatted string) so the label state is unit-tested on
+ * the JVM: the screen turns it into "Give all 3", "Give 2 · skip 1" or
+ * "Skip all" from the string resources.
+ */
+sealed interface GiveSummary {
+
+    /** Every pill is checked: "Give all [count]". */
+    data class GiveAll(val count: Int) : GiveSummary
+
+    /** Some pills are unchecked: "Give [given] · skip [skipped]". */
+    data class GiveSome(val given: Int, val skipped: Int) : GiveSummary
+
+    /** Every pill is unchecked: "Skip all". */
+    data class SkipAll(val count: Int) : GiveSummary
+}
+
 /** One medication of the slot, as the screen draws it. */
 data class SlotMedicationUi(
     val slot: DoseSlot,
     val name: String,
+    val strength: String?,
+    /** The stored unit token ("tablet", "ml"); the screen localizes it. */
+    val stockUnit: String,
+    val instructions: String?,
+    val pillLook: PillLook?,
     val outcome: DoseOutcome,
     val skipReason: SkipReason?,
     /** The effective entry already recorded for this slot, if any. */
@@ -47,14 +73,20 @@ data class SlotMedicationUi(
 }
 
 /**
- * The dose-slot screen (docs/ux/screens.md §2): one patient's doses at one
- * wall-clock time, with an exception per medication.
+ * The dose-slot screen (docs/ux/screens.md §2, screens v2 "Give"): one patient's
+ * doses at one wall-clock time, with an exception per medication.
  *
- * Saving is the group confirmation the card does in one tap, with the
- * exceptions added: the not-yet-confirmed slots go in **one**
- * [DoseLogRepository.confirm] call, and a slot that already has an entry is
- * **corrected** ([DoseLogRepository.correct]) rather than confirmed again — a
- * second entry for the same slot would read as a double dose.
+ * Every pill starts checked. Unchecking one marks it skipped (default reason
+ * [SkipReason.REFUSED]) and the row opens the reason list on tap; checking it
+ * again clears the reason. Saving is the group confirmation the card does in one
+ * tap: the not-yet-confirmed slots go in **one** [DoseLogRepository.confirm]
+ * call, and a slot that already has an entry is **corrected**
+ * ([DoseLogRepository.correct]) rather than confirmed again — a second entry for
+ * the same slot would read as a double dose.
+ *
+ * A slot whose entries are all recorded opens read-only ([DoseSlotUiState
+ * .confirmed]), showing who gave each dose and when; [onEdit] unlocks the
+ * toggles so the existing correction path stays reachable.
  */
 class DoseSlotViewModel(
     private val patientId: String,
@@ -81,7 +113,7 @@ class DoseSlotViewModel(
             group = groups.firstOrNull { group ->
                 group.patientId == PatientId(patientId) && group.scheduledLocal == scheduledLocal
             },
-            names = medications.associate { it.medication.id.value to it.medication.name },
+            medications = medications.associate { it.medication.id.value to it.medication },
             patientName = patient?.displayName,
             canWrite = role.canWrite,
             members = members.sortedWith(MemberOrder),
@@ -89,6 +121,7 @@ class DoseSlotViewModel(
     }
 
     val uiState: StateFlow<DoseSlotUiState> = combine(base, local, edits) { baseState, state, edits ->
+        val items = baseState.group?.toItems(baseState.medications, edits).orEmpty()
         state.copy(
             loaded = true,
             group = baseState.group,
@@ -96,13 +129,36 @@ class DoseSlotViewModel(
             patientName = baseState.patientName,
             canWrite = baseState.canWrite,
             members = baseState.members,
-            items = baseState.group?.toItems(baseState.names, edits).orEmpty(),
+            items = items,
+            confirmed = !state.editing && items.isNotEmpty() && items.all { it.existing != null },
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = DoseSlotUiState(),
     )
+
+    /**
+     * Checks or unchecks one pill: a checked pill becomes skipped (with the row's
+     * existing reason, or refused) and an unchecked one becomes given again.
+     */
+    fun onToggle(regimenIdValue: String) {
+        val current = uiState.value.items.firstOrNull { it.slot.regimenId.value == regimenIdValue }
+            ?: return
+        edits.update { edits ->
+            val edit = edits[regimenIdValue] ?: SlotEdit()
+            val toggled = if (current.outcome == DoseOutcome.TAKEN) {
+                edit.copy(
+                    outcome = DoseOutcome.SKIPPED,
+                    skipReason = edit.skipReason ?: SkipReason.REFUSED,
+                )
+            } else {
+                edit.copy(outcome = DoseOutcome.TAKEN, skipReason = null)
+            }
+            edits + (regimenIdValue to toggled)
+        }
+        local.update { it.copy(editing = true) }
+    }
 
     fun onOutcome(regimenIdValue: String, outcome: DoseOutcome) {
         edits.update { current ->
@@ -116,6 +172,7 @@ class DoseSlotViewModel(
                 },
             ))
         }
+        local.update { it.copy(editing = true) }
     }
 
     fun onSkipReason(regimenIdValue: String, reason: SkipReason) {
@@ -126,6 +183,12 @@ class DoseSlotViewModel(
                 skipReason = reason,
             ))
         }
+        local.update { it.copy(editing = true) }
+    }
+
+    /** Unlocks a fully recorded slot so its entries can be corrected. */
+    fun onEdit() {
+        local.update { it.copy(editing = true) }
     }
 
     fun onGivenByMe() {
@@ -230,9 +293,28 @@ data class DoseSlotUiState(
     val saving: Boolean = false,
     val saved: Boolean = false,
     val error: MedsUiError? = null,
+    /** True once the user has touched a pill or asked to correct a saved slot. */
+    val editing: Boolean = false,
+    /** True when every slot already has an entry and nothing was edited. */
+    val confirmed: Boolean = false,
     /** The domain group being edited; null until the rows arrive. */
     val group: TodayDoseGroup? = null,
 ) {
+
+    /** How many pills the button would give. */
+    val givenCount: Int get() = items.count { it.outcome == DoseOutcome.TAKEN }
+
+    /** How many pills the button would skip. */
+    val skippedCount: Int get() = items.count { it.outcome == DoseOutcome.SKIPPED }
+
+    /** The bottom bar's action, or null when the slot has no rows. */
+    val giveSummary: GiveSummary?
+        get() = when {
+            items.isEmpty() -> null
+            skippedCount == 0 -> GiveSummary.GiveAll(givenCount)
+            givenCount == 0 -> GiveSummary.SkipAll(skippedCount)
+            else -> GiveSummary.GiveSome(given = givenCount, skipped = skippedCount)
+        }
 
     /** The choice as the data layer wants it. */
     fun givenBy(): GivenBy = when (givenBy) {
@@ -245,22 +327,27 @@ data class DoseSlotUiState(
 
 private data class BaseState(
     val group: TodayDoseGroup?,
-    val names: Map<String, String>,
+    val medications: Map<String, Medication>,
     val patientName: String?,
     val canWrite: Boolean,
     val members: List<CircleMember>,
 )
 
 private fun TodayDoseGroup.toItems(
-    names: Map<String, String>,
+    medications: Map<String, Medication>,
     edits: Map<String, SlotEdit>,
 ): List<SlotMedicationUi> = slots.map { slot ->
     val existing = statusOf(slot)?.effectiveEntries?.lastOrNull()
     val edit = edits[slot.regimenId.value]
     val outcome = edit?.outcome ?: existing?.outcome ?: DoseOutcome.TAKEN
+    val medication = medications[slot.medicationId.value]
     SlotMedicationUi(
         slot = slot,
-        name = names[slot.medicationId.value].orEmpty(),
+        name = medication?.name.orEmpty(),
+        strength = medication?.strength,
+        stockUnit = medication?.stockUnit.orEmpty(),
+        instructions = medication?.instructions,
+        pillLook = medication?.pillLook,
         outcome = outcome,
         skipReason = when (outcome) {
             DoseOutcome.SKIPPED -> edit?.skipReason ?: existing?.skipReason ?: SkipReason.REFUSED

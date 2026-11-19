@@ -30,6 +30,7 @@ import io.github.lgpy.familycare.core.ui.export.PatientExporter
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
+import io.github.lgpy.familycare.core.ui.patient.PatientAlerts
 import io.github.lgpy.familycare.core.ui.patient.PatientHeader
 import io.github.lgpy.familycare.core.ui.patient.PatientHeaders
 import io.github.lgpy.familycare.core.ui.patient.PatientTab
@@ -67,6 +68,7 @@ import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoRepository
 import io.github.lgpy.familycare.feature.patientinfo.patientInfoModule
 import io.github.lgpy.familycare.feature.patientinfo.profile.AllergiesPatientHeader
 import io.github.lgpy.familycare.feature.patientinfo.profile.InfoPatientTab
+import io.github.lgpy.familycare.feature.patientinfo.profile.PatientInfoAlerts
 import io.github.lgpy.familycare.ui.MoreViewModel
 import io.github.lgpy.familycare.ui.SignInViewModel
 import io.github.lgpy.familycare.ui.activity.ActivityViewModel
@@ -213,6 +215,11 @@ val appModule: Module = module {
     single { PatientHeaders(getAll<PatientHeader>()) }
     single { PatientTabs(getAll<PatientTab>()) }
     single { TimelineSources(getAll<TimelineSource>()) }
+
+    // The patient alerts extension point (D5): patient-info owns the allergies,
+    // and the Give screen in medications reads them through the core contract.
+    // A screen that finds nothing registered falls back to NoPatientAlerts.
+    single<PatientAlerts> { PatientInfoAlerts(repository = get()) }
 
     // The export extension point (D30, docs/domain/patient-lifecycle.md
     // "Export"). Each source is built from a module's public data API; the

@@ -220,4 +220,96 @@ class DoseSlotViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `unchecking a pill marks it skipped and splits the give summary`() = runTest {
+        doses.todayFlow.value = listOf(todayGroup(listOf(firstSlot, secondSlot)))
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.items.size == 2 }
+            viewModel.onToggle("reg-2")
+            val state = awaitWhere { it.items[1].outcome == DoseOutcome.SKIPPED }
+
+            assertEquals(DoseOutcome.TAKEN, state.items[0].outcome)
+            assertEquals(SkipReason.REFUSED, state.items[1].skipReason)
+            assertEquals(1, state.givenCount)
+            assertEquals(1, state.skippedCount)
+            assertEquals(GiveSummary.GiveSome(given = 1, skipped = 1), state.giveSummary)
+            assertFalse(state.confirmed)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the button follows the toggles - give all, give some, skip all`() = runTest {
+        doses.todayFlow.value = listOf(todayGroup(listOf(firstSlot, secondSlot)))
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            var state = awaitWhere { it.loaded && it.items.size == 2 }
+            assertEquals(GiveSummary.GiveAll(2), state.giveSummary)
+
+            viewModel.onToggle("reg-1")
+            state = awaitWhere { it.items[0].outcome == DoseOutcome.SKIPPED }
+            assertEquals(GiveSummary.GiveSome(given = 1, skipped = 1), state.giveSummary)
+
+            viewModel.onToggle("reg-2")
+            state = awaitWhere { it.skippedCount == 2 }
+            assertEquals(GiveSummary.SkipAll(2), state.giveSummary)
+
+            viewModel.onToggle("reg-2")
+            state = awaitWhere { it.items[1].outcome == DoseOutcome.TAKEN }
+            assertEquals(GiveSummary.GiveSome(given = 1, skipped = 1), state.giveSummary)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `saving writes each medication's toggled outcome`() = runTest {
+        doses.todayFlow.value = listOf(todayGroup(listOf(firstSlot, secondSlot)))
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.items.size == 2 }
+            viewModel.onToggle("reg-2")
+            viewModel.save()
+
+            val call = doses.confirmations.single()
+            assertEquals(2, call.group.slotCount)
+            assertEquals(
+                listOf(firstSlot.slotId, secondSlot.slotId),
+                call.group.slots.map { it.slotId },
+            )
+            assertEquals(mapOf(secondSlot.slotId to SkipReason.REFUSED), call.skipped)
+            assertTrue(viewModel.uiState.value.saved)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a fully recorded slot opens read-only until edit`() = runTest {
+        val firstEntry = entry(firstSlot, id = "entry-1")
+        val secondEntry = entry(secondSlot, id = "entry-2")
+        doses.todayFlow.value = listOf(
+            todayGroup(
+                slots = listOf(firstSlot, secondSlot),
+                statuses = listOf(
+                    status(firstSlot, DoseState.TAKEN, listOf(firstEntry)),
+                    status(secondSlot, DoseState.TAKEN, listOf(secondEntry)),
+                ),
+            ),
+        )
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            var state = awaitWhere { it.loaded && it.items.size == 2 }
+            assertTrue(state.confirmed)
+
+            viewModel.onEdit()
+            state = awaitWhere { !it.confirmed }
+            assertTrue(state.editing)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

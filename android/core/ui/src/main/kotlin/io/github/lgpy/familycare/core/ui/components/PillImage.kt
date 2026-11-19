@@ -276,12 +276,17 @@ fun pillColorName(colour: PillColor, feminine: Boolean = false): String = string
  * docs/ux/mockups/screens-v2.html computes them from its pixel size, so the
  * shape is identical at 24 dp, 40 dp and 72 dp. [PillSize.scale] multiplies the
  * body inside the box, never the box itself.
+ *
+ * [box] and [centre] default to the current canvas; [renderPillsBitmap] passes
+ * one cell of a larger bitmap so the notification icon draws the same picture.
  */
-private fun DrawScope.drawPill(look: PillLook) {
-    val box = size.minDimension
-    val cx = size.width / 2f
-    val cy = size.height / 2f
-    val centre = Offset(cx, cy)
+fun DrawScope.drawPill(
+    look: PillLook,
+    box: Float = size.minDimension,
+    centre: Offset = Offset(size.width / 2f, size.height / 2f),
+) {
+    val cx = centre.x
+    val cy = centre.y
     val k = look.size.scale
     val strokeWidth = 1.2f * box / DrawingBoxDp
     val scoreWidth = 1.4f * box / DrawingBoxDp

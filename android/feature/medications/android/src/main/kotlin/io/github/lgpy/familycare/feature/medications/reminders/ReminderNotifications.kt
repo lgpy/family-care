@@ -4,9 +4,13 @@ import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import io.github.lgpy.familycare.core.domain.medication.PillLook
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.PillBitmapMaxPills
+import io.github.lgpy.familycare.core.ui.components.renderPillsBitmap
 import io.github.lgpy.familycare.feature.medications.domain.TimeSlotGroup
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
 
@@ -18,7 +22,9 @@ import io.github.lgpy.familycare.feature.medications.ui.formatTime
  * - **Lock-screen privacy**: `VISIBILITY_PRIVATE` plus a public version that is
  *   only "Family Care · A dose is due" (pt-PT "Family Care · Há uma toma para
  *   dar"). The unlocked notification may name the patient, the time and the
- *   number of medications; the public one never does.
+ *   number of medications; the public one never does. The pill picture is
+ *   medical information too, so the **private** notification gets the large icon
+ *   and the public one deliberately does not.
  * - **No health data in logs**: nothing here is logged.
  *
  * The full-screen intent is deliberately absent: the notification plus the
@@ -27,13 +33,20 @@ import io.github.lgpy.familycare.feature.medications.ui.formatTime
  */
 object ReminderNotifications {
 
-    /** Posts (or replaces) the reminder for [group]; returns its notification id. */
+    /**
+     * Posts (or replaces) the reminder for [group]; returns its notification id.
+     *
+     * [pillLooks] is one entry per slot (null where the medication has no look),
+     * in [TimeSlotGroup.slots] order. The caller loads it from the medication
+     * repository on a background thread; this function only renders the bitmap.
+     */
     @SuppressLint("MissingPermission")
     fun post(
         context: Context,
         group: TimeSlotGroup,
         patientName: String,
         store: ScheduledRemindersStore,
+        pillLooks: List<PillLook?> = emptyList(),
     ): Int {
         val id = io.github.lgpy.familycare.feature.medications.domain.ReminderIds.requestCode(
             group.patientId,
@@ -59,7 +72,11 @@ object ReminderNotifications {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
-        val notification = NotificationCompat.Builder(context, ReminderContract.CHANNEL_ID)
+        // D12: only the unlocked version gets the pills. A picture of the
+        // medicines would tell a lock screen what the person takes.
+        val largeIcon = renderLargeIcon(context, pillLooks)
+
+        val builder = NotificationCompat.Builder(context, ReminderContract.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(patientName.ifBlank {
                 context.getString(R.string.reminder_notification_title)
@@ -82,7 +99,8 @@ object ReminderNotifications {
                 context.getString(R.string.reminder_action_snooze),
                 actionIntent(context, group, patientName, ReminderContract.ACTION_SNOOZE, id),
             )
-            .build()
+        if (largeIcon != null) builder.setLargeIcon(largeIcon)
+        val notification = builder.build()
 
         manager.notify(id, notification)
         store.addPosted(id)
@@ -126,6 +144,21 @@ object ReminderNotifications {
         return true
     }
 
+    /**
+     * The private notification's large icon: up to three pills per row on a
+     * transparent square, or null when no medication has a drawn look.
+     *
+     * The system draws a large icon at about 72 dp; rendering at the display
+     * density keeps it crisp on every phone. Called from [post], which the
+     * reminder receiver runs on `Dispatchers.IO`, never from the main thread.
+     */
+    private fun renderLargeIcon(context: Context, looks: List<PillLook?>): Bitmap? {
+        val drawable = looks.filterNotNull().take(PillBitmapMaxPills)
+        if (drawable.isEmpty()) return null
+        val sizePx = (LargeIconDp * context.resources.displayMetrics.density).toInt()
+        return renderPillsBitmap(drawable, sizePx.coerceAtLeast(MinLargeIconPx))
+    }
+
     private fun contentIntent(context: Context, group: TimeSlotGroup, id: Int): PendingIntent {
         val intent = Intent()
             .setClassName(context, MAIN_ACTIVITY)
@@ -160,4 +193,10 @@ object ReminderNotifications {
     }
 
     private const val MAIN_ACTIVITY = "io.github.lgpy.familycare.MainActivity"
+
+    /** The size the system draws a notification's large icon at. */
+    private const val LargeIconDp = 72f
+
+    /** A floor for very low-density screens, so the pills stay legible. */
+    private const val MinLargeIconPx = 96
 }

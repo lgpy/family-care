@@ -305,6 +305,18 @@
     <string name="meds_existing_entry">Registado: %1$s às %2$s</string>
     <string name="meds_save">Guardar</string>
 
+    <!-- M3/D33: o ecrã Dar (screens v2 `const giveSlot`). -->
+    <string name="meds_give_title">%1$s · %2$s</string>
+    <string name="meds_give_helper">Confirme cada comprimido à medida que o entrega</string>
+    <string name="meds_give_some">Dar %1$d · não dar %2$d</string>
+    <string name="meds_skip_all">Não dar nenhuma</string>
+    <string name="meds_give_chip_by_me">Dada por mim</string>
+    <string name="meds_give_chip_by_member">Dada por %1$s</string>
+    <string name="meds_give_chip_by_someone">Dada por outra pessoa</string>
+    <string name="meds_give_chip_at">Às %1$s</string>
+    <string name="meds_give_edit">Alterar</string>
+    <string name="meds_give_toggle">Marcar %1$s</string>
+
     <!-- M3: medicação de uma pessoa. -->
     <string name="meds_list_title">Medicação</string>
     <string name="meds_tab_title">Medicamentos</string>

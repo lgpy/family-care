@@ -48,7 +48,19 @@ class DoseReminderReceiver : BroadcastReceiver() {
                 }
                 if (confirmed) return@launch
 
-                ReminderNotifications.post(appContext, group, patientName, store)
+                // The notification's large icon is a picture of this group's
+                // pills (D33): load the looks here, on Dispatchers.IO, so the
+                // builder never touches a repository on the main thread.
+                val medications = koin
+                    .get<io.github.lgpy.familycare.feature.medications.data.MedicationRepository>()
+                    .activeMedications
+                    .first()
+                    .associateBy { it.medication.id.value }
+                val pillLooks = group.slots.map { slot ->
+                    medications[slot.medicationId.value]?.medication?.pillLook
+                }
+
+                ReminderNotifications.post(appContext, group, patientName, store, pillLooks)
             } catch (_: Exception) {
                 // A receiver must not crash the process; the next reschedule and
                 // the server escalation remain the safety nets.

@@ -302,6 +302,18 @@
     <string name="meds_existing_entry">Saved: %1$s at %2$s</string>
     <string name="meds_save">Save</string>
 
+    <!-- M3/D33: the Give screen (screens v2 `const giveSlot`). -->
+    <string name="meds_give_title">%1$s · %2$s</string>
+    <string name="meds_give_helper">Check each pill as you hand it over</string>
+    <string name="meds_give_some">Give %1$d · skip %2$d</string>
+    <string name="meds_skip_all">Skip all</string>
+    <string name="meds_give_chip_by_me">Given by me</string>
+    <string name="meds_give_chip_by_member">Given by %1$s</string>
+    <string name="meds_give_chip_by_someone">Given by someone</string>
+    <string name="meds_give_chip_at">At %1$s</string>
+    <string name="meds_give_edit">Change</string>
+    <string name="meds_give_toggle">Mark %1$s</string>
+
     <!-- M3: a patient's medications. -->
     <string name="meds_list_title">Medications</string>
     <string name="meds_tab_title">Medications</string>
