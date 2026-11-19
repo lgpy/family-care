@@ -442,6 +442,8 @@
     <string name="meds_detail_log">Tomas recentes</string>
     <string name="meds_detail_log_empty">Ainda não há tomas registadas.</string>
     <string name="meds_detail_edit">Editar detalhes</string>
+    <string name="meds_detail_actions">Mais ações</string>
+    <string name="meds_detail_change_look">Alterar o aspeto do comprimido</string>
     <string name="meds_detail_change">Alterar dose ou esquema</string>
     <string name="meds_detail_stop">Suspender</string>
     <string name="meds_detail_stopped">Suspensa em %1$s</string>
@@ -450,6 +452,7 @@
     <string name="meds_detail_form">Forma: %1$s</string>
     <string name="meds_detail_stock_unit">Unidade de stock: %1$s</string>
     <string name="meds_detail_instructions">Instruções: %1$s</string>
+    <string name="meds_detail_prescription_section">Receita</string>
     <string name="meds_detail_prescription">Receita válida até %1$s</string>
     <string name="meds_detail_no_prescription">Não precisa de receita</string>
     <string name="meds_history_until">%1$s até %2$s</string>
@@ -506,6 +509,7 @@
     <string name="meds_stock_ready_to_buy">Pronto a comprar</string>
     <string name="meds_stock_refill">Registar reabastecimento</string>
     <string name="meds_stock_recount">Recontar</string>
+    <string name="meds_stock_count">Contar</string>
     <string name="meds_stock_discard">Deitar fora</string>
     <string name="meds_stock_refill_title">Registar reabastecimento</string>
     <string name="meds_stock_refill_body">Adicione o stock que entrou, por exemplo uma caixa nova.</string>
@@ -524,6 +528,7 @@
 
     <!-- M5: shopping list (D28). As duas secções, as respetivas linhas e diálogos. -->
     <string name="shopping_title">Compras</string>
+    <string name="shopping_group_needs_prescription">Peça primeiro uma receita</string>
     <string name="shopping_empty_title">Nada para comprar</string>
     <string name="shopping_empty_body">Os medicamentos aparecem aqui quando estão a acabar.</string>
     <string name="shopping_prescription_missing">Falta a receita</string>

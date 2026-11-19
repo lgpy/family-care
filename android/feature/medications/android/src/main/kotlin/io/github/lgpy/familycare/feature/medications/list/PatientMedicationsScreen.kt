@@ -2,26 +2,28 @@ package io.github.lgpy.familycare.feature.medications.list
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,25 +33,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.PillTile
+import io.github.lgpy.familycare.core.ui.components.ScreenHeader
 import io.github.lgpy.familycare.core.ui.components.StockMeter
 import io.github.lgpy.familycare.core.ui.components.stockMeterFraction
-import io.github.lgpy.familycare.feature.medications.ui.regimenSummary
+import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
+import io.github.lgpy.familycare.feature.medications.ui.MedsMetaItem
+import io.github.lgpy.familycare.feature.medications.ui.MedsTimeChip
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * A patient's medications: active ones with their current regimen as a one-line
- * summary, stopped ones collapsed (docs/ux/screens.md §3).
+ * A patient's medications in the "screens v2" shape (docs/ux/mockups/
+ * screens-v2.html, `profileMeds`): one row per medicine with its pill picture,
+ * name and strength, a chip per dose time, the food note when there is one and
+ * a stock meter. Stopped medicines stay collapsed behind their header.
  *
- * "Add medication" exists for owners and caregivers only, the same rule the
- * repository enforces.
+ * "Add medicine" exists for owners and caregivers only, the same rule the
+ * repository enforces: an extended floating button here, and the tonal button
+ * on the profile tab, which has no Scaffold of its own.
  *
  * The list itself ([PatientMedicationsSection]) is also the content of the
- * Medications tab of the patient profile (D29), which embeds it without this
- * screen's Scaffold, back arrow or floating button.
+ * Medications tab of the patient profile (D29).
  */
 @Composable
 fun PatientMedicationsScreen(
@@ -68,12 +77,13 @@ fun PatientMedicationsScreen(
         modifier = modifier.fillMaxSize(),
         floatingActionButton = {
             if (uiState.canWrite && !uiState.patientMissing) {
-                FloatingActionButton(onClick = onAdd) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.meds_list_add),
-                    )
-                }
+                ExtendedFloatingActionButton(
+                    onClick = onAdd,
+                    icon = {
+                        Icon(imageVector = FcIcons.Add, contentDescription = null)
+                    },
+                    text = { Text(text = stringResource(R.string.meds_list_add)) },
+                )
             }
         },
     ) { padding ->
@@ -88,18 +98,15 @@ fun PatientMedicationsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = FcIcons.ArrowBack,
                             contentDescription = stringResource(R.string.back),
                         )
                     }
-                    Column {
-                        Text(
-                            text = stringResource(R.string.meds_list_title),
-                            style = MaterialTheme.typography.headlineMedium,
+                    Column(modifier = Modifier.weight(1f)) {
+                        ScreenHeader(
+                            title = stringResource(R.string.meds_list_title),
+                            subtitle = uiState.patientName,
                         )
-                        uiState.patientName?.let { name ->
-                            Text(text = name, style = MaterialTheme.typography.bodyLarge)
-                        }
                     }
                 }
             },
@@ -112,8 +119,8 @@ fun PatientMedicationsScreen(
  * below the profile's own header and tabs.
  *
  * It has no Scaffold of its own: the profile owns the screen. "Add medication"
- * is a row at the top of the list instead of a floating button, because a
- * floating button would hover over the whole profile rather than this tab.
+ * is a tonal button at the top of the list instead of a floating button,
+ * because a floating button would hover over the whole profile.
  */
 @Composable
 fun PatientMedicationsSection(
@@ -147,7 +154,7 @@ private fun PatientMedicationsList(
 ) {
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(24.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         if (header != null) {
@@ -160,11 +167,13 @@ private fun PatientMedicationsList(
                     onClick = onAdd,
                     modifier = Modifier.heightIn(min = 48.dp),
                 ) {
-                    Icon(imageVector = Icons.Filled.Add, contentDescription = null)
-                    Text(
-                        text = stringResource(R.string.meds_list_add),
-                        modifier = Modifier.padding(start = 8.dp),
+                    Icon(
+                        imageVector = FcIcons.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.meds_list_add))
                 }
             }
         }
@@ -192,11 +201,16 @@ private fun PatientMedicationsList(
                     item = item,
                     onClick = { onOpenMedication(item.medication.id.value) },
                 )
-                HorizontalDivider()
             }
             if (uiState.stopped.isNotEmpty()) {
                 item {
                     TextButton(onClick = onToggleStopped) {
+                        Icon(
+                            imageVector = FcIcons.History,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = stringResource(
                                 R.string.meds_list_stopped,
@@ -212,42 +226,96 @@ private fun PatientMedicationsList(
                         item = item,
                         onClick = { onOpenMedication(item.medication.id.value) },
                     )
-                    HorizontalDivider()
                 }
             }
         }
     }
 }
 
+/**
+ * One medicine: the 40 dp pill tile (the row's picture), the name and strength
+ * as one wrapping title, a chip per dose time, the food note from the
+ * medication's instructions and the stock meter with its icon — the filled
+ * error symbol in amber when the stock is low.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MedicationRow(item: PatientMedicationUi, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(
-                selected = false,
-                role = Role.Button,
-                onClick = onClick,
-            )
-            .padding(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        Text(
-            text = item.medication.strength
-                ?.let { item.medication.name + " " + it }
-                ?: item.medication.name,
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        val regimen = item.item.currentRegimen
-        if (regimen != null) {
-            Text(text = regimenSummary(regimen), style = MaterialTheme.typography.bodyMedium)
-        }
-        item.daysRemaining?.let { days ->
-            StockMeter(
-                daysLeft = pluralStringResource(R.plurals.meds_stock_days_left, days, days),
-                fraction = stockMeterFraction(days),
-                low = item.low,
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            PillTile(
+                look = item.medication.pillLook,
+                size = 40.dp,
+                contentDescription = null,
             )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = item.medication.strength
+                        ?.let { "${item.medication.name} $it" }
+                        ?: item.medication.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+
+                item.item.currentRegimen?.let { regimen ->
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        regimen.sortedTimes().forEach { doseTime ->
+                            MedsTimeChip(
+                                time = doseTime.time,
+                                icon = FcIcons.Schedule,
+                            )
+                        }
+                    }
+                }
+
+                item.medication.instructions?.let { note ->
+                    MedsMetaItem(icon = FcIcons.Restaurant, text = note)
+                }
+
+                item.daysRemaining?.let { days ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        StockMeter(
+                            daysLeft = pluralStringResource(
+                                R.plurals.meds_stock_days_left,
+                                days,
+                                days,
+                            ),
+                            fraction = stockMeterFraction(days),
+                            low = item.low,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Icon(
+                            imageVector = if (item.low) FcIcons.ErrorFilled else FcIcons.Inventory2,
+                            contentDescription = null,
+                            tint = if (item.low) {
+                                FamilyCareTheme.colors.attentionAccent
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -2,6 +2,9 @@ package io.github.lgpy.familycare.feature.medications.detail
 
 import app.cash.turbine.test
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
+import io.github.lgpy.familycare.core.domain.medication.PillColor
+import io.github.lgpy.familycare.core.domain.medication.PillLook
+import io.github.lgpy.familycare.core.domain.medication.PillShape
 import io.github.lgpy.familycare.feature.medications.FakeCareCircleRepository
 import io.github.lgpy.familycare.feature.medications.FakeDoseLogRepository
 import io.github.lgpy.familycare.feature.medications.FakeMedicationRepository
@@ -193,6 +196,59 @@ class MedicationDetailViewModelTest {
             viewModel.confirmStop()
 
             assertEquals(0, meds.stops.size)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // --- Pill look (D33) ----------------------------------------------------
+
+    @Test
+    fun `saving a pill look keeps every other field`() = runTest {
+        val original = medication(id = "med-1", name = "Metformin", strength = "850 mg").copy(
+            instructions = "Take with food",
+            requiresPrescription = true,
+            prescriptionValidUntil = LocalDate.of(2027, 3, 31),
+            lowStockThresholdDays = 5,
+        )
+        meds.observed["med-1"] = MutableStateFlow(
+            withRegimens(original, listOf(secondVersion)),
+        )
+        val look = PillLook(
+            shape = PillShape.CAPSULE,
+            color = PillColor.PURPLE,
+            color2 = PillColor.PINK,
+        )
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.medication != null }
+            viewModel.requestPillLook()
+            assertTrue(viewModel.uiState.value.showPillLook)
+
+            viewModel.savePillLook(look)
+
+            val saved = meds.updated.single()
+            assertEquals(look, saved.pillLook)
+            assertEquals(original.copy(pillLook = look), saved)
+            assertEquals(MedicationId("med-1"), saved.id)
+            assertFalse(viewModel.uiState.value.showPillLook)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a viewer cannot change the pill look`() = runTest {
+        circles.roleFlow.value = MemberRole.VIEWER
+        meds.observed["med-1"] = MutableStateFlow(
+            withRegimens(medication(id = "med-1"), listOf(secondVersion)),
+        )
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.medication != null }
+            viewModel.requestPillLook()
+            viewModel.savePillLook(PillLook(shape = PillShape.ROUND, color = PillColor.WHITE))
+
+            assertFalse(viewModel.uiState.value.showPillLook)
+            assertEquals(0, meds.updated.size)
             cancelAndIgnoreRemainingEvents()
         }
     }

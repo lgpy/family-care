@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.canWrite
+import io.github.lgpy.familycare.core.domain.medication.PillLook
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.MedsError
 import io.github.lgpy.familycare.feature.medications.data.MedsResult
@@ -132,6 +133,42 @@ class MedicationDetailViewModel(
         }
     }
 
+    // --- Pill look (D33) -----------------------------------------------------
+
+    /** Opens the pill-look sheet (the same one the new-medication form uses). */
+    fun requestPillLook() {
+        if (!uiState.value.canWrite) return
+        local.update { it.copy(showPillLook = true) }
+    }
+
+    fun dismissPillLook() = local.update { it.copy(showPillLook = false) }
+
+    /**
+     * Saves the look the sheet returned through
+     * [MedicationRepository.update], so every other column of the medication
+     * (name, strength, form, stock unit, instructions, prescription, policy,
+     * stopped state) stays exactly as it was.
+     *
+     * A viewer or a second save while one is in flight never reaches the
+     * repository. The sheet closes immediately, like the form's; a failure
+     * shows the usual message on the screen.
+     */
+    fun savePillLook(look: PillLook) {
+        val state = uiState.value
+        val loaded = state.medication ?: return
+        if (!state.canWrite || state.savingPillLook) return
+
+        local.update { it.copy(savingPillLook = true, showPillLook = false, error = null) }
+        viewModelScope.launch {
+            when (val result = medicationRepository.update(loaded.medication.copy(pillLook = look))) {
+                is MedsResult.Success<*> -> local.update { it.copy(savingPillLook = false) }
+                is MedsResult.Failure -> local.update {
+                    it.copy(savingPillLook = false, error = result.uiError())
+                }
+            }
+        }
+    }
+
     // --- Stock (D28) ---------------------------------------------------------
 
     /** Opens the refill dialog: stock that came in. */
@@ -238,6 +275,10 @@ data class MedicationDetailUiState(
     val stopLastDay: String = "",
     val stopDateInvalid: Boolean = false,
     val stopping: Boolean = false,
+    /** The pill-look sheet is open (D33). */
+    val showPillLook: Boolean = false,
+    /** A look returned by the sheet is being written. */
+    val savingPillLook: Boolean = false,
     /** The stock dialog that is open, if any. */
     val stockAction: StockAction? = null,
     /** The quantity typed in that dialog, kept as text while it is typed. */

@@ -94,9 +94,14 @@ fun stockLeftText(quantity: BigDecimal, stockUnit: String): String {
 @Composable
 fun stockUnitName(unit: String): String = stockUnitLabel(unit, count = 1)
 
-/** The plural form of a default stock unit, or the typed token unchanged. */
+/**
+ * The plural form of a default stock unit, or the typed token unchanged.
+ *
+ * The detail screen's stock card shows the count and this label beside it
+ * ("18 tablets"), so it is public as well as used by [stockLeftText].
+ */
 @Composable
-private fun stockUnitLabel(unit: String, count: Int): String {
+fun stockUnitLabel(unit: String, count: Int): String {
     val words = when (unit.trim().lowercase()) {
         "tablet" -> R.plurals.meds_unit_tablet
         "capsule" -> R.plurals.meds_unit_capsule

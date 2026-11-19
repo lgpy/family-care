@@ -1,58 +1,104 @@
 package io.github.lgpy.familycare.feature.medications.detail
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.PatientAvatar
+import io.github.lgpy.familycare.core.ui.components.PillTile
+import io.github.lgpy.familycare.core.ui.components.StockMeter
+import io.github.lgpy.familycare.core.ui.components.stockMeterFraction
+import io.github.lgpy.familycare.feature.medications.data.MedicationWithRegimens
+import io.github.lgpy.familycare.feature.medications.domain.DoseLogEntry
 import io.github.lgpy.familycare.feature.medications.domain.DoseOutcome
+import io.github.lgpy.familycare.feature.medications.domain.Medication
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.domain.Regimen
 import io.github.lgpy.familycare.feature.medications.domain.ShoppingStatus
 import io.github.lgpy.familycare.feature.medications.domain.StockSummary
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
+import io.github.lgpy.familycare.feature.medications.ui.MedsMetaItem
+import io.github.lgpy.familycare.feature.medications.ui.MedsSectionTitle
+import io.github.lgpy.familycare.feature.medications.ui.MedsTimeChip
+import io.github.lgpy.familycare.feature.medications.ui.PillLookSheet
+import io.github.lgpy.familycare.feature.medications.ui.formatQuantity
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
 import io.github.lgpy.familycare.feature.medications.ui.labelRes
 import io.github.lgpy.familycare.feature.medications.ui.localizedDate
 import io.github.lgpy.familycare.feature.medications.ui.messageRes
 import io.github.lgpy.familycare.feature.medications.ui.regimenSummary
-import io.github.lgpy.familycare.feature.medications.ui.stockLeftText
+import io.github.lgpy.familycare.feature.medications.ui.stockUnitLabel
+import io.github.lgpy.familycare.feature.medications.ui.timeOfDayIcon
+import java.math.BigDecimal
+import java.time.ZoneId
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * One medication: what it is, the current schedule, the earlier versions, the
- * stock ledger's summary and the recent doses, with the three dosing actions
- * (edit details, change dose or schedule, stop) and the three stock actions
- * (refill, recount, discard). Viewers see exactly the same information without
- * the buttons.
+ * One medication, in the "screens v2" shape (docs/ux/mockups/screens-v2.html,
+ * `medDetail`): the pill picture with its palette badge, the name and strength,
+ * the patient and form, then the icon-headed sections **When**, **Stock** and
+ * **Prescription**, the earlier schedule versions and the recent doses.
+ *
+ * The pill picture is the way into the same look customizer the new-medication
+ * form uses ([PillLookSheet]); saving it goes through the repository's update,
+ * so every other field of the medication stays as it was.
+ *
+ * Every action the older screen had is still reachable: the top bar holds
+ * "Edit details", the overflow menu holds "Change dose or schedule", "Discard
+ * stock" and "Stop", and the stock card holds "Bought" and "Count" — the same
+ * dialogs, with the same validation. Viewers see the same information without
+ * the actions.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MedicationDetailScreen(
     medicationId: String,
@@ -70,27 +116,21 @@ fun MedicationDetailScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = 16.dp)
+            .padding(top = 8.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.back),
-                )
-            }
-            Column {
-                Text(
-                    text = uiState.medication?.medication?.name
-                        ?: stringResource(R.string.meds_detail_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-                uiState.medication?.medication?.strength?.let { strength ->
-                    Text(text = strength, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
+        val stopped = uiState.medication?.medication?.isStopped == true
+        DetailTopBar(
+            canWrite = uiState.canWrite,
+            stopped = stopped,
+            canDiscard = uiState.stock != null,
+            onBack = onBack,
+            onEdit = onEdit,
+            onChangeSchedule = onChangeSchedule,
+            onDiscard = viewModel::requestDiscard,
+            onStop = viewModel::requestStop,
+        )
 
         when {
             !uiState.loaded -> CircularProgressIndicator()
@@ -102,13 +142,14 @@ fun MedicationDetailScreen(
             else -> {
                 val item = uiState.medication!!
                 val medication = item.medication
+                val canAct = uiState.canWrite && !medication.isStopped
 
                 if (medication.isStopped) {
                     medication.stoppedAt?.let { stoppedAt ->
                         Text(
                             text = stringResource(
                                 R.string.meds_detail_stopped,
-                                localizedDate(stoppedAt.atZone(java.time.ZoneId.systemDefault()).toLocalDate()),
+                                localizedDate(stoppedAt.atZone(ZoneId.systemDefault()).toLocalDate()),
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
@@ -121,128 +162,41 @@ fun MedicationDetailScreen(
                     )
                 }
 
-                HorizontalDivider()
-                Text(
-                    text = stringResource(R.string.meds_detail_info),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                medication.activeIngredient?.let {
-                    Text(
-                        text = stringResource(R.string.meds_detail_ingredient, it),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                medication.strength?.let {
-                    Text(
-                        text = stringResource(R.string.meds_detail_strength, it),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                Text(
-                    text = stringResource(
-                        R.string.meds_detail_form,
-                        stringResource(medication.form.labelRes()),
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = stringResource(R.string.meds_detail_stock_unit, medication.stockUnit),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                medication.instructions?.let {
-                    Text(
-                        text = stringResource(R.string.meds_detail_instructions, it),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                Text(
-                    text = medication.prescriptionValidUntil?.let {
-                        stringResource(R.string.meds_detail_prescription, localizedDate(it))
-                    } ?: stringResource(R.string.meds_detail_no_prescription),
-                    style = MaterialTheme.typography.bodyMedium,
+                MedicationHero(
+                    item = item,
+                    canWrite = canAct,
+                    onOpenLook = viewModel::requestPillLook,
                 )
 
-                HorizontalDivider()
-                Text(
-                    text = stringResource(R.string.meds_detail_current),
-                    style = MaterialTheme.typography.titleSmall,
+                WhenSection(
+                    regimen = item.currentRegimen,
+                    foodNote = medication.instructions,
+                    canEdit = canAct && item.currentRegimen != null,
+                    onChange = onChangeSchedule,
                 )
-                item.currentRegimen?.let { regimen ->
-                    Text(text = regimenSummary(regimen), style = MaterialTheme.typography.bodyLarge)
+
+                uiState.stock?.let { overview ->
+                    StockSection(
+                        summary = overview.summary,
+                        stockUnit = medication.stockUnit,
+                        canWrite = canAct,
+                        onRefill = viewModel::requestRefill,
+                        onCount = viewModel::requestRecount,
+                    )
+                }
+
+                if (medication.requiresPrescription || medication.prescriptionValidUntil != null) {
+                    PrescriptionSection(
+                        medication = medication,
+                        status = uiState.stock?.summary?.shoppingStatus,
+                    )
                 }
 
                 if (uiState.history.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.meds_detail_history),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    uiState.history.forEach { regimen ->
-                        Text(
-                            text = historyLine(regimen),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
+                    HistorySection(history = uiState.history)
                 }
 
-                uiState.stock?.let { overview ->
-                    HorizontalDivider()
-                    Text(
-                        text = stringResource(R.string.meds_step_stock),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    StockSection(summary = overview.summary, stockUnit = medication.stockUnit)
-
-                    if (uiState.canWrite) {
-                        OutlinedButton(
-                            onClick = viewModel::requestRefill,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text(text = stringResource(R.string.meds_stock_refill)) }
-                        OutlinedButton(
-                            onClick = viewModel::requestRecount,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text(text = stringResource(R.string.meds_stock_recount)) }
-                        OutlinedButton(
-                            onClick = viewModel::requestDiscard,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text(text = stringResource(R.string.meds_stock_discard)) }
-                    }
-                }
-
-                HorizontalDivider()
-                Text(
-                    text = stringResource(R.string.meds_detail_log),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                if (uiState.recentEntries.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.meds_detail_log_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                uiState.recentEntries.forEach { entry ->
-                    val whenText = localizedDate(entry.scheduledLocal.toLocalDate()) +
-                        stringResource(R.string.meds_list_separator) +
-                        formatTime(entry.scheduledLocal.toLocalTime())
-                    val what = stringResource(
-                        if (entry.outcome == DoseOutcome.TAKEN) {
-                            R.string.meds_status_taken
-                        } else {
-                            R.string.meds_status_skipped
-                        },
-                    ).let { outcomeText ->
-                        entry.skipReason?.let { reason ->
-                            stringResource(
-                                R.string.meds_log_what_with_reason,
-                                outcomeText,
-                                stringResource(reason.labelRes()),
-                            )
-                        } ?: outcomeText
-                    }
-                    Text(
-                        text = stringResource(R.string.meds_log_line, whenText, what),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+                LogSection(entries = uiState.recentEntries)
 
                 uiState.error?.let { error ->
                     Text(
@@ -251,28 +205,16 @@ fun MedicationDetailScreen(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
-
-                if (uiState.canWrite && !medication.isStopped) {
-                    OutlinedButton(
-                        onClick = onEdit,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(text = stringResource(R.string.meds_detail_edit)) }
-                    OutlinedButton(
-                        onClick = onChangeSchedule,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(text = stringResource(R.string.meds_detail_change)) }
-                    TextButton(
-                        onClick = viewModel::requestStop,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.meds_detail_stop),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
             }
         }
+    }
+
+    if (uiState.showPillLook) {
+        PillLookSheet(
+            initial = uiState.medication?.medication?.pillLook,
+            onDismiss = viewModel::dismissPillLook,
+            onDone = viewModel::savePillLook,
+        )
     }
 
     if (uiState.showStop) {
@@ -297,47 +239,505 @@ fun MedicationDetailScreen(
 }
 
 /**
- * "10 tablet left", "About 7 days left" and, when low, the badge and what to do
- * next (D28). The stock section never adds a ledger up: [summary] is the
- * domain's.
+ * Back, edit and the overflow: the actions that do not deserve a section of
+ * their own stay one tap away without crowding the mockup's header.
  */
 @Composable
-private fun StockSection(summary: StockSummary, stockUnit: String) {
+private fun DetailTopBar(
+    canWrite: Boolean,
+    stopped: Boolean,
+    canDiscard: Boolean,
+    onBack: () -> Unit,
+    onEdit: () -> Unit,
+    onChangeSchedule: () -> Unit,
+    onDiscard: () -> Unit,
+    onStop: () -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val hasMenu = canWrite && (!stopped || canDiscard)
+
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack) {
+            Icon(
+                imageVector = FcIcons.ArrowBack,
+                contentDescription = stringResource(R.string.back),
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        if (canWrite && !stopped) {
+            IconButton(onClick = onEdit) {
+                Icon(
+                    imageVector = FcIcons.Edit,
+                    contentDescription = stringResource(R.string.meds_detail_edit),
+                )
+            }
+        }
+        if (hasMenu) {
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(
+                        imageVector = FcIcons.MoreVert,
+                        contentDescription = stringResource(R.string.meds_detail_actions),
+                    )
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (!stopped) {
+                        DropdownMenuItem(
+                            text = { Text(text = stringResource(R.string.meds_detail_change)) },
+                            leadingIcon = { Icon(imageVector = FcIcons.Schedule, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                onChangeSchedule()
+                            },
+                        )
+                    }
+                    if (canDiscard) {
+                        DropdownMenuItem(
+                            text = { Text(text = stringResource(R.string.meds_stock_discard)) },
+                            leadingIcon = { Icon(imageVector = FcIcons.Tally3, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                onDiscard()
+                            },
+                        )
+                    }
+                    if (!stopped) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = stringResource(R.string.meds_detail_stop),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = FcIcons.Error,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onStop()
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The large pill tile with its palette badge, then the name with the strength
+ * as one title, and the meta row: the patient (avatar, 18 dp) and the form.
+ *
+ * The badge is a 30 dp circle inside a 48 dp target, so it is comfortable to
+ * tap without growing the tile. The title never truncates: a long name wraps
+ * and the header grows.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MedicationHero(
+    item: MedicationWithRegimens,
+    canWrite: Boolean,
+    onOpenLook: () -> Unit,
+) {
+    val medication = item.medication
+    val lookLabel = stringResource(R.string.meds_detail_change_look)
+
     Row(
         modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = stockLeftText(summary.displayStock, stockUnit),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        if (summary.low) {
+        Box {
+            PillTile(look = medication.pillLook, size = 84.dp, contentDescription = null)
+            if (canWrite) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = onOpenLook)
+                        .semantics { contentDescription = lookLabel },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(30.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = FcIcons.Palette,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
             Text(
-                text = stringResource(R.string.meds_stock_low_badge),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
+                text = medication.strength
+                    ?.let { "${medication.name} $it" }
+                    ?: medication.name,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    PatientAvatar(
+                        patientId = medication.patientId,
+                        name = item.patient.displayName,
+                        size = 18.dp,
+                    )
+                    Text(
+                        text = item.patient.displayName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                MedsMetaItem(
+                    icon = FcIcons.Pill,
+                    text = stringResource(medication.form.labelRes()),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * **When**: the current schedule as a summary plus one chip per dose time with
+ * its time-of-day icon and amount, and the food note when the medication has
+ * instructions. The whole row opens the existing change-regimen screen.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WhenSection(
+    regimen: Regimen?,
+    foodNote: String?,
+    canEdit: Boolean,
+    onChange: () -> Unit,
+) {
+    MedsSectionTitle(
+        icon = FcIcons.Schedule,
+        title = stringResource(R.string.meds_when_section),
+    )
+    SectionCard(onClick = if (canEdit) onChange else null) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = regimen?.let { regimenSummary(it) }
+                        ?: stringResource(R.string.meds_stock_no_schedule),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (regimen != null) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        regimen.sortedTimes().forEach { doseTime ->
+                            MedsTimeChip(
+                                time = doseTime.time,
+                                quantity = doseTime.quantity,
+                                icon = timeOfDayIcon(doseTime.time),
+                            )
+                        }
+                    }
+                }
+                foodNote?.let { note ->
+                    MedsMetaItem(icon = FcIcons.Restaurant, text = note)
+                }
+            }
+            if (canEdit) {
+                Icon(
+                    imageVector = FcIcons.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * **Stock**: the count and unit large, the days left in [StockMeter], and the
+ * two common movements as buttons — "Bought" (one refill) and "Count" (one
+ * recount). Discarding stays in the overflow, since it is rare.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun StockSection(
+    summary: StockSummary,
+    stockUnit: String,
+    canWrite: Boolean,
+    onRefill: () -> Unit,
+    onCount: () -> Unit,
+) {
+    val days = summary.daysRemaining
+    MedsSectionTitle(
+        icon = FcIcons.Inventory2,
+        title = stringResource(R.string.meds_step_stock),
+    )
+    SectionCard {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Text(
+                text = formatQuantity(summary.displayStock),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = stockUnitLabel(
+                    unit = stockUnit,
+                    count = summary.displayStock.max(BigDecimal.ZERO).toInt(),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+        }
+
+        if (days != null) {
+            StockMeter(
+                daysLeft = pluralStringResource(R.plurals.meds_stock_days_left, days, days),
+                fraction = stockMeterFraction(days),
+                low = summary.low,
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.meds_stock_no_schedule),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        if (canWrite) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilledTonalButton(
+                    onClick = onRefill,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Icon(
+                        imageVector = FcIcons.AddShoppingCart,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.shopping_bought))
+                }
+                OutlinedButton(
+                    onClick = onCount,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Icon(
+                        imageVector = FcIcons.Tally3,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.meds_stock_count))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * **Prescription**: the last valid day (or "no prescription needed") with the
+ * shopping list's state underneath, so a medication that needs a new
+ * prescription says so here too.
+ */
+@Composable
+private fun PrescriptionSection(medication: Medication, status: ShoppingStatus?) {
+    val validUntil = medication.prescriptionValidUntil
+    MedsSectionTitle(
+        icon = FcIcons.Prescriptions,
+        title = stringResource(R.string.meds_detail_prescription_section),
+    )
+    SectionCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(imageVector = FcIcons.ReceiptLong, contentDescription = null)
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = if (validUntil != null) {
+                        stringResource(R.string.meds_detail_prescription, localizedDate(validUntil))
+                    } else {
+                        stringResource(R.string.meds_detail_no_prescription)
+                    },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                status?.let {
+                    Text(
+                        text = stringResource(
+                            when (it) {
+                                ShoppingStatus.NEEDS_PRESCRIPTION ->
+                                    R.string.meds_stock_needs_prescription
+
+                                ShoppingStatus.READY_TO_BUY -> R.string.meds_stock_ready_to_buy
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** **Earlier schedules**, oldest first; the history is kept when a version ends. */
+@Composable
+private fun HistorySection(history: List<Regimen>) {
+    MedsSectionTitle(
+        icon = FcIcons.History,
+        title = stringResource(R.string.meds_detail_history),
+    )
+    SectionCard {
+        history.forEach { regimen ->
+            Text(
+                text = historyLine(regimen),
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }
+}
 
-    Text(
-        text = summary.daysRemaining?.let { days ->
-            pluralStringResource(R.plurals.meds_stock_days_left, days, days)
-        } ?: stringResource(R.string.meds_stock_no_schedule),
-        style = MaterialTheme.typography.bodyMedium,
+/** The recent doses, newest first, exactly as the ledger recorded them. */
+@Composable
+private fun LogSection(entries: List<DoseLogEntry>) {
+    MedsSectionTitle(
+        icon = FcIcons.Medication,
+        title = stringResource(R.string.meds_detail_log),
     )
-
-    summary.shoppingStatus?.let { status ->
-        Text(
-            text = stringResource(
-                when (status) {
-                    ShoppingStatus.NEEDS_PRESCRIPTION -> R.string.meds_stock_needs_prescription
-                    ShoppingStatus.READY_TO_BUY -> R.string.meds_stock_ready_to_buy
+    SectionCard {
+        if (entries.isEmpty()) {
+            Text(
+                text = stringResource(R.string.meds_detail_log_empty),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        entries.forEach { entry ->
+            val whenText = localizedDate(entry.scheduledLocal.toLocalDate()) +
+                stringResource(R.string.meds_list_separator) +
+                formatTime(entry.scheduledLocal.toLocalTime())
+            val what = stringResource(
+                if (entry.outcome == DoseOutcome.TAKEN) {
+                    R.string.meds_status_taken
+                } else {
+                    R.string.meds_status_skipped
                 },
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-        )
+            ).let { outcomeText ->
+                entry.skipReason?.let { reason ->
+                    stringResource(
+                        R.string.meds_log_what_with_reason,
+                        outcomeText,
+                        stringResource(reason.labelRes()),
+                    )
+                } ?: outcomeText
+            }
+            Text(
+                text = stringResource(R.string.meds_log_line, whenText, what),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}
+
+/**
+ * The mockup's list card: `surfaceContainerLow`, 20 dp corners, 14 dp inside.
+ * With [onClick] it is the whole row's button (the When card); without, it is
+ * a plain container and its content owns any interaction.
+ */
+@Composable
+private fun SectionCard(
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(20.dp)
+    val color = MaterialTheme.colorScheme.surfaceContainerLow
+    if (onClick == null) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = shape,
+            color = color,
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                content = content,
+            )
+        }
+    } else {
+        Surface(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
+            shape = shape,
+            color = color,
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                content = content,
+            )
+        }
+    }
+}
+
+/** "1 at 08:00, daily until 3 Mar 2027" / "… since 10 Mar 2027". */
+@Composable
+private fun historyLine(regimen: Regimen): String {
+    val summary = regimenSummary(regimen)
+    val end = regimen.endDate
+    return if (end == null) {
+        stringResource(R.string.meds_history_since, summary, localizedDate(regimen.startDate))
+    } else {
+        stringResource(R.string.meds_history_until, summary, localizedDate(end))
     }
 }
 
@@ -429,18 +829,6 @@ private fun StockDialog(
     )
 }
 
-/** "1 at 08:00, daily until 3 Mar 2027" / "… since 10 Mar 2027". */
-@Composable
-private fun historyLine(regimen: Regimen): String {
-    val summary = regimenSummary(regimen)
-    val end = regimen.endDate
-    return if (end == null) {
-        stringResource(R.string.meds_history_since, summary, localizedDate(regimen.startDate))
-    } else {
-        stringResource(R.string.meds_history_until, summary, localizedDate(end))
-    }
-}
-
 @Composable
 private fun StopDialog(
     uiState: MedicationDetailUiState,
@@ -490,4 +878,3 @@ private fun StopDialog(
         },
     )
 }
-

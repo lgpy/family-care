@@ -439,6 +439,8 @@
     <string name="meds_detail_log">Recent doses</string>
     <string name="meds_detail_log_empty">No doses recorded yet.</string>
     <string name="meds_detail_edit">Edit details</string>
+    <string name="meds_detail_actions">More actions</string>
+    <string name="meds_detail_change_look">Change how the pill looks</string>
     <string name="meds_detail_change">Change dose or schedule</string>
     <string name="meds_detail_stop">Stop</string>
     <string name="meds_detail_stopped">Stopped on %1$s</string>
@@ -447,6 +449,7 @@
     <string name="meds_detail_form">Form: %1$s</string>
     <string name="meds_detail_stock_unit">Stock unit: %1$s</string>
     <string name="meds_detail_instructions">Instructions: %1$s</string>
+    <string name="meds_detail_prescription_section">Prescription</string>
     <string name="meds_detail_prescription">Prescription valid until %1$s</string>
     <string name="meds_detail_no_prescription">No prescription needed</string>
     <string name="meds_history_until">%1$s until %2$s</string>
@@ -503,6 +506,7 @@
     <string name="meds_stock_ready_to_buy">Ready to buy</string>
     <string name="meds_stock_refill">Record refill</string>
     <string name="meds_stock_recount">Recount</string>
+    <string name="meds_stock_count">Count</string>
     <string name="meds_stock_discard">Discard</string>
     <string name="meds_stock_refill_title">Record refill</string>
     <string name="meds_stock_refill_body">Add the stock that came in, for example a new box.</string>
@@ -521,6 +525,7 @@
 
     <!-- M5: shopping list (D28). The two groups, their lines and their dialogs. -->
     <string name="shopping_title">Shopping</string>
+    <string name="shopping_group_needs_prescription">Ask for a prescription first</string>
     <string name="shopping_empty_title">Nothing to buy</string>
     <string name="shopping_empty_body">Medications appear here when they are running low.</string>
     <string name="shopping_prescription_missing">Prescription missing</string>

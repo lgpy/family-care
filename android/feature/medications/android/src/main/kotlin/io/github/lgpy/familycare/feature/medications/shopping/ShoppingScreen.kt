@@ -4,22 +4,31 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -29,35 +38,43 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
+import io.github.lgpy.familycare.core.ui.components.PillTile
 import io.github.lgpy.familycare.core.ui.components.ScreenHeader
-import io.github.lgpy.familycare.core.ui.components.StockMeter
-import io.github.lgpy.familycare.core.ui.components.stockMeterFraction
+import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
+import io.github.lgpy.familycare.feature.medications.ui.MedsMetaItem
+import io.github.lgpy.familycare.feature.medications.ui.MedsSectionTitle
 import io.github.lgpy.familycare.feature.medications.ui.localizedDate
 import io.github.lgpy.familycare.feature.medications.ui.messageRes
-import io.github.lgpy.familycare.feature.medications.ui.stockLeftText
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The shopping list (docs/ux/screens.md §5, D28): the low medications of the
- * circle, in "needs a new prescription first" and "ready to buy".
+ * The shopping list in the "screens v2" shape (docs/ux/mockups/screens-v2.html,
+ * `shopping`): two icon-headed groups, "Ask for a prescription first" and
+ * "Ready to buy". Every row has the medicine's pill picture, its name and
+ * strength, the patient (18 dp avatar) and the days left — amber with the error
+ * icon, since a line only appears here when it is low — and its prescription
+ * state.
  *
- * Tapping a line opens the medication's detail; writers also get "Bought" (one
- * refill of the quantity they typed) and, on a line that needs one, "Got a new
- * prescription" (its last valid day). The list is the repository's watch, so a
- * bought or re-prescribed line leaves its group by itself.
+ * Writers get one tonal action per line ("Got prescription" on the first group,
+ * "Bought" on the second) plus the secondary "Bought" on a line that still
+ * needs its prescription. Both keep the existing dialogs (a quantity for the
+ * refill, a date for the prescription) and the repository's own checks.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,7 +118,10 @@ fun ShoppingScreen(
             else -> {
                 if (uiState.needsPrescription.isNotEmpty()) {
                     item {
-                        GroupTitle(R.string.meds_stock_needs_prescription)
+                        GroupTitle(
+                            icon = FcIcons.Prescriptions,
+                            titleRes = R.string.shopping_group_needs_prescription,
+                        )
                     }
                     items(uiState.needsPrescription, key = { it.medicationId }) { item ->
                         ShoppingRow(
@@ -113,12 +133,14 @@ fun ShoppingScreen(
                                 viewModel.requestPrescription(item.medicationId)
                             },
                         )
-                        HorizontalDivider()
                     }
                 }
                 if (uiState.readyToBuy.isNotEmpty()) {
                     item {
-                        GroupTitle(R.string.meds_stock_ready_to_buy)
+                        GroupTitle(
+                            icon = FcIcons.ShoppingCart,
+                            titleRes = R.string.meds_stock_ready_to_buy,
+                        )
                     }
                     items(uiState.readyToBuy, key = { it.medicationId }) { item ->
                         ShoppingRow(
@@ -128,7 +150,6 @@ fun ShoppingScreen(
                             onBought = { viewModel.requestBuy(item.medicationId) },
                             onPrescription = null,
                         )
-                        HorizontalDivider()
                     }
                 }
             }
@@ -166,21 +187,25 @@ fun ShoppingScreen(
     }
 }
 
-/** The heading of one of the two groups. */
+/** The heading of one of the two groups: icon beside the label, never icon-only. */
 @Composable
-private fun GroupTitle(@StringRes resId: Int) {
-    Text(
-        text = stringResource(resId),
-        style = MaterialTheme.typography.titleSmall,
-        modifier = Modifier.padding(top = 16.dp),
+private fun GroupTitle(icon: ImageVector, @StringRes titleRes: Int) {
+    MedsSectionTitle(
+        icon = icon,
+        title = stringResource(titleRes),
+        modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
     )
 }
 
 /**
- * One line: the patient, the medication, how long its stock lasts and, when it
- * applies, the prescription's state. The text block opens the detail screen; the
- * actions sit below it so a tap on the body never buys by accident.
+ * One line: the pill picture, the medicine, the patient's avatar with the days
+ * left, and the prescription state. The text block opens the detail screen;
+ * the actions sit below it so a tap on the body never buys by accident.
+ *
+ * The first group leads with "Got prescription" and keeps "Bought" as its
+ * secondary action; the second leads with "Bought".
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ShoppingRow(
     item: ShoppingItem,
@@ -189,63 +214,136 @@ private fun ShoppingRow(
     onBought: () -> Unit,
     onPrescription: (() -> Unit)?,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    val lowColour = FamilyCareTheme.colors.attentionAccent
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            PatientAvatar(
-                patientId = PatientId(item.patientId),
-                name = item.patientName,
+            PillTile(
+                look = item.medication.pillLook,
+                size = 40.dp,
+                contentDescription = null,
             )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(text = item.patientName, style = MaterialTheme.typography.bodySmall)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(role = Role.Button, onClick = onOpen)
-                        .padding(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                        .padding(vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
                         text = item.strength?.let { "${item.medication.name} $it" }
                             ?: item.medication.name,
                         style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
                     )
-                    item.daysRemaining?.let { days ->
-                        StockMeter(
-                            daysLeft = pluralStringResource(
-                                R.plurals.meds_stock_days_left,
-                                days,
-                                days,
-                            ),
-                            fraction = stockMeterFraction(days),
-                            low = true,
-                        )
-                    }
-                    Text(
-                        text = stockLeftText(item.displayStock, item.stockUnit),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    prescriptionLine(item)?.let { line ->
-                        Text(text = line, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-            }
-        }
 
-        if (canWrite) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onBought) {
-                    Text(text = stringResource(R.string.shopping_bought))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            PatientAvatar(
+                                patientId = PatientId(item.patientId),
+                                name = item.patientName,
+                                size = 18.dp,
+                            )
+                            Text(
+                                text = item.patientName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        item.daysRemaining?.let { days ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    imageVector = FcIcons.ErrorFilled,
+                                    contentDescription = null,
+                                    tint = lowColour,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text(
+                                    text = pluralStringResource(
+                                        R.plurals.meds_stock_days_left,
+                                        days,
+                                        days,
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = lowColour,
+                                )
+                            }
+                        }
+                    }
+
+                    MedsMetaItem(
+                        icon = FcIcons.ReceiptLong,
+                        text = prescriptionLine(item),
+                    )
                 }
-                if (onPrescription != null) {
-                    TextButton(onClick = onPrescription) {
-                        Text(text = stringResource(R.string.shopping_got_prescription))
+
+                if (canWrite) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        if (onPrescription != null) {
+                            FilledTonalButton(
+                                onClick = onPrescription,
+                                modifier = Modifier.heightIn(min = 48.dp),
+                            ) {
+                                Icon(
+                                    imageVector = FcIcons.ReceiptLong,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = stringResource(R.string.shopping_got_prescription))
+                            }
+                            TextButton(
+                                onClick = onBought,
+                                modifier = Modifier.heightIn(min = 48.dp),
+                            ) {
+                                Icon(
+                                    imageVector = FcIcons.AddShoppingCart,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = stringResource(R.string.shopping_bought))
+                            }
+                        } else {
+                            FilledTonalButton(
+                                onClick = onBought,
+                                modifier = Modifier.heightIn(min = 48.dp),
+                            ) {
+                                Icon(
+                                    imageVector = FcIcons.AddShoppingCart,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = stringResource(R.string.shopping_bought))
+                            }
+                        }
                     }
                 }
             }
@@ -256,20 +354,23 @@ private fun ShoppingRow(
 /**
  * "Prescription missing" / "Prescription expired on <date>" for a line that
  * needs one, "Prescription valid until <date>" for a line that is ready to buy
- * and has a date. Nothing when the medication needs no prescription.
+ * and has a date, and "No prescription needed" when it has none.
  */
 @Composable
-private fun prescriptionLine(item: ShoppingItem): String? = when {
+private fun prescriptionLine(item: ShoppingItem): String = when {
     item.needsPrescription && item.prescriptionMissing ->
         stringResource(R.string.shopping_prescription_missing)
 
     item.needsPrescription -> item.prescriptionValidUntil?.let {
         stringResource(R.string.shopping_prescription_expired, localizedDate(it))
-    }
+    } ?: stringResource(R.string.shopping_prescription_missing)
 
-    else -> item.prescriptionValidUntil?.let {
-        stringResource(R.string.meds_detail_prescription, localizedDate(it))
-    }
+    item.prescriptionValidUntil != null -> stringResource(
+        R.string.meds_detail_prescription,
+        localizedDate(item.prescriptionValidUntil!!),
+    )
+
+    else -> stringResource(R.string.meds_detail_no_prescription)
 }
 
 /** "How many tablet did you buy?", one quantity — the same refill as the detail. */
