@@ -57,8 +57,9 @@ internal const val SELECT_MEMBERS = """
 
 /** The current circle's active patients, sorted by name. */
 internal const val SELECT_PATIENTS = """
-    SELECT id, circle_id, display_name, linked_user_id, reminder_policy, primary_caregiver_id,
-           escalation_delay_minutes, missed_window_minutes, agreement_note, archived_at
+    SELECT id, circle_id, display_name, linked_user_id, birth_year, reminder_policy,
+           primary_caregiver_id, escalation_delay_minutes, missed_window_minutes,
+           agreement_note, archived_at
     FROM patients
     WHERE archived_at IS NULL
       AND circle_id = (
@@ -69,8 +70,9 @@ internal const val SELECT_PATIENTS = """
 
 /** The current circle's archived patients, sorted by name. */
 internal const val SELECT_ARCHIVED_PATIENTS = """
-    SELECT id, circle_id, display_name, linked_user_id, reminder_policy, primary_caregiver_id,
-           escalation_delay_minutes, missed_window_minutes, agreement_note, archived_at
+    SELECT id, circle_id, display_name, linked_user_id, birth_year, reminder_policy,
+           primary_caregiver_id, escalation_delay_minutes, missed_window_minutes,
+           agreement_note, archived_at
     FROM patients
     WHERE archived_at IS NOT NULL
       AND circle_id = (
@@ -81,8 +83,9 @@ internal const val SELECT_ARCHIVED_PATIENTS = """
 
 /** One patient, restricted to the circles the user belongs to. */
 internal const val SELECT_PATIENT = """
-    SELECT id, circle_id, display_name, linked_user_id, reminder_policy, primary_caregiver_id,
-           escalation_delay_minutes, missed_window_minutes, agreement_note, archived_at
+    SELECT id, circle_id, display_name, linked_user_id, birth_year, reminder_policy,
+           primary_caregiver_id, escalation_delay_minutes, missed_window_minutes,
+           agreement_note, archived_at
     FROM patients
     WHERE id = ?
       AND circle_id IN (SELECT circle_id FROM memberships WHERE user_id = ?)
@@ -107,9 +110,10 @@ internal const val SELECT_PATIENT_PRESENT = """
 /** Inserts a new patient. */
 internal const val INSERT_PATIENT = """
     INSERT INTO patients (
-        id, circle_id, display_name, linked_user_id, reminder_policy, primary_caregiver_id,
-        escalation_delay_minutes, missed_window_minutes, agreement_note, archived_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, circle_id, display_name, linked_user_id, birth_year, reminder_policy,
+        primary_caregiver_id, escalation_delay_minutes, missed_window_minutes,
+        agreement_note, archived_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 /** Updates an existing patient; the last parameter is the id. */
@@ -117,6 +121,7 @@ internal const val UPDATE_PATIENT = """
     UPDATE patients SET
         display_name = ?,
         linked_user_id = ?,
+        birth_year = ?,
         reminder_policy = ?,
         primary_caregiver_id = ?,
         escalation_delay_minutes = ?,

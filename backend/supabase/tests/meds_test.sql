@@ -20,7 +20,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(135);
+select plan(150);
 
 -- --- Fixtures ---------------------------------------------------------------
 -- Alice owns circle A; Bob is a caregiver, Carol a viewer, Erin a caregiver who
@@ -1006,6 +1006,93 @@ select is((
   select count(*)::int from (
     SELECT * FROM "meds"."dose_log" WHERE medication_id IN (SELECT id FROM "meds"."medications" WHERE patient_id IN (SELECT id FROM "core"."patients" WHERE circle_id IN (SELECT circle_id FROM "core"."memberships" WHERE user_id = (select auth.uid()))))
   ) s), 0, 'stream dose_log: a removed caregiver downloads nothing');
+
+-- --- pill looks (D33) -------------------------------------------------------
+-- Additive, optional columns: an app that predates them keeps working, and the
+-- defaults make a plain insert valid. The archive half is in lifecycle_test.sql.
+
+select col_type_is('meds', 'medications', 'pill_shape', 'text',
+                   'medications.pill_shape is text');
+select col_type_is('meds', 'medications', 'pill_color', 'text',
+                   'medications.pill_color is text');
+select col_type_is('meds', 'medications', 'pill_color2', 'text',
+                   'medications.pill_color2 is text');
+select col_type_is('meds', 'medications', 'pill_score', 'boolean',
+                   'medications.pill_score is boolean');
+select col_type_is('meds', 'medications', 'pill_size', 'text',
+                   'medications.pill_size is text');
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
+
+select results_eq(
+  $$ insert into meds.medications (id, patient_id, name, form, stock_unit)
+     values ('50000000-0000-4000-8000-000000000009',
+             '40000000-0000-4000-8000-000000000001',
+             'Plain tablet', 'tablet', 'tablet')
+     returning pill_shape, pill_color, pill_color2, pill_score, pill_size $$,
+  $$ values (null::text, null::text, null::text, false, 'medium'::text) $$,
+  'a medication without a pill look gets null shape/colours, no score and medium size');
+
+select throws_ok(
+  $$ update meds.medications set pill_shape = 'square'
+      where id = '50000000-0000-4000-8000-000000000001' $$,
+  '23514', null, 'an unknown pill shape is refused');
+
+select throws_ok(
+  $$ update meds.medications set pill_color = 'black'
+      where id = '50000000-0000-4000-8000-000000000001' $$,
+  '23514', null, 'a pill colour outside the palette is refused');
+
+select throws_ok(
+  $$ update meds.medications set pill_color2 = 'silver'
+      where id = '50000000-0000-4000-8000-000000000001' $$,
+  '23514', null, 'a second colour outside the palette is refused');
+
+select throws_ok(
+  $$ update meds.medications set pill_size = 'huge'
+      where id = '50000000-0000-4000-8000-000000000001' $$,
+  '23514', null, 'an unknown pill size is refused');
+
+select lives_ok(
+  $$ update meds.medications
+        set pill_shape = 'oval', pill_color = 'white', pill_color2 = 'blue',
+            pill_score = true, pill_size = 'large'
+      where id = '50000000-0000-4000-8000-000000000001' $$,
+  'an owner can set the pill look of their circle''s medication');
+
+select results_eq(
+  $$ select pill_shape, pill_color, pill_color2, pill_score, pill_size
+       from meds.medications
+      where id = '50000000-0000-4000-8000-000000000001' $$,
+  $$ values ('oval'::text, 'white'::text, 'blue'::text, true, 'large'::text) $$,
+  'the pill look is stored as chosen');
+
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}';
+
+select lives_ok(
+  $$ update meds.medications set pill_color2 = null
+      where id = '50000000-0000-4000-8000-000000000001' $$,
+  'a caregiver can change the pill look of their circle''s medication');
+
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}';
+
+select is_empty(
+  $$ update meds.medications set pill_shape = 'round'
+      where id = '50000000-0000-4000-8000-000000000001'
+      returning id $$,
+  'a viewer updates zero pill looks');
+
+reset role;
+
+select is((
+  select new_data ->> 'pill_color' from core.audit_log
+   where table_name = 'medications'
+     and record_id = '50000000-0000-4000-8000-000000000001'
+     and action = 'update'
+   order by id desc
+   limit 1), 'white',
+  'the medication audit row records the pill look columns');
 
 select * from finish();
 

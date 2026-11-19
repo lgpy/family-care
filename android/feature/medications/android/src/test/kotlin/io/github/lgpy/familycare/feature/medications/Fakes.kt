@@ -17,6 +17,7 @@ import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRules
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
+import io.github.lgpy.familycare.core.domain.medication.PillLook
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.GivenBy
 import io.github.lgpy.familycare.feature.medications.data.MedsResult
@@ -105,6 +106,7 @@ fun medication(
     name: String = "Metformin",
     strength: String? = "500 mg",
     stoppedAt: Instant? = null,
+    pillLook: PillLook? = null,
 ): Medication = Medication(
     id = MedicationId(id),
     patientId = patientId,
@@ -112,6 +114,7 @@ fun medication(
     strength = strength,
     form = MedicationForm.TABLET,
     stockUnit = "tablet",
+    pillLook = pillLook,
     stoppedAt = stoppedAt,
 )
 
@@ -520,6 +523,7 @@ class FakePatientRepository : PatientRepository {
         circleId: CareCircleId,
         displayName: String,
         linkedUserId: String?,
+        birthYear: Int?,
         chosenPrimaryCaregiverId: String?,
         reminderPolicy: ReminderPolicy,
         escalationDelayMinutes: Int,
@@ -530,6 +534,7 @@ class FakePatientRepository : PatientRepository {
         circleId = circleId,
         displayName = displayName,
         linkedUserId = linkedUserId,
+        birthYear = birthYear,
         chosenPrimaryCaregiverId = chosenPrimaryCaregiverId,
         reminderPolicy = reminderPolicy,
         escalationDelayMinutes = escalationDelayMinutes,

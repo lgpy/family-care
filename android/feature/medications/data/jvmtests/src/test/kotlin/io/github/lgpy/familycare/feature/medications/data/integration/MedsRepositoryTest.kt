@@ -4,6 +4,10 @@ import com.powersync.db.crud.CrudEntry
 import com.powersync.db.crud.CrudTransaction
 import com.powersync.db.crud.UpdateType
 import io.github.lgpy.familycare.core.domain.circle.PatientId
+import io.github.lgpy.familycare.core.domain.medication.PillColor
+import io.github.lgpy.familycare.core.domain.medication.PillLook
+import io.github.lgpy.familycare.core.domain.medication.PillShape
+import io.github.lgpy.familycare.core.domain.medication.PillSize
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.GivenBy
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
@@ -103,6 +107,50 @@ class MedsRepositoryTest {
         // A medication and the schedule that makes it useful can never half-apply.
         transaction.complete(null)
         assertNull(local.database.getNextCrudTransaction(), "One action queues exactly one transaction")
+    }
+
+    @Test
+    fun `a pill look survives creation, an edit and a change of look`() = runBlocking {
+        seedCircleAndPatient()
+        val repository = medicationRepository()
+        val capsule = PillLook(
+            shape = PillShape.CAPSULE,
+            color = PillColor.PURPLE,
+            color2 = PillColor.PINK,
+            score = true,
+            size = PillSize.SMALL,
+        )
+
+        assertEquals(
+            MedsResult.Success(MedicationId(MED_1)),
+            repository.create(medication(MED_1).copy(pillLook = capsule), regimen(REGIMEN_1, MED_1)),
+        )
+        assertEquals(capsule, storedMedication(repository).pillLook)
+
+        // Editing another column rewrites the whole row, so the look must be part
+        // of what the form's copy carries: it is not wiped.
+        assertEquals(
+            MedsResult.Success(MedicationId(MED_1)),
+            repository.update(storedMedication(repository).copy(name = "Metformin 850 mg")),
+        )
+        val edited = withTimeout(TIMEOUT_MS) {
+            repository.observeMedication(MedicationId(MED_1))
+                .first { it?.medication?.name == "Metformin 850 mg" }
+        }!!.medication
+        assertEquals(capsule, edited.pillLook)
+
+        // A new look replaces it. A round tablet has no second colour, and the
+        // domain's normalize() drops one before it can reach the write.
+        val round = PillLook(shape = PillShape.ROUND, color = PillColor.YELLOW)
+        assertEquals(
+            MedsResult.Success(MedicationId(MED_1)),
+            repository.update(edited.copy(pillLook = round)),
+        )
+        val relooked = withTimeout(TIMEOUT_MS) {
+            repository.observeMedication(MedicationId(MED_1))
+                .first { it?.medication?.pillLook == round }
+        }!!.medication
+        assertEquals(round, relooked.pillLook)
     }
 
     @Test
@@ -471,6 +519,11 @@ class MedsRepositoryTest {
     private fun group(slots: List<io.github.lgpy.familycare.feature.medications.domain.DoseSlot>) =
         groupTimeSlots(slots) { PatientId(PATIENT_1) }
             .single { it.localTime == LocalTime.of(8, 0) }
+
+    private suspend fun storedMedication(repository: MedicationRepository): Medication =
+        withTimeout(TIMEOUT_MS) {
+            repository.observeMedication(MedicationId(MED_1)).first { it != null }
+        }!!.medication
 
     private fun medicationRepository(newId: () -> String = { REGIMEN_1 }): MedicationRepository =
         PowerSyncMedicationRepository(

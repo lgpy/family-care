@@ -1,5 +1,6 @@
 package io.github.lgpy.familycare.feature.medications.data
 
+import io.github.lgpy.familycare.core.domain.medication.PillSize
 import io.github.lgpy.familycare.feature.medications.domain.DoseLogEntry
 import io.github.lgpy.familycare.feature.medications.domain.Medication
 import io.github.lgpy.familycare.feature.medications.domain.Regimen
@@ -26,6 +27,11 @@ internal fun medicationParameters(medication: Medication): List<Any?> = listOf(
     medication.instructions,
     medication.requiresPrescription.toSqlite(),
     medication.prescriptionValidUntil?.let(::formatDate),
+    medication.pillLook?.shape?.serverValue,
+    medication.pillLook?.color?.serverValue,
+    medication.pillLook?.color2?.serverValue,
+    (medication.pillLook?.score ?: false).toSqlite(),
+    (medication.pillLook?.size ?: PillSize.MEDIUM).serverValue,
     medication.lowStockThresholdDays,
     medication.reminderPolicy?.serverValue,
     medication.primaryCaregiverId,

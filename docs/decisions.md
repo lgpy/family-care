@@ -176,6 +176,16 @@ Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
 
 ---
 
+### D33 — M8: drawn pill pictures, an optional birth year, Material Symbols icons
+- **Pill looks:** `meds.medications` gains `pill_shape` (`round`, `oval`, `oblong`, `capsule`, `diamond`, `triangle`, `drops`), `pill_color` and `pill_color2` from a fixed palette (white, cream, yellow, orange, pink, red, blue, navy, green, brown, purple, grey), `pill_score` and `pill_size` (`small`, `medium`, `large`). Every field is optional or defaulted, so an app that predates the change keeps working; the palette is a token list the app maps to light/dark colours, not free text and not a colour picker.
+- **Drawn, not photographed, for now:** the app draws the pill (`PillImage` in `core/ui`) wherever a medicine appears. Photos would mean storage, upload, an offline image cache and syncing images of a family's medication; they can be added later (a photo column or table) without changing these fields or the drawn fallback.
+- **Birth year:** `core.patients.birth_year smallint` (1900..2100), optional, used only to show an age. The full date of birth is deliberately not stored: the day and month add nothing the app needs and are more identifying than the year.
+- **Icons:** Material Symbols are bundled in `core/ui` as vector drawables (Apache 2.0), exposed as `FcIcons`. `material-icons-extended` is not a dependency: it is huge and still lacks many of the symbols this app uses, while only the icons actually used are bundled. Every section header, list row type, tab and status gets an icon; icons never replace text labels; filled variants are reserved for status and the active tab.
+- **Why:** a pill's shape and colour are how a caregiver recognises it in the box, and that must work offline without shipping photographs of medication to the family. The palette keeps the drawing consistent across phones and dark mode. Bundling only the icons used keeps the APK small and the set stable, unlike an icon library that changes with a dependency upgrade.
+- **Trade-off accepted:** a drawn pill can be approximate and is chosen by hand, so it is a memory aid, not an identification: the name and strength are still the authority. **Release note:** push this migration to **prod before** installing any app build that writes the new columns — a phone that uploads `pill_shape`/`birth_year` to a project without them gets the upload rejected (unknown column), so the migration is a prerequisite of the app release, not a follow-up.
+
+---
+
 - ~~**Q1 — Default policy for caregiver-patients.**~~ Resolved by D11: self-managed.
 - **Q2 — Security and GDPR deep-dive.** Drafted in [security-and-privacy.md](security-and-privacy.md) D12–D17 accepted. Only S2 (grandparents' agreement) remains open, non-blocking.
 - **Q3 — Default timings.** Escalation delay 30 min, missed window 2 h, low-stock threshold 7 days, appointment reminders evening before + 1 h before. To validate in use.

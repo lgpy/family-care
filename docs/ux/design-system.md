@@ -149,10 +149,55 @@ ibuprofen").
 | `StockMeter` | 8 dp bar (primary, or attention accent when low) plus "N days left"; label moves under the bar when it does not fit. |
 | `TimeRail` / `DoseTimeGroup` / `DoseSlot` / `DoseSlotUi` / `DoseSlotState` | doses today: time column beside slots while the widest *time* is ≤ 26% of the width (`TimeRailMaxTimeWidthFraction`), otherwise times as headings; countdowns wrap under the time. Dose slots are done (dashed outline, neutral), next (primary container) or upcoming (surface container). |
 
-Icons come from `material-icons-core` (`Warning`, `Info`, `Check`); no
-`icons-extended` dependency.
+Icons come from `FcIcons` (see §6); there is no `material-icons-extended` dependency.
 
-## 5. Checking 100%, 150% and 200%
+## 5. Pill pictures
+
+`PillImage` in `core/ui.components` draws a medicine's pill from the optional
+`pill_shape`, `pill_color`, `pill_color2`, `pill_score` and `pill_size` fields
+(D33). It is shown **wherever a medicine appears**: medication list rows, the
+dose slot, the patient profile tabs, the stock/shopping rows and the medication
+form preview. The same component is used in every feature; a feature never
+draws its own.
+
+- **Shapes:** round, oval, oblong, capsule, diamond, triangle and drops. **No
+  shape set** (or an app version that predates the column) renders the neutral
+  pill glyph, never an empty box.
+- **Colours:** the twelve palette tokens (`white`, `cream`, `yellow`, `orange`,
+  `pink`, `red`, `blue`, `navy`, `green`, `brown`, `purple`, `grey`) map to a
+  light and a dark value inside `core/ui`, so a pill looks the same everywhere
+  and stays legible on both themes. `pill_color2` is the optional second half
+  of a two-tone pill; without it the pill is one colour.
+- **Score line and size:** `pill_score` draws the divider line; `pill_size`
+  (small / medium / large) changes the drawn size relative to the row, never
+  the row height.
+- **Accessibility:** the drawing always carries a description built from its
+  parts, e.g. "Oval white tablet, scored" (pt-PT: "Comprimido oval branco, com
+  ranhura"). The description is the only content description; the medicine
+  name, strength and instructions remain real text beside it. A missing pill
+  look is announced as nothing extra, not as an unlabelled image.
+
+## 6. Icons
+
+Icons are Material Symbols bundled in `core/ui` as vector drawables (Apache
+2.0) and exposed as `FcIcons` (D33). `material-icons-extended` is deliberately
+not a dependency: it is large and still lacks many of the symbols used here,
+while only the icons actually used are bundled.
+
+- **Where:** every section header, every list row type (medication,
+  appointment, patient info, stock, activity), every bottom-bar tab and every
+  status gets an icon from `FcIcons`. The set is the single source: a feature
+  picks from it rather than importing a drawable itself.
+- **Icons never replace text labels.** The icon sits beside the label or
+  title; nothing is icon-only, and no state is communicated by an icon alone.
+- **Filled variants only for status and the active tab.** A status (low stock,
+  needs attention) or the selected tab may use the filled symbol; everywhere
+  else uses the outlined variant, so emphasis keeps meaning.
+- **Sizing:** 24 dp like the rest of the chrome, fixed regardless of font
+  scale. Icons are decorative next to a label (`contentDescription = null`); an
+  icon-only control, if ever added, must carry its own description.
+
+## 7. Checking 100%, 150% and 200%
 
 - In Android Studio, open a component: each `@ScalePreviews` preview renders
   100%, 150% and 200% at 384 dp width, plus dark at 100%. Every component has

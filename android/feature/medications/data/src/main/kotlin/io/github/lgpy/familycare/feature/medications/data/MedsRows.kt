@@ -8,6 +8,7 @@ import com.powersync.db.getLongOptional
 import io.github.lgpy.familycare.core.data.circle.parseServerInstant
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
+import io.github.lgpy.familycare.core.domain.medication.PillLookRules
 import io.github.lgpy.familycare.feature.medications.domain.DoseLogEntry
 import io.github.lgpy.familycare.feature.medications.domain.DoseLogEntryId
 import io.github.lgpy.familycare.feature.medications.domain.DoseOutcome
@@ -57,6 +58,11 @@ internal data class MedicationRow(
     val instructions: String?,
     val requiresPrescription: Long,
     val prescriptionValidUntil: String?,
+    val pillShape: String?,
+    val pillColor: String?,
+    val pillColor2: String?,
+    val pillScore: Long?,
+    val pillSize: String?,
     val lowStockThresholdDays: Long,
     val reminderPolicy: String?,
     val primaryCaregiverId: String?,
@@ -95,6 +101,15 @@ internal data class MedicationRow(
             instructions = instructions,
             requiresPrescription = requiresPrescription != 0L,
             prescriptionValidUntil = validUntil,
+            // An unknown shape/colour/size is not a reason to hide the
+            // medication: the look degrades (or becomes null) instead.
+            pillLook = PillLookRules.fromServer(
+                shape = pillShape,
+                color = pillColor,
+                color2 = pillColor2,
+                score = pillScore?.let { it != 0L } ?: false,
+                size = pillSize,
+            ),
             lowStockThresholdDays = lowStockThresholdDays.toInt(),
             reminderPolicy = policy,
             primaryCaregiverId = primaryCaregiverId,
@@ -167,6 +182,11 @@ internal fun SqlCursor.toMedicationRow(): MedicationRow {
         instructions = getStringOptional("instructions"),
         requiresPrescription = getLong("requires_prescription"),
         prescriptionValidUntil = getStringOptional("prescription_valid_until"),
+        pillShape = getStringOptional("pill_shape"),
+        pillColor = getStringOptional("pill_color"),
+        pillColor2 = getStringOptional("pill_color2"),
+        pillScore = getLongOptional("pill_score"),
+        pillSize = getStringOptional("pill_size"),
         lowStockThresholdDays = getLong("low_stock_threshold_days"),
         reminderPolicy = getStringOptional("reminder_policy"),
         primaryCaregiverId = getStringOptional("primary_caregiver_id"),

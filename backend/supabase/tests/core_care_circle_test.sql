@@ -20,7 +20,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(138);
+select plan(146);
 
 -- --- Fixtures ---------------------------------------------------------------
 -- Eight users. Alice owns circle A; Bob is a caregiver, Carol a viewer and Erin
@@ -885,6 +885,65 @@ select is((
      and c.relkind in ('r', 'p')
      and not (c.relrowsecurity and c.relforcerowsecurity)), 0,
   'every core table (including the new ones) has RLS enabled and forced');
+
+-- --- optional birth year (D33) ----------------------------------------------
+-- Optional so an app that predates the column keeps working, and only the year
+-- is stored: the day and month are deliberately absent. The archive half is in
+-- lifecycle_test.sql.
+
+select col_type_is('core', 'patients', 'birth_year', 'smallint',
+                   'patients.birth_year is smallint');
+
+select is((select birth_year from core.patients
+            where id = '40000000-0000-4000-8000-000000000001'),
+          null::smallint,
+          'birth_year is optional and defaults to null');
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
+
+select throws_ok(
+  $$ update core.patients set birth_year = 1899
+      where id = '40000000-0000-4000-8000-000000000001' $$,
+  '23514', null, 'a birth year before 1900 is refused');
+
+select throws_ok(
+  $$ update core.patients set birth_year = 2101
+      where id = '40000000-0000-4000-8000-000000000001' $$,
+  '23514', null, 'a birth year after 2100 is refused');
+
+select results_eq(
+  $$ update core.patients set birth_year = 1900
+      where id = '40000000-0000-4000-8000-000000000001'
+      returning birth_year $$,
+  $$ values (1900::smallint) $$,
+  'the lower bound 1900 is accepted');
+
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}';
+
+select results_eq(
+  $$ update core.patients set birth_year = 1948
+      where id = '40000000-0000-4000-8000-000000000001'
+      returning birth_year $$,
+  $$ values (1948::smallint) $$,
+  'a caregiver can set the birth year of their circle''s patient');
+
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}';
+
+select is_empty(
+  $$ update core.patients set birth_year = 1950
+      where id = '40000000-0000-4000-8000-000000000001'
+      returning id $$,
+  'a viewer updates zero birth years');
+
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
+
+select results_eq(
+  $$ update core.patients set birth_year = 2100
+      where id = '40000000-0000-4000-8000-000000000001'
+      returning birth_year $$,
+  $$ values (2100::smallint) $$,
+  'the upper bound 2100 is accepted');
 
 select * from finish();
 

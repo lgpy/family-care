@@ -540,7 +540,8 @@ private const val LAST_STEP = MedicationFormUiState.STEP_COUNT - 1
  * The medication this form describes, and the fields the domain rejected.
  *
  * [existing] keeps the columns the form does not edit: id, patient, the stopped
- * timestamp and (when the threshold text does not parse) the stored threshold.
+ * timestamp, the drawn pill look and (when the threshold text does not parse)
+ * the stored threshold.
  */
 private fun MedicationFormUiState.toMedication(
     id: MedicationId,
@@ -567,6 +568,8 @@ private fun MedicationFormUiState.toMedication(
         instructions = instructions,
         requiresPrescription = requiresPrescription,
         prescriptionValidUntil = validUntil,
+        // The look is edited elsewhere; an edit here must never wipe it.
+        pillLook = existing?.pillLook,
         lowStockThresholdDays = parseThresholdDays(lowStockThresholdDays)
             ?: existing?.lowStockThresholdDays
             ?: MedicationRules.DEFAULT_LOW_STOCK_THRESHOLD_DAYS,

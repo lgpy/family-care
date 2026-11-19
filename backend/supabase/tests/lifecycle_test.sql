@@ -23,7 +23,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(45);
+select plan(47);
 
 -- --- Fixtures ---------------------------------------------------------------
 -- Alice owns circle A; Bob is a caregiver, Carol a viewer.
@@ -129,6 +129,18 @@ select throws_ok(
       where id = '40000000-0000-4000-8000-000000000001' $$,
   '42501', null,
   'an archived patient cannot be renamed, even by the owner');
+
+select throws_ok(
+  $$ update core.patients set birth_year = 1945
+      where id = '40000000-0000-4000-8000-000000000001' $$,
+  '42501', null,
+  'setting the birth year of an archived patient is refused');
+
+select throws_ok(
+  $$ update meds.medications set pill_color = 'blue'
+      where patient_id = '40000000-0000-4000-8000-000000000001' $$,
+  '42501', null,
+  'editing the pill look of an archived patient''s medication is refused');
 
 select throws_ok(
   $$ insert into meds.medications (patient_id, name, form, stock_unit)

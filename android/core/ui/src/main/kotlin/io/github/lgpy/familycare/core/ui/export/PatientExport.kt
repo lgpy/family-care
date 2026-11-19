@@ -120,6 +120,7 @@ object PatientExportJson {
         put("circle_id", patient.circleId.value)
         put("display_name", patient.displayName)
         put("linked_user_id", patient.linkedUserId)
+        put("birth_year", patient.birthYear)
         put("reminder_policy", patient.reminderPolicy.serverValue)
         put("primary_caregiver_id", patient.primaryCaregiverId)
         put("escalation_delay_minutes", patient.escalationDelayMinutes)

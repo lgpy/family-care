@@ -22,6 +22,7 @@ enum class MedicationField {
      * only an unparseable one; the column itself has no server-side field name.
      */
     MEDICATION_PRESCRIPTION_VALID_UNTIL,
+    MEDICATION_PILL_LOOK,
     MEDICATION_LOW_STOCK_THRESHOLD,
     MEDICATION_REMINDER_POLICY,
     MEDICATION_PRIMARY_CAREGIVER,

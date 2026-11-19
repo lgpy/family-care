@@ -124,6 +124,47 @@ class LocalPatientRepositoryTest {
     }
 
     @Test
+    fun `a birth year is stored, read back and queued with the patient`() = runBlocking {
+        val patient = repository.newPatient(
+            circleId = CareCircleId(local.circleId),
+            displayName = "Grandma",
+            birthYear = 1943,
+        )
+        assertEquals(1943, patient.birthYear)
+
+        assertEquals(CoreResult.Success(patient.id), repository.save(patient))
+
+        val stored = withTimeout(READ_TIMEOUT) {
+            repository.patients.first { patients -> patients.any { it.id == patient.id } }
+        }.single()
+        assertEquals(1943, stored.birthYear)
+
+        val transaction = local.database.nextTransaction()
+        val data = transaction.crud.single().opData!!.jsonValues
+        assertEquals(1943, data["birth_year"]!!.jsonPrimitive.int)
+        transaction.complete(null)
+    }
+
+    @Test
+    fun `adding a birth year to an existing patient queues just that column`() = runBlocking {
+        val patient = repository.newPatient(
+            circleId = CareCircleId(local.circleId),
+            displayName = "Grandma",
+        )
+        assertEquals(CoreResult.Success(patient.id), repository.save(patient))
+        local.database.nextTransaction().complete(null)
+
+        assertEquals(CoreResult.Success(patient.id), repository.save(patient.copy(birthYear = 1943)))
+
+        val entry = local.database.nextTransaction().crud.single()
+        assertEquals(UpdateType.PATCH, entry.op)
+        assertEquals(
+            JsonObject(mapOf("birth_year" to JsonPrimitive(1943))),
+            entry.opData!!.jsonValues,
+        )
+    }
+
+    @Test
     fun `editing the same patient queues a PATCH with only the changed column`() = runBlocking {
         val patient = repository.newPatient(
             circleId = CareCircleId(local.circleId),

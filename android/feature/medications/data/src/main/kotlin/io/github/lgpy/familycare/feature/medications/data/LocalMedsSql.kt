@@ -39,6 +39,11 @@ private const val MEDICATION_SELECT = """
            m.instructions AS instructions,
            m.requires_prescription AS requires_prescription,
            m.prescription_valid_until AS prescription_valid_until,
+           m.pill_shape AS pill_shape,
+           m.pill_color AS pill_color,
+           m.pill_color2 AS pill_color2,
+           m.pill_score AS pill_score,
+           m.pill_size AS pill_size,
            m.low_stock_threshold_days AS low_stock_threshold_days,
            m.reminder_policy AS reminder_policy,
            m.primary_caregiver_id AS primary_caregiver_id,
@@ -124,9 +129,10 @@ internal const val SELECT_REGIMEN_OWNER = """
 internal const val INSERT_MEDICATION = """
     INSERT INTO medications (
         id, patient_id, name, active_ingredient, strength, form, stock_unit, instructions,
-        requires_prescription, prescription_valid_until, low_stock_threshold_days,
-        reminder_policy, primary_caregiver_id, stopped_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        requires_prescription, prescription_valid_until, pill_shape, pill_color, pill_color2,
+        pill_score, pill_size, low_stock_threshold_days, reminder_policy,
+        primary_caregiver_id, stopped_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 /**
@@ -144,6 +150,11 @@ internal const val UPDATE_MEDICATION = """
         instructions = ?,
         requires_prescription = ?,
         prescription_valid_until = ?,
+        pill_shape = ?,
+        pill_color = ?,
+        pill_color2 = ?,
+        pill_score = ?,
+        pill_size = ?,
         low_stock_threshold_days = ?,
         reminder_policy = ?,
         primary_caregiver_id = ?,

@@ -2,6 +2,9 @@ package io.github.lgpy.familycare.feature.medications.form
 
 import app.cash.turbine.test
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
+import io.github.lgpy.familycare.core.domain.medication.PillColor
+import io.github.lgpy.familycare.core.domain.medication.PillLook
+import io.github.lgpy.familycare.core.domain.medication.PillShape
 import io.github.lgpy.familycare.feature.medications.FakeCareCircleRepository
 import io.github.lgpy.familycare.feature.medications.FakeMedicationCatalogRepository
 import io.github.lgpy.familycare.feature.medications.FakeMedicationRepository
@@ -223,6 +226,30 @@ class MedicationFormViewModelTest {
 
             assertEquals("Metformin 850", meds.updated.single().name)
             assertEquals(0, meds.created.size)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `edit mode keeps the medication's pill look`() = runTest {
+        val look = PillLook(shape = PillShape.CAPSULE, color = PillColor.PURPLE, color2 = PillColor.PINK)
+        meds.observed["med-1"] =
+            kotlinx.coroutines.flow.MutableStateFlow(
+                withRegimens(
+                    medication(id = "med-1", name = "Omeprazole", pillLook = look),
+                    listOf(regimen(id = "reg-1", medicationId = "med-1", startDate = LocalDate.of(2026, 1, 1))),
+                ),
+            )
+        val viewModel = viewModel(medicationId = "med-1")
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.onNameChanged("Omeprazole 20 mg")
+            viewModel.save()
+
+            val updated = meds.updated.single()
+            assertEquals("Omeprazole 20 mg", updated.name)
+            // The form edits details only; the drawn look is another screen's job.
+            assertEquals(look, updated.pillLook)
             cancelAndIgnoreRemainingEvents()
         }
     }

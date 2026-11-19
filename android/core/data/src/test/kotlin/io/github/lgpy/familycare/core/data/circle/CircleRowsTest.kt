@@ -20,11 +20,13 @@ class CircleRowsTest {
     private fun patientRow(
         reminderPolicy: String = "primary_with_escalation",
         archivedAt: String? = null,
+        birthYear: Long? = null,
     ) = PatientRow(
         id = "patient-1",
         circleId = "circle-1",
         displayName = "Grandma",
         linkedUserId = null,
+        birthYear = birthYear,
         reminderPolicy = reminderPolicy,
         primaryCaregiverId = "user-caregiver",
         escalationDelayMinutes = 45,
@@ -48,6 +50,8 @@ class CircleRowsTest {
         assertNull(patient.linkedUserId)
         assertNull(patient.archivedAt)
         assertFalse(patient.isArchived)
+        assertNull(patient.birthYear)
+        assertEquals(1942, patientRow(birthYear = 1942).toPatient()!!.birthYear)
     }
 
     @Test

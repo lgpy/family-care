@@ -53,6 +53,9 @@ enum class ReminderPolicy(val serverValue: String) {
  * persist it with [PatientRepository.save].
  *
  * @param linkedUserId `auth.users.id` when the patient also uses the app, else null.
+ * @param birthYear Year the patient was born, when known (screens v2, D33).
+ *   Optional: the profile shows the age it implies, and nothing else depends on
+ *   it. 1900..2100, mirroring the `patients_birth_year_range` check.
  * @param primaryCaregiverId Who is reminded first for
  *   [ReminderPolicy.PRIMARY_WITH_ESCALATION]. Must be an owner or caregiver of
  *   the circle (the server enforces it; [PatientRules.validate] checks it too
@@ -71,6 +74,7 @@ data class Patient(
     val circleId: CareCircleId,
     val displayName: String,
     val linkedUserId: String? = null,
+    val birthYear: Int? = null,
     val reminderPolicy: ReminderPolicy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
     val primaryCaregiverId: String? = null,
     val escalationDelayMinutes: Int = PatientRules.DEFAULT_ESCALATION_DELAY_MINUTES,
@@ -143,6 +147,10 @@ object PatientRules {
     const val MIN_MISSED_WINDOW_MINUTES: Int = 1
     const val MAX_MISSED_WINDOW_MINUTES: Int = 1440
 
+    /** Mirrors `patients_birth_year_range`: a constant, not "this year", so the check is immutable. */
+    const val MIN_BIRTH_YEAR: Int = 1900
+    const val MAX_BIRTH_YEAR: Int = 2100
+
     const val DEFAULT_ESCALATION_DELAY_MINUTES: Int = 30
     const val DEFAULT_MISSED_WINDOW_MINUTES: Int = 120
 
@@ -177,6 +185,7 @@ object PatientRules {
         circleId: CareCircleId,
         displayName: String,
         linkedUserId: String? = null,
+        birthYear: Int? = null,
         chosenPrimaryCaregiverId: String? = null,
         reminderPolicy: ReminderPolicy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
         escalationDelayMinutes: Int = DEFAULT_ESCALATION_DELAY_MINUTES,
@@ -187,6 +196,7 @@ object PatientRules {
         circleId = circleId,
         displayName = normalizeName(displayName),
         linkedUserId = linkedUserId,
+        birthYear = birthYear,
         reminderPolicy = reminderPolicy,
         primaryCaregiverId = defaultPrimaryCaregiver(linkedUserId, chosenPrimaryCaregiverId),
         escalationDelayMinutes = escalationDelayMinutes,
@@ -222,6 +232,9 @@ object PatientRules {
             MIN_MISSED_WINDOW_MINUTES..MAX_MISSED_WINDOW_MINUTES
         ) {
             errors += CoreField.PATIENT_MISSED_WINDOW
+        }
+        if (patient.birthYear != null && patient.birthYear !in MIN_BIRTH_YEAR..MAX_BIRTH_YEAR) {
+            errors += CoreField.PATIENT_BIRTH_YEAR
         }
         val noteLength = normalizeNote(patient.agreementNote)?.length ?: 0
         if (noteLength > MAX_AGREEMENT_NOTE_LENGTH) {

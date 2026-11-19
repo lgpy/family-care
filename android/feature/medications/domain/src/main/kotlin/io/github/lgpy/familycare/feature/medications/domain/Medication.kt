@@ -2,6 +2,8 @@ package io.github.lgpy.familycare.feature.medications.domain
 
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
+import io.github.lgpy.familycare.core.domain.medication.PillLook
+import io.github.lgpy.familycare.core.domain.medication.PillLookRules
 import java.time.Instant
 import java.time.LocalDate
 
@@ -47,6 +49,8 @@ enum class MedicationForm(val serverValue: String) {
  * @param prescriptionValidUntil Null when the medication needs no prescription
  *   or the date is not known. A date in the past means "expired" and is a
  *   shopping-list state, not a validation error.
+ * @param pillLook How the pill is drawn (shape, colour, score line, size; D33).
+ *   Null when nobody has set it yet: the UI then draws a neutral outline.
  * @param lowStockThresholdDays Days of remaining stock at which `StockLow` is
  *   raised. 0 disables the alert for this medication.
  * @param reminderPolicy Overrides the patient's policy when set; null inherits
@@ -67,6 +71,7 @@ data class Medication(
     val instructions: String? = null,
     val requiresPrescription: Boolean = false,
     val prescriptionValidUntil: LocalDate? = null,
+    val pillLook: PillLook? = null,
     val lowStockThresholdDays: Int = MedicationRules.DEFAULT_LOW_STOCK_THRESHOLD_DAYS,
     val reminderPolicy: ReminderPolicy? = null,
     val primaryCaregiverId: String? = null,
@@ -86,6 +91,7 @@ data class Medication(
         strength = MedicationRules.normalizeOptional(strength),
         stockUnit = MedicationRules.normalizeText(stockUnit),
         instructions = MedicationRules.normalizeOptional(instructions),
+        pillLook = pillLook?.let(PillLookRules::normalize),
         primaryCaregiverId = MedicationRules.normalizeOptional(primaryCaregiverId),
     )
 
@@ -159,6 +165,9 @@ object MedicationRules {
         }
         if (lengthOrZero(medication.instructions) > MAX_INSTRUCTIONS_LENGTH) {
             errors += MedicationField.MEDICATION_INSTRUCTIONS
+        }
+        if (medication.pillLook != null && PillLookRules.validate(medication.pillLook).isNotEmpty()) {
+            errors += MedicationField.MEDICATION_PILL_LOOK
         }
         if (medication.lowStockThresholdDays !in
             MIN_LOW_STOCK_THRESHOLD_DAYS..MAX_LOW_STOCK_THRESHOLD_DAYS

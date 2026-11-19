@@ -49,6 +49,9 @@ interface PatientRepository {
      *   (self-managed), otherwise [chosenPrimaryCaregiverId];
      * - escalation delay 30 minutes, missed window 120 minutes.
      *
+     * @param birthYear Optional year of birth (1900..2100); screens v2 shows the
+     *   age it implies.
+     *
      * Pass the result to [save]. The values are not stored until then, and the
      * id only becomes a row once [save] succeeds.
      */
@@ -56,6 +59,7 @@ interface PatientRepository {
         circleId: CareCircleId,
         displayName: String,
         linkedUserId: String? = null,
+        birthYear: Int? = null,
         chosenPrimaryCaregiverId: String? = null,
         reminderPolicy: ReminderPolicy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
         escalationDelayMinutes: Int = PatientRules.DEFAULT_ESCALATION_DELAY_MINUTES,

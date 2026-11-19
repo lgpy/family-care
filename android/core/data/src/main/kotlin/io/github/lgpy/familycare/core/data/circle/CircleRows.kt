@@ -2,6 +2,7 @@ package io.github.lgpy.familycare.core.data.circle
 
 import com.powersync.db.SqlCursor
 import com.powersync.db.getLong
+import com.powersync.db.getLongOptional
 import com.powersync.db.getString
 import com.powersync.db.getStringOptional
 import io.github.lgpy.familycare.core.domain.circle.CareCircleId
@@ -29,6 +30,7 @@ internal data class PatientRow(
     val circleId: String,
     val displayName: String,
     val linkedUserId: String?,
+    val birthYear: Long?,
     val reminderPolicy: String,
     val primaryCaregiverId: String?,
     val escalationDelayMinutes: Long,
@@ -50,6 +52,7 @@ internal data class PatientRow(
             circleId = CareCircleId(circleId),
             displayName = displayName,
             linkedUserId = linkedUserId,
+            birthYear = birthYear?.toInt(),
             reminderPolicy = policy,
             primaryCaregiverId = primaryCaregiverId,
             escalationDelayMinutes = escalationDelayMinutes.toInt(),
@@ -66,6 +69,7 @@ internal fun SqlCursor.toPatientRow(): PatientRow = PatientRow(
     circleId = getString("circle_id"),
     displayName = getString("display_name"),
     linkedUserId = getStringOptional("linked_user_id"),
+    birthYear = getLongOptional("birth_year"),
     reminderPolicy = getString("reminder_policy"),
     primaryCaregiverId = getStringOptional("primary_caregiver_id"),
     escalationDelayMinutes = getLong("escalation_delay_minutes"),

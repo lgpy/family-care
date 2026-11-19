@@ -1,6 +1,10 @@
 package io.github.lgpy.familycare.feature.medications.data
 
 import io.github.lgpy.familycare.core.domain.circle.PatientId
+import io.github.lgpy.familycare.core.domain.medication.PillColor
+import io.github.lgpy.familycare.core.domain.medication.PillLook
+import io.github.lgpy.familycare.core.domain.medication.PillShape
+import io.github.lgpy.familycare.core.domain.medication.PillSize
 import io.github.lgpy.familycare.feature.medications.domain.DoseOutcome
 import io.github.lgpy.familycare.feature.medications.domain.DoseTime
 import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
@@ -160,6 +164,61 @@ class MedsRowsTest {
     }
 
     @Test
+    fun `the pill columns become the drawn look`() {
+        val medication = medicationRow(
+            pillShape = "capsule",
+            pillColor = "purple",
+            pillColor2 = "pink",
+            pillScore = 1,
+            pillSize = "small",
+        ).toMedication()
+
+        assertEquals(
+            PillLook(
+                shape = PillShape.CAPSULE,
+                color = PillColor.PURPLE,
+                color2 = PillColor.PINK,
+                score = true,
+                size = PillSize.SMALL,
+            ),
+            medication?.pillLook,
+        )
+    }
+
+    @Test
+    fun `a row with no pill shape has no drawn look`() {
+        assertNull(medicationRow().toMedication()?.pillLook)
+        assertNull(medicationRow(pillColor = "white", pillScore = 1).toMedication()?.pillLook)
+    }
+
+    @Test
+    fun `unknown pill tokens degrade without hiding the medication`() {
+        // An unknown shape: no picture, but the medication is still usable.
+        val unknownShape = medicationRow(pillShape = "lollipop", pillColor = "white").toMedication()
+        assertNotNull(unknownShape)
+        assertNull(unknownShape!!.pillLook)
+
+        // Unknown colour and size: the defaults the drawing expects.
+        val degraded = medicationRow(
+            pillShape = "round",
+            pillColor = "chartreuse",
+            pillSize = "enormous",
+        ).toMedication()
+
+        assertEquals(PillShape.ROUND, degraded?.pillLook?.shape)
+        assertNull(degraded?.pillLook?.color)
+        assertEquals(PillSize.MEDIUM, degraded?.pillLook?.size)
+    }
+
+    @Test
+    fun `a second colour survives only on a capsule`() {
+        val capsule = medicationRow(pillShape = "capsule", pillColor2 = "pink").toMedication()
+
+        assertEquals(PillColor.PINK, capsule?.pillLook?.color2)
+        assertNull(medicationRow(pillShape = "oval", pillColor2 = "pink").toMedication()?.pillLook?.color2)
+    }
+
+    @Test
     fun `the patient settings come from the joined patient row`() {
         val patient = medicationRow().toPatient()
 
@@ -260,6 +319,11 @@ class MedsRowsTest {
         form: String = "tablet",
         requiresPrescription: Long = 0,
         prescriptionValidUntil: String? = null,
+        pillShape: String? = null,
+        pillColor: String? = null,
+        pillColor2: String? = null,
+        pillScore: Long? = null,
+        pillSize: String? = null,
         lowStockThresholdDays: Long = 30,
         reminderPolicy: String? = "primary_with_escalation",
         stoppedAt: String? = null,
@@ -275,6 +339,11 @@ class MedsRowsTest {
         instructions = "with food",
         requiresPrescription = requiresPrescription,
         prescriptionValidUntil = prescriptionValidUntil,
+        pillShape = pillShape,
+        pillColor = pillColor,
+        pillColor2 = pillColor2,
+        pillScore = pillScore,
+        pillSize = pillSize,
         lowStockThresholdDays = lowStockThresholdDays,
         reminderPolicy = reminderPolicy,
         primaryCaregiverId = null,

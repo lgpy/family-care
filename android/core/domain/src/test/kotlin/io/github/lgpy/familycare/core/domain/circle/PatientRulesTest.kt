@@ -40,6 +40,7 @@ class PatientRulesTest {
     private fun patient(
         displayName: String = "Grandma",
         linkedUserId: String? = null,
+        birthYear: Int? = null,
         primaryCaregiverId: String? = null,
         reminderPolicy: ReminderPolicy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
         escalationDelayMinutes: Int = PatientRules.DEFAULT_ESCALATION_DELAY_MINUTES,
@@ -50,6 +51,7 @@ class PatientRulesTest {
         circleId = circle,
         displayName = displayName,
         linkedUserId = linkedUserId,
+        birthYear = birthYear,
         reminderPolicy = reminderPolicy,
         primaryCaregiverId = primaryCaregiverId,
         escalationDelayMinutes = escalationDelayMinutes,
@@ -72,6 +74,7 @@ class PatientRulesTest {
         assertEquals(120, newPatient.missedWindowMinutes)
         assertNull(newPatient.primaryCaregiverId)
         assertNull(newPatient.linkedUserId)
+        assertNull(newPatient.birthYear)
         assertFalse(newPatient.isArchived)
     }
 
@@ -192,6 +195,34 @@ class PatientRulesTest {
             setOf(CoreField.PATIENT_MISSED_WINDOW),
             patient(missedWindowMinutes = 1441).validate().errors,
         )
+    }
+
+    @Test
+    fun `the birth year accepts exactly 1900 to 2100 and may be absent`() {
+        assertEquals(setOf<CoreField>(), patient(birthYear = 1900).validate().errors)
+        assertEquals(setOf<CoreField>(), patient(birthYear = 2026).validate().errors)
+        assertEquals(setOf<CoreField>(), patient(birthYear = 2100).validate().errors)
+        assertEquals(setOf<CoreField>(), patient(birthYear = null).validate().errors)
+        assertEquals(
+            setOf(CoreField.PATIENT_BIRTH_YEAR),
+            patient(birthYear = 1899).validate().errors,
+        )
+        assertEquals(
+            setOf(CoreField.PATIENT_BIRTH_YEAR),
+            patient(birthYear = 2101).validate().errors,
+        )
+    }
+
+    @Test
+    fun `a new patient keeps the birth year it was given`() {
+        val newPatient = PatientRules.newPatient(
+            id = PatientId("patient-1"),
+            circleId = circle,
+            displayName = "Grandma",
+            birthYear = 1943,
+        )
+
+        assertEquals(1943, newPatient.birthYear)
     }
 
     @Test
