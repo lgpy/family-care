@@ -66,6 +66,7 @@ import androidx.compose.ui.window.DialogProperties
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PillTile
 import io.github.lgpy.familycare.core.ui.components.ReflowRow
 import io.github.lgpy.familycare.core.ui.components.pillDescription
@@ -351,7 +352,7 @@ private fun MedicineSection(viewModel: MedicationFormViewModel, state: Medicatio
                     Icon(
                         imageVector = formIcon(form),
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                     )
                 },
             )
@@ -512,7 +513,7 @@ private fun WhenSection(
                     Icon(
                         imageVector = preset.icon,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                     )
                 },
             )
@@ -540,7 +541,7 @@ private fun WhenSection(
                         Icon(
                             imageVector = FcIcons.Schedule,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                         )
                     },
                     trailingIcon = {
@@ -550,7 +551,7 @@ private fun WhenSection(
                                 R.string.meds_remove_custom_time,
                                 formatTime(time),
                             ),
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                         )
                     },
                 )
@@ -613,7 +614,7 @@ private fun HowManySection(viewModel: MedicationFormViewModel, state: Medication
                         Icon(
                             imageVector = FcIcons.Package2,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                         )
                     },
                 )

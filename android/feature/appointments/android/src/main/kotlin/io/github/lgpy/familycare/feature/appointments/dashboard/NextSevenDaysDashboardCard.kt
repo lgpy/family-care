@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.core.ui.components.ReflowRow
 import io.github.lgpy.familycare.core.ui.components.SectionHeader
@@ -231,7 +232,7 @@ private fun MetaLine(line: CardLine) {
                     imageVector = FcIcons.LocationOn,
                     contentDescription = null,
                     tint = scheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodySmall)),
                 )
                 Text(
                     text = place,

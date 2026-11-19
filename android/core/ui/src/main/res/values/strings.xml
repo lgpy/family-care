@@ -58,11 +58,12 @@
     <string name="patients_empty">No patients yet. Add the people whose medication and appointments you help with.</string>
     <string name="patients_add">Add patient</string>
     <string name="patients_open">Open patient</string>
-    <string name="patients_primary_name">Primary: %1$s</string>
     <string name="patients_policy_primary_with_escalation">Primary with escalation</string>
     <string name="patients_policy_all_caregivers">All caregivers</string>
     <string name="patients_policy_unavailable">Reminder policy not available</string>
-    <string name="patients_reminders_line">reminders: %1$s</string>
+    <string name="patients_reminder_primary_first">%1$s first, then everyone</string>
+    <string name="patients_reminder_you_first">You first, then everyone</string>
+    <string name="patients_reminder_everyone">Everyone is reminded</string>
     <string name="patients_tag_allergies">Allergies</string>
     <string name="patients_summary_low_stock">%1$s low</string>
     <string name="patients_summary_next_appointment">%1$s · %2$s</string>
@@ -327,7 +328,11 @@
         <item quantity="one">Give it</item>
         <item quantity="other">Give all %1$d</item>
     </plurals>
-    <string name="meds_attention_group_title">%1$s\'s %2$s medicines aren\'t confirmed</string>
+    <string name="meds_attention_group_title">%1$s’s %2$s not confirmed</string>
+    <plurals name="meds_attention_medicines">
+        <item quantity="one">%1$d medicine</item>
+        <item quantity="other">%1$d medicines</item>
+    </plurals>
     <string name="meds_attention_low_stock_title">%1$s running low</string>
     <plurals name="meds_attention_low_stock">
         <item quantity="one">%1$s, %2$d day left</item>

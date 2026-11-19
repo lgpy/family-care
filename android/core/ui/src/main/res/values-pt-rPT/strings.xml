@@ -58,11 +58,12 @@
     <string name="patients_empty">Ainda não há pessoas. Adicione as pessoas cuja medicação e consultas ajuda a gerir.</string>
     <string name="patients_add">Adicionar pessoa</string>
     <string name="patients_open">Abrir pessoa</string>
-    <string name="patients_primary_name">Principal: %1$s</string>
     <string name="patients_policy_primary_with_escalation">Principal com escalonamento</string>
     <string name="patients_policy_all_caregivers">Todos os cuidadores</string>
     <string name="patients_policy_unavailable">Política de lembretes indisponível</string>
-    <string name="patients_reminders_line">lembretes: %1$s</string>
+    <string name="patients_reminder_primary_first">Primeiro %1$s, depois todos</string>
+    <string name="patients_reminder_you_first">Primeiro você, depois todos</string>
+    <string name="patients_reminder_everyone">Todos recebem lembretes</string>
     <string name="patients_tag_allergies">Alergias</string>
     <string name="patients_summary_low_stock">%1$s a acabar</string>
     <string name="patients_summary_next_appointment">%1$s · %2$s</string>
@@ -331,7 +332,13 @@
         <item quantity="one">Dar</item>
         <item quantity="other">Dar todos (%1$d)</item>
     </plurals>
-    <string name="meds_attention_group_title">Tomas de %1$s das %2$s por confirmar</string>
+    <string name="meds_attention_group_title">%1$s às %2$s por confirmar</string>
+    <!-- MissingQuantity: pt-PT has no "many" form; the other plurals in this
+         file raise the same warning and are read the same way. -->
+    <plurals name="meds_attention_medicines" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d medicamento</item>
+        <item quantity="other">%1$d medicamentos</item>
+    </plurals>
     <string name="meds_attention_low_stock_title">%1$s está a acabar</string>
     <plurals name="meds_attention_low_stock">
         <item quantity="one">%1$s, resta %2$d dia</item>

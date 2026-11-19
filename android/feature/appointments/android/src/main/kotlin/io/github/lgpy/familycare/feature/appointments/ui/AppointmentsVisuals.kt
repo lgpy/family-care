@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.patient.TimelineKind
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentKind
@@ -208,7 +209,7 @@ fun PreparationTagChip(chip: PreparationChip, modifier: Modifier = Modifier) {
             Icon(
                 imageVector = chip.icon,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodySmall)),
             )
             Text(
                 text = chip.text,

@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentEntry
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentField
@@ -138,7 +139,7 @@ fun AppointmentDayHeader(date: LocalDate, today: LocalDate, modifier: Modifier =
             imageVector = FcIcons.CalendarToday,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.titleSmall)),
         )
         Text(
             text = dayLabel(date, today),
@@ -202,7 +203,7 @@ fun AppointmentLine(
                         imageVector = FcIcons.Schedule,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodySmall)),
                     )
                     Text(
                         text = formatAppointmentTime(appointment.localTime),
@@ -238,7 +239,7 @@ fun AppointmentLine(
                         imageVector = FcIcons.LocationOn,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodySmall)),
                     )
                     Text(
                         text = place,

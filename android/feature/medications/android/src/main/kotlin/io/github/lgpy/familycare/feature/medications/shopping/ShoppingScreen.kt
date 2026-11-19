@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.core.ui.components.PillTile
 import io.github.lgpy.familycare.core.ui.components.ScreenHeader
@@ -278,7 +279,7 @@ private fun ShoppingRow(
                                     imageVector = FcIcons.ErrorFilled,
                                     contentDescription = null,
                                     tint = lowColour,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodyMedium)),
                                 )
                                 Text(
                                     text = pluralStringResource(
@@ -313,7 +314,7 @@ private fun ShoppingRow(
                                 Icon(
                                     imageVector = FcIcons.ReceiptLong,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(text = stringResource(R.string.shopping_got_prescription))
@@ -325,7 +326,7 @@ private fun ShoppingRow(
                                 Icon(
                                     imageVector = FcIcons.AddShoppingCart,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(text = stringResource(R.string.shopping_bought))
@@ -338,7 +339,7 @@ private fun ShoppingRow(
                                 Icon(
                                     imageVector = FcIcons.AddShoppingCart,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(text = stringResource(R.string.shopping_bought))

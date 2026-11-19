@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import java.math.BigDecimal
 import java.time.LocalTime
 
@@ -119,7 +120,7 @@ fun MedsTimeChip(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
             )
             Text(text = label, style = MaterialTheme.typography.labelLarge)
         }

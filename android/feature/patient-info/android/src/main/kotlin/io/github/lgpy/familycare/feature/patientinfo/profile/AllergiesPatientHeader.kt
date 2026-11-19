@@ -24,6 +24,7 @@ import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.AllergyBanner
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.patient.PatientHeader
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -116,7 +117,7 @@ private fun ConditionChip(text: String) {
             imageVector = FcIcons.EcgHeart,
             contentDescription = null,
             tint = scheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodyMedium)),
         )
         Text(
             text = text,

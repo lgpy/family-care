@@ -56,6 +56,7 @@ import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.AllergyBanner
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.core.ui.components.PillTile
 import io.github.lgpy.familycare.core.ui.components.pillDescription
@@ -409,7 +410,7 @@ private fun MedicationRow(
                     Icon(
                         imageVector = FcIcons.Block,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodyMedium)),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
@@ -560,7 +561,7 @@ private fun GiveChip(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(

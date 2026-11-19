@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.core.ui.components.SectionHeader
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentField
@@ -249,7 +250,7 @@ private fun WhatSection(state: AppointmentFormUiState, onKind: (AppointmentKind)
                         Icon(
                             imageVector = kind.icon(),
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                         )
                     },
                     modifier = Modifier.heightIn(min = 44.dp),
@@ -393,7 +394,7 @@ private fun WhereSection(state: AppointmentFormUiState, onPlace: (String) -> Uni
                             Icon(
                                 imageVector = FcIcons.History,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                             )
                         },
                     )
@@ -434,7 +435,7 @@ private fun BeforeGoingSection(
                         Icon(
                             imageVector = tag.icon(),
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                         )
                     },
                     modifier = Modifier.heightIn(min = 44.dp),

@@ -52,6 +52,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.core.ui.components.PillTile
 import io.github.lgpy.familycare.core.ui.components.StockMeter
@@ -550,7 +551,7 @@ private fun StockSection(
                     Icon(
                         imageVector = FcIcons.AddShoppingCart,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = stringResource(R.string.shopping_bought))
@@ -562,7 +563,7 @@ private fun StockSection(
                     Icon(
                         imageVector = FcIcons.Tally3,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = stringResource(R.string.meds_stock_count))

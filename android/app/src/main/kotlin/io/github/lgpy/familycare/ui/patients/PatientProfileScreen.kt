@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,9 +49,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.CoreError
 import io.github.lgpy.familycare.core.domain.circle.PatientExportFormat
@@ -58,6 +62,7 @@ import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.patient.PatientHeaders
 import io.github.lgpy.familycare.core.ui.patient.PatientTabIcon
 import io.github.lgpy.familycare.core.ui.patient.PatientTabs
@@ -109,7 +114,13 @@ fun PatientProfileScreen(
     }
     val selectedIndex = contributed.indexOfFirst { it.id == selectedTabId }
     val historySelected = selectedIndex < 0
-    val tabIndex = if (historySelected) contributed.size else selectedIndex
+    val profileTabs = contributed.map { tab ->
+        ProfileTab(id = tab.id, label = stringResource(tab.titleRes), icon = tab.icon)
+    } + ProfileTab(
+        id = HISTORY_TAB_ID,
+        label = stringResource(R.string.patient_tab_history),
+        icon = PatientTabIcon.HISTORY,
+    )
 
     var confirmingArchive by remember { mutableStateOf(false) }
     var confirmingUnarchive by remember { mutableStateOf(false) }
@@ -166,9 +177,10 @@ fun PatientProfileScreen(
                 patientId = patient,
                 displayName = uiState.displayName,
                 age = patientAge(uiState.birthYear),
-                reminderLine = reminderLine(
+                reminderSummary = reminderSummary(
                     policy = uiState.reminderPolicy,
                     primaryCaregiverName = uiState.primaryCaregiverName,
+                    primaryCaregiverIsMe = uiState.primaryCaregiverIsMe,
                 ),
             )
         }
@@ -222,41 +234,19 @@ fun PatientProfileScreen(
 
                 // History is the shell's tab, so it is drawn after the
                 // contributions rather than registered as one.
-                // The profile's tabs span the screen and scroll to its edges;
-                // 16 dp edge padding lines the first tab up with the head above,
-                // and a long label is never clipped inside a content padding.
+                // Fixed equal-width tabs while all four labels fit their
+                // quarter at the current font; four labels in a scrollable row
+                // push "History" past the edge, so the last tab disappears
+                // behind a scroll nobody expects. When a label no longer fits
+                // (a longer translation, a larger font) the row scrolls again
+                // rather than clipping the word.
                 // Each tab carries its icon above the label, filled while
                 // selected (screens v2, design-system §6).
-                PrimaryScrollableTabRow(
-                    selectedTabIndex = tabIndex,
-                    edgePadding = 16.dp,
-                ) {
-                    contributed.forEach { tab ->
-                        val selected = !historySelected && tab.id == selectedTabId
-                        Tab(
-                            selected = selected,
-                            onClick = { selectedTabId = tab.id },
-                            icon = {
-                                Icon(
-                                    imageVector = tab.icon.image(selected),
-                                    contentDescription = null,
-                                )
-                            },
-                            text = { Text(text = stringResource(tab.titleRes)) },
-                        )
-                    }
-                    Tab(
-                        selected = historySelected,
-                        onClick = { selectedTabId = HISTORY_TAB_ID },
-                        icon = {
-                            Icon(
-                                imageVector = PatientTabIcon.HISTORY.image(historySelected),
-                                contentDescription = null,
-                            )
-                        },
-                        text = { Text(text = stringResource(R.string.patient_tab_history)) },
-                    )
-                }
+                ProfileTabRow(
+                    tabs = profileTabs,
+                    selectedId = if (historySelected) HISTORY_TAB_ID else selectedTabId,
+                    onSelect = { selectedTabId = it },
+                )
 
                 Box(modifier = Modifier.weight(1f)) {
                     val tab = contributed.firstOrNull { it.id == selectedTabId }
@@ -525,24 +515,19 @@ private fun PatientProfileTopBar(
 
 /**
  * The profile head (screens v2): the 60 dp identity avatar beside the patient's
- * name, and one line under it with the age and how reminders are routed.
+ * name, and two short lines under it — the age, and how reminders are routed.
  *
- * The line is built from the patient's own values: the age only when a year of
- * birth is recorded (D33: the full date is deliberately not stored), and the
- * reminder text from the same policy wording the list used to show.
+ * The second line is one glanceable phrase with an alarm icon instead of the
+ * full policy wording (which took four lines at 200% font): see
+ * [reminderSummaryKind]. It wraps at word boundaries like the name above it.
  */
 @Composable
 private fun PatientProfileHead(
     patientId: PatientId,
     displayName: String,
     age: Int?,
-    reminderLine: String?,
+    reminderSummary: String?,
 ) {
-    val details = listOfNotNull(
-        age?.let { years -> pluralStringResource(R.plurals.patient_age_years, years, years) },
-        reminderLine,
-    )
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -564,32 +549,55 @@ private fun PatientProfileHead(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
-            if (details.isNotEmpty()) {
+            age?.let { years ->
                 Text(
-                    text = details.joinToString(" · "),
+                    text = pluralStringResource(R.plurals.patient_age_years, years, years),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            reminderSummary?.let { summary ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = FcIcons.Alarm,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodyMedium)),
+                    )
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
 }
 
 /**
- * "reminders: Primary with escalation · Primary: Mom", the same policy wording
- * the patient form and the list use; null when the patient is not loaded.
+ * The one-line reminder summary of the policy, or the policy's own label when
+ * it has no short human phrase; null while the patient is not loaded.
  */
 @Composable
-private fun reminderLine(
+private fun reminderSummary(
     policy: ReminderPolicy?,
     primaryCaregiverName: String?,
+    primaryCaregiverIsMe: Boolean,
 ): String? {
-    if (policy == null) return null
-    val label = stringResource(policy.labelRes())
-    val hint = primaryCaregiverName
-        ?.let { name -> label + " · " + stringResource(R.string.patients_primary_name, name) }
-        ?: label
-    return stringResource(R.string.patients_reminders_line, hint)
+    val firstName = firstNameOf(primaryCaregiverName)
+    return when (reminderSummaryKind(policy, firstName, primaryCaregiverIsMe)) {
+        null -> null
+        ReminderSummaryKind.PRIMARY_FIRST ->
+            stringResource(R.string.patients_reminder_primary_first, firstName.orEmpty())
+
+        ReminderSummaryKind.YOU_FIRST -> stringResource(R.string.patients_reminder_you_first)
+        ReminderSummaryKind.EVERYONE -> stringResource(R.string.patients_reminder_everyone)
+        ReminderSummaryKind.POLICY -> stringResource(policy!!.labelRes())
+    }
 }
 
 /** The outlined icon of a tab, and its filled variant while it is selected. */
@@ -789,3 +797,100 @@ private fun TimelineKind.isPromoted(): Boolean = when (this) {
 
     else -> false
 }
+
+/** One tab of the profile: the contributed ones, then the app-owned History. */
+private data class ProfileTab(
+    val id: String,
+    val label: String,
+    val icon: PatientTabIcon,
+)
+
+/** Breathing room a fixed tab needs on each side of its label. */
+private val FixedTabLabelGap = 8.dp
+
+/**
+ * Whether [labelWidthsPx] all fit their equal share of [availableWidthPx],
+ * with [tabPaddingPx] of breathing room on each side.
+ *
+ * Pure and pixel-based on purpose: the decision is a measurement of the labels
+ * in the user's font, never `fontScale` (docs/ux/design-system.md §1). An
+ * empty list fits — there is nothing to cut.
+ */
+internal fun fixedTabsFit(
+    availableWidthPx: Int,
+    labelWidthsPx: List<Int>,
+    tabPaddingPx: Int,
+): Boolean {
+    if (labelWidthsPx.isEmpty()) return true
+    if (availableWidthPx <= 0) return false
+    val perTab = availableWidthPx.toFloat() / labelWidthsPx.size
+    return labelWidthsPx.all { width -> width + tabPaddingPx <= perTab }
+}
+
+/**
+ * The profile's tab strip: four equal-width tabs while every label fits its
+ * quarter, otherwise the scrollable row.
+ *
+ * With a fixed row "History" is always on screen; the scrollable row pushed it
+ * past the right edge even at 100%, so the fourth tab looked missing. When a
+ * label genuinely does not fit (a longer translation, or 200% font) scrolling
+ * is the honest fallback: the labels stay whole instead of being trimmed.
+ */
+@Composable
+private fun ProfileTabRow(
+    tabs: List<ProfileTab>,
+    selectedId: String,
+    onSelect: (String) -> Unit,
+) {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val style = MaterialTheme.typography.titleSmall
+
+    // The row's own width, not the screen's: a split-screen window measures its
+    // quarter from what the tabs actually get.
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val rowWidth = maxWidth
+        val fixed = remember(measurer, tabs, style, rowWidth, density) {
+            val labelWidths = tabs.map { tab ->
+                measurer.measure(text = tab.label, style = style, maxLines = 1).size.width
+            }
+            with(density) {
+                fixedTabsFit(
+                    availableWidthPx = rowWidth.roundToPx(),
+                    labelWidthsPx = labelWidths,
+                    tabPaddingPx = FixedTabLabelGap.roundToPx(),
+                )
+            }
+        }
+        val selectedIndex = tabs.indexOfFirst { it.id == selectedId }.coerceAtLeast(0)
+
+        val tabContent: @Composable () -> Unit = {
+            tabs.forEach { tab ->
+                val selected = tab.id == selectedId
+                Tab(
+                    selected = selected,
+                    onClick = { onSelect(tab.id) },
+                    icon = {
+                        Icon(
+                            imageVector = tab.icon.image(selected),
+                            contentDescription = null,
+                        )
+                    },
+                    text = { Text(text = tab.label) },
+                )
+            }
+        }
+
+        if (fixed) {
+            PrimaryTabRow(selectedTabIndex = selectedIndex) { tabContent() }
+        } else {
+            PrimaryScrollableTabRow(
+                selectedTabIndex = selectedIndex,
+                edgePadding = ProfileTabEdgePadding,
+            ) { tabContent() }
+        }
+    }
+}
+
+/** The scrollable row's edge padding: the first tab lines up with the head. */
+private val ProfileTabEdgePadding = 16.dp

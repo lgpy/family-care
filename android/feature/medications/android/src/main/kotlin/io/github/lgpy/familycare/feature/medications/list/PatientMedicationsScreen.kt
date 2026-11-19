@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PillTile
 import io.github.lgpy.familycare.core.ui.components.ScreenHeader
 import io.github.lgpy.familycare.core.ui.components.StockMeter
@@ -170,7 +171,7 @@ private fun PatientMedicationsList(
                     Icon(
                         imageVector = FcIcons.Add,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = stringResource(R.string.meds_list_add))
@@ -208,7 +209,7 @@ private fun PatientMedicationsList(
                         Icon(
                             imageVector = FcIcons.History,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(

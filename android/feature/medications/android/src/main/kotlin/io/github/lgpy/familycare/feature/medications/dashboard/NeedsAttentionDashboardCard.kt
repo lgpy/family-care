@@ -140,9 +140,19 @@ internal fun attentionRows(
     if (health != null && !health.isHealthy) add(AttentionRow.Reminders(health.problems))
 }
 
+/**
+ * Whether a dose row offers its one-tap confirm button: only a member who may
+ * write, and only while something is still open. A read-only viewer and a
+ * fully confirmed group keep the chevron (the row still opens the dose slot).
+ *
+ * Separated from the composable so the rule is testable without a device; the
+ * plural wording itself lives in `meds_give_all` and `meds_attention_medicines`.
+ */
+internal fun showsGiveAction(canWrite: Boolean, allConfirmed: Boolean): Boolean =
+    canWrite && !allConfirmed
+
 @Composable
-private fun AttentionRow.toItem(
-    canWrite: Boolean,
+private fun AttentionRow.toItem(    canWrite: Boolean,
     onGive: (DoseGroupUi) -> Unit,
     onNavigate: (String) -> Unit,
 ): AttentionItem = when (this) {
@@ -154,11 +164,11 @@ private fun AttentionRow.toItem(
             formatTime(group.time),
         ),
         supportingText = pluralStringResource(
-            R.plurals.reminder_notification_medications,
+            R.plurals.meds_attention_medicines,
             group.doseCount,
             group.doseCount,
         ),
-        action = if (canWrite && !group.allConfirmed) {
+        action = if (showsGiveAction(canWrite, group.allConfirmed)) {
             AttentionAction(
                 label = pluralStringResource(
                     R.plurals.meds_give_all,

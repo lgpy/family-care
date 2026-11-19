@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.feature.patientinfo.domain.EmergencyContactField
 import io.github.lgpy.familycare.feature.patientinfo.domain.PatientInfoField
@@ -485,7 +486,7 @@ private fun EntryChip(
                 imageVector = icon,
                 contentDescription = null,
                 tint = content,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodyMedium)),
             )
         }
         Text(
@@ -503,7 +504,7 @@ private fun EntryChip(
                 imageVector = icon,
                 contentDescription = null,
                 tint = content,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodyMedium)),
             )
         }
     }
@@ -569,7 +570,7 @@ private fun ContactSection(
                 Icon(
                     imageVector = FcIcons.Add,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
                 )
                 Text(
                     text = stringResource(R.string.patient_info_add_contact),

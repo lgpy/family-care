@@ -45,6 +45,7 @@ import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.domain.circle.canWrite
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.SectionHeader
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -353,7 +354,7 @@ private fun FieldLabel(@StringRes text: Int, icon: ImageVector) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodyLarge)),
         )
         Text(text = stringResource(text))
     }

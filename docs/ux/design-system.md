@@ -197,6 +197,11 @@ while only the icons actually used are bundled.
 - **Sizing:** 24 dp like the rest of the chrome, fixed regardless of font
   scale. Icons are decorative next to a label (`contentDescription = null`); an
   icon-only control, if ever added, must carry its own description.
+- **Inline with text:** an icon that shares a line with text (a meta line, a
+  chip, a tag, a summary row) grows with that text instead — size it with
+  `inlineIconSize(style)` from `core/ui`, which measures the style's font at the
+  user's scale and clamps to 16–32 dp, so a 16 dp dot never sits beside 200%
+  text; chrome, top bar and tile icons stay a fixed 24 dp.
 
 ## 7. Checking 100%, 150% and 200%
 

@@ -57,6 +57,8 @@ data class PatientProfileUiState(
     val reminderPolicy: ReminderPolicy? = null,
     /** The name of the caregiver reminded first, when there is one. */
     val primaryCaregiverName: String? = null,
+    /** The caregiver reminded first is the signed-in user ("You first, then everyone"). */
+    val primaryCaregiverIsMe: Boolean = false,
     val canWrite: Boolean = false,
     val canManage: Boolean = false,
     val isArchived: Boolean = false,
@@ -129,6 +131,9 @@ class PatientProfileViewModel(
             primaryCaregiverName = patient?.primaryCaregiverId?.let { primaryId ->
                 members.firstOrNull { it.userId == primaryId }?.displayName
             },
+            primaryCaregiverIsMe = patient?.primaryCaregiverId?.let { primaryId ->
+                members.firstOrNull { it.userId == primaryId }?.isMe
+            } == true,
             canWrite = patient != null && role.canWrite(patient),
             canManage = role.canManage,
             isArchived = patient?.isArchived == true,

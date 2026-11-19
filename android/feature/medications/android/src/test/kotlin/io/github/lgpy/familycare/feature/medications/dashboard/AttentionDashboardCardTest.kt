@@ -7,6 +7,7 @@ import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealth
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderProblem
 import java.time.LocalDateTime
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -119,5 +120,30 @@ class AttentionDashboardCardTest {
         )
 
         assertTrue(rows.isEmpty())
+    }
+
+    @Test
+    fun `a single unconfirmed dose still offers its one-tap action`() {
+        // The row's copy is "Grandpa's 08:00 not confirmed" + "1 medicine", and
+        // the button says "Give it" (meds_give_all's singular). The pure part is
+        // that a writable member sees the action while something is open.
+        assertTrue(showsGiveAction(canWrite = true, allConfirmed = false))
+    }
+
+    @Test
+    fun `a fully confirmed group and a read-only member get the chevron`() {
+        assertFalse(showsGiveAction(canWrite = true, allConfirmed = true))
+        assertFalse(showsGiveAction(canWrite = false, allConfirmed = false))
+    }
+
+    @Test
+    fun `the dose row's detail counts the group's medicines`() {
+        val row = attentionRows(
+            doses = NeedsAttentionUiState(groups = listOf(doseGroup)),
+            stock = LowStockUiState(loaded = true),
+            health = null,
+        ).single() as AttentionRow.DoseGroup
+
+        assertEquals(1, row.group.doseCount)
     }
 }

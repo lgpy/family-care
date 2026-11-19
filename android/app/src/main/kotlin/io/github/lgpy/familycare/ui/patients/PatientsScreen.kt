@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.core.ui.components.ScreenHeader
 import io.github.lgpy.familycare.core.ui.patient.PatientSummaryIcon
@@ -231,7 +232,7 @@ private fun PatientListRow(
                                 imageVector = item.icon.image(),
                                 contentDescription = null,
                                 tint = scheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodySmall)),
                             )
                             Text(
                                 text = item.text,

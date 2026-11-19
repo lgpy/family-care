@@ -168,7 +168,7 @@ fun DoseSlot(
                     Icon(
                         imageVector = FcIcons.CheckCircle,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodySmall)),
                     )
                     Text(
                         text = slot.givenText,

@@ -56,6 +56,18 @@ Nothing in this repository links to a remote project: linking and `db push` are
 done by hand, on purpose, so a stray command cannot touch prod. Dev holds
 invented test data only — never real health data.
 
+Current CLI versions target the **local** stack unless told otherwise, so a
+remote push needs the flag:
+
+```bash
+npx supabase@latest link --project-ref <ref>        # dev, then later prod
+npx supabase@latest db push --remote                # without --remote: local only
+npx supabase@latest migration list --remote         # check: every local row has a remote one
+```
+
+Push to prod **before** installing an app version that writes new columns, or
+its uploads are rejected (D33).
+
 ## What exists so far (M1–M7)
 
 M1 (walking skeleton):
