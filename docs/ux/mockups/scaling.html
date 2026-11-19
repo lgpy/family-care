@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Family Care · one design at system font and display sizes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ---------- Dynamic colour samples (Material You roles from 3 wallpapers) ---------- */
+  :root { color-scheme: light; }
+  body[data-seed="green"] {
+    --primary:#3A6A4F; --on-primary:#fff; --pc:#BCEFCF; --on-pc:#00210F; --sc:#D2E8D6; --on-sc:#0E1F14;
+    --surface:#F6FBF4; --sc-low:#F0F5EE; --sc-mid:#EAEFE8; --sc-high:#E4EAE3; --on-surface:#171D19; --on-sv:#404943; --outline-v:#C0C9C1;
+  }
+  body[data-seed="blue"] {
+    --primary:#3F5F91; --on-primary:#fff; --pc:#D6E3FF; --on-pc:#001B3E; --sc:#DBE2F9; --on-sc:#141B2C;
+    --surface:#F9F9FF; --sc-low:#F3F3FA; --sc-mid:#EDEDF4; --sc-high:#E7E8EE; --on-surface:#191C20; --on-sv:#43474E; --outline-v:#C4C6CF;
+  }
+  body[data-seed="rose"] {
+    --primary:#8B4A62; --on-primary:#fff; --pc:#FFD9E3; --on-pc:#3A071F; --sc:#F2DDE2; --on-sc:#2B151C;
+    --surface:#FFF8F8; --sc-low:#FDF0F2; --sc-mid:#F7EBED; --sc-high:#F1E5E7; --on-surface:#22191C; --on-sv:#514347; --outline-v:#D5C2C6;
+  }
+  body[data-dark][data-seed="green"] {
+    --primary:#A1D3B4; --on-primary:#053822; --pc:#215239; --on-pc:#BCEFCF; --sc:#374B3D; --on-sc:#D2E8D6;
+    --surface:#0F1511; --sc-low:#171D19; --sc-mid:#1B211D; --sc-high:#252B27; --on-surface:#DEE4DD; --on-sv:#C0C9C1; --outline-v:#404943;
+  }
+  body[data-dark][data-seed="blue"] {
+    --primary:#A8C8FF; --on-primary:#07305F; --pc:#254777; --on-pc:#D6E3FF; --sc:#3E4759; --on-sc:#DBE2F9;
+    --surface:#111318; --sc-low:#191C20; --sc-mid:#1D2024; --sc-high:#282A2F; --on-surface:#E1E2E8; --on-sv:#C4C6CF; --outline-v:#43474E;
+  }
+  body[data-dark][data-seed="rose"] {
+    --primary:#FFB0C9; --on-primary:#541D34; --pc:#6F334A; --on-pc:#FFD9E3; --sc:#5A3F47; --on-sc:#FFD9E3;
+    --surface:#191113; --sc-low:#22191C; --sc-mid:#261D1F; --sc-high:#31282A; --on-surface:#EFDFE1; --on-sv:#D5C2C6; --outline-v:#514347;
+  }
+
+  /* ---------- Fixed semantic colours (never follow the wallpaper) ---------- */
+  body {
+    --attn-c:#FFDDB3; --on-attn-c:#2A1800; --attn:#8A5100;
+    --crit-c:#FFDAD6; --on-crit-c:#410002; --crit:#BA1A1A;
+    --p-maria:#9A4F00; --p-antonio:#00687A; --p-ana:#6B4EA2; --p-you:#5D6300;
+  }
+  body[data-dark] {
+    color-scheme: dark;
+    --attn-c:#5A3500; --on-attn-c:#FFDDB3; --attn:#FFB95C;
+    --crit-c:#93000A; --on-crit-c:#FFDAD6; --crit:#FFB4AB;
+    --p-maria:#FFB77C; --p-antonio:#53D7F1; --p-ana:#D4BBFF; --p-you:#C6CE6C;
+  }
+
+  /* ---------- Page chrome (outside the phones) ---------- */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+    background: #D9D9D6; color: #222; min-height: 100vh;
+    font-variant-numeric: tabular-nums;
+  }
+  body[data-dark] { background: #2A2A2A; color: #ddd; }
+  .bar {
+    display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; justify-content: center;
+    padding: 20px 24px 8px; font-size: 14px;
+  }
+  .bar fieldset { border: 0; padding: 0; margin: 0; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .bar legend { float: left; margin-right: 8px; font-weight: 600; }
+  .bar button {
+    font: inherit; border: 1px solid #0003; background: #fff8; color: inherit; border-radius: 999px;
+    padding: 6px 14px; cursor: pointer;
+  }
+  body[data-dark] .bar button { background: #fff1; border-color: #fff3; }
+  .bar button[aria-pressed="true"] { background: #222; color: #fff; border-color: #222; }
+  body[data-dark] .bar button[aria-pressed="true"] { background: #eee; color: #111; }
+  .bar button:focus-visible { outline: 3px solid #4A7BD0; outline-offset: 2px; }
+  .swatch { width: 14px; height: 14px; border-radius: 50%; display: inline-block; vertical-align: -2px; margin-right: 6px; }
+
+  .stage { display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; padding: 16px 24px 48px; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .col h2 { margin: 0; font-size: 17px; font-weight: 700; }
+  .col p.note { margin: 0; font-size: 13px; max-width: 384px; min-height: 38px; text-align: center; opacity: .75; line-height: 1.45; }
+
+  /* ---------- Phone ----------
+     Frame is 384 x 820 physical px (Galaxy A class). Inside, 1px = 1dp at default display size.
+     "Display size" zooms the screen: fewer dp fit across, everything in dp gets bigger.
+     "Font size" only changes the --fs-* values (sp), set from JS with Android 14's non-linear curve. */
+  .phone {
+    width: 384px; height: 820px; border-radius: 36px; overflow: hidden; position: relative;
+    box-shadow: 0 0 0 10px #1a1a1a, 0 20px 50px #0005; background: var(--surface);
+  }
+  .screen {
+    width: calc(384px / var(--dz, 1)); height: calc(820px / var(--dz, 1)); zoom: var(--dz, 1);
+    background: var(--surface); color: var(--on-surface);
+    display: flex; flex-direction: column;
+    --tap: 48px; --gap: 12px; --pad: 16px; --avatar: 32px; --radius: 20px;
+  }
+  .status { height: 32px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 13px; font-weight: 600; }
+  .scroll { flex: 1; overflow-y: auto; padding: 0 var(--pad) 24px; scrollbar-width: none; }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  /* Reflow pattern used everywhere: content and action share a row while both fit;
+     when they don't, the action drops below and fills the width. (Compose: a measuring
+     Layout / FlowRow, never a font-scale threshold.) */
+  .reflow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+  .reflow > .content { flex: 999 1 auto; min-width: 0; } /* basis = its natural width */
+  .reflow > .action { flex: 1 0 auto; }                  /* grows only once it's alone on its line */
+
+  .appbar { padding: 10px 0 14px; }
+  .appbar h1 { margin: 0; font-size: var(--fs-title); font-weight: 700; line-height: 1.15; letter-spacing: -.01em; }
+  .appbar .date { display: block; font-size: var(--fs-small); font-weight: 500; color: var(--on-sv); letter-spacing: 0; margin-top: 2px; }
+
+  .chip {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 4px 12px;
+    border: 1px solid var(--outline-v); border-radius: 10px; font-size: var(--fs-small); font-weight: 500; color: var(--on-sv);
+  }
+
+  .avatar {
+    width: var(--avatar); height: var(--avatar); flex: none; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 700; font-size: 15px; /* fixed: an initial in a dp circle */
+    color: var(--surface); background: var(--pc-col);
+  }
+
+  section { margin-top: 20px; }
+  section > h3 { margin: 0 0 8px; font-size: var(--fs-section); font-weight: 700; }
+
+  /* Needs attention: the only coloured block on the screen */
+  .attn {
+    background: var(--attn-c); color: var(--on-attn-c); border-radius: var(--radius);
+    padding: var(--pad); display: flex; flex-direction: column; gap: var(--gap);
+  }
+  .attn .row { display: flex; gap: 12px; align-items: flex-start; }
+  .attn .icon { color: var(--attn); flex: none; margin-top: 2px; }
+  .attn strong { font-size: var(--fs-body); display: block; line-height: 1.3; }
+  .attn span.sub { font-size: var(--fs-small); display: block; margin-top: 3px; line-height: 1.4; opacity: .85; }
+  .attn hr { border: 0; border-top: 1px solid color-mix(in srgb, var(--on-attn-c) 18%, transparent); margin: 0; }
+
+  .btn {
+    font: inherit; font-size: var(--fs-body); font-weight: 700; border: 0; cursor: pointer;
+    min-height: var(--tap); padding: 6px 18px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    line-height: 1.2; text-align: center;
+  }
+  .btn.filled { background: var(--primary); color: var(--on-primary); }
+  .btn.tonal { background: var(--sc); color: var(--on-sc); }
+  .btn.attn-btn { background: var(--attn); color: var(--attn-c); }
+  .btn.block { width: 100%; }
+  .btn:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+  /* Time rail: times on the left while the rail is at most ~a quarter of the width;
+     otherwise each time becomes a heading above its slots (class set by measuring). */
+  .rail { display: grid; grid-template-columns: max-content 1fr; column-gap: 12px; }
+  .rail .time {
+    font-size: var(--fs-time); font-weight: 700; letter-spacing: -.02em; line-height: 1; padding-top: 14px;
+  }
+  .rail .time.done { color: var(--on-sv); opacity: .55; }
+  .rail .time small { display: block; font-size: var(--fs-small); font-weight: 500; letter-spacing: 0; color: var(--on-sv); margin-top: 6px; line-height: 1.2; }
+  .rail.stacked { grid-template-columns: 1fr; }
+  .rail .time { width: min-content; } /* the countdown wraps under the time instead of widening the rail */
+  .rail.stacked .time { width: auto; padding: 10px 2px 8px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .rail.stacked .time small { margin-top: 0; }
+
+  .slot {
+    background: var(--sc-mid); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px;
+  }
+  .slot.done { background: transparent; border: 1px dashed var(--outline-v); }
+  .slot.next { background: var(--pc); color: var(--on-pc); }
+  .who { display: flex; align-items: center; gap: 10px; }
+  .who b { font-size: var(--fs-body); font-weight: 700; display: block; line-height: 1.25; }
+  .who .meta { font-size: var(--fs-small); opacity: .8; display: block; margin-top: 1px; line-height: 1.3; }
+  .slot.done .who { color: var(--on-sv); }
+  .check { color: var(--on-sv); display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-small); line-height: 1.3; }
+  .check svg { flex: none; }
+
+  .upcoming { display: flex; flex-direction: column; gap: 2px; border-radius: var(--radius); overflow: hidden; }
+  .upcoming .item { background: var(--sc-low); padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .day { flex: none; min-width: 40px; text-align: center; line-height: 1.05; }
+  .day b { display: block; font-size: var(--fs-time-s); font-weight: 700; }
+  .day span { font-size: var(--fs-small); color: var(--on-sv); }
+  .item .txt { flex: 1 1 10em; min-width: 0; }
+  .item .txt b { display: block; font-size: var(--fs-body); font-weight: 600; line-height: 1.25; }
+  .item .txt span { display: block; font-size: var(--fs-small); color: var(--on-sv); margin-top: 2px; line-height: 1.35; }
+  .flag { font-size: var(--fs-small); font-weight: 700; color: var(--attn); }
+
+  /* Profile */
+  .topbar { display: flex; justify-content: space-between; align-items: center; height: 56px; }
+  .profile-head { display: flex; gap: 14px; align-items: center; padding: 4px 0 14px; flex-wrap: wrap; }
+  .profile-head .avatar { --avatar: 56px; font-size: 24px; }
+  .profile-head h1 { margin: 0; font-size: var(--fs-title); line-height: 1.15; }
+  .profile-head span { font-size: var(--fs-small); color: var(--on-sv); }
+  .allergy {
+    background: var(--crit-c); color: var(--on-crit-c); border-radius: 14px; padding: 12px 14px;
+    display: flex; gap: 10px; align-items: flex-start; font-size: var(--fs-body); line-height: 1.35;
+  }
+  .allergy .icon { color: var(--crit); flex: none; margin-top: 2px; }
+  .conditions { font-size: var(--fs-small); color: var(--on-sv); margin: 12px 2px 0; line-height: 1.45; }
+  .tabs { display: flex; gap: 4px; margin-top: 16px; border-bottom: 1px solid var(--outline-v); overflow-x: auto; scrollbar-width: none; }
+  .tab { font-size: var(--fs-small); font-weight: 600; padding: 4px 12px; min-height: var(--tap); display: flex; align-items: center; color: var(--on-sv); border-bottom: 3px solid transparent; white-space: nowrap; }
+  .tab.on { color: var(--primary); border-color: var(--primary); }
+  .med { padding: 14px 2px; border-bottom: 1px solid var(--outline-v); display: flex; flex-direction: column; gap: 6px; }
+  .med b { font-size: var(--fs-body); line-height: 1.25; }
+  .med .times { font-size: var(--fs-small); color: var(--on-sv); line-height: 1.35; }
+  .stock { display: flex; align-items: center; gap: 6px 10px; font-size: var(--fs-small); color: var(--on-sv); flex-wrap: wrap; }
+  .meter { flex: 1 1 6em; height: 8px; border-radius: 4px; background: var(--sc-high); overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
+  .meter.low i { background: var(--attn); }
+  .stock.low { color: var(--attn); font-weight: 700; }
+
+  /* Bottom nav: labels are sp, so they grow; at large sizes they wrap rather than truncate. */
+  nav.bottom {
+    flex: none; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--sc-mid);
+    padding: 10px 2px 14px;
+  }
+  nav.bottom div { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: var(--fs-label); font-weight: 600; color: var(--on-sv); text-align: center; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; }
+  nav.bottom .pill { width: 56px; height: 32px; border-radius: 16px; display: grid; place-items: center; }
+  nav.bottom .on { color: var(--on-surface); }
+  nav.bottom .on .pill { background: var(--sc); color: var(--on-sc); }
+  svg { display: block; }
+</style>
+</head>
+<body data-seed="green">
+  <div class="bar" role="toolbar" aria-label="Mockup controls">
+    <fieldset id="seed"><legend>Wallpaper</legend>
+      <button data-v="green" aria-pressed="true"><span class="swatch" style="background:#3A6A4F"></span>Green</button>
+      <button data-v="blue" aria-pressed="false"><span class="swatch" style="background:#3F5F91"></span>Blue</button>
+      <button data-v="rose" aria-pressed="false"><span class="swatch" style="background:#8B4A62"></span>Rose</button>
+    </fieldset>
+    <fieldset id="mode"><legend>Mode</legend>
+      <button data-v="light" aria-pressed="true">Light</button>
+      <button data-v="dark" aria-pressed="false">Dark</button>
+    </fieldset>
+    <fieldset id="screen"><legend>Screen</legend>
+      <button data-v="today" aria-pressed="true">Today</button>
+      <button data-v="profile" aria-pressed="false">Patient profile</button>
+    </fieldset>
+  </div>
+  <div class="bar" role="toolbar" aria-label="Right phone system settings">
+    <fieldset id="font"><legend>Right phone font size</legend>
+      <button data-v="1.3" aria-pressed="false">130%</button>
+      <button data-v="1.5" aria-pressed="false">150%</button>
+      <button data-v="2" aria-pressed="true">200%</button>
+    </fieldset>
+    <fieldset id="display"><legend>Display size</legend>
+      <button data-v="1" aria-pressed="true">Default</button>
+      <button data-v="1.15" aria-pressed="false">Larger</button>
+      <button data-v="1.3" aria-pressed="false">Largest</button>
+    </fieldset>
+  </div>
+
+  <main class="stage">
+    <div class="col">
+      <h2>Phone defaults</h2>
+      <p class="note">100% font, default display size.</p>
+      <div class="phone"><div class="screen" id="p-a"></div></div>
+    </div>
+    <div class="col">
+      <h2 id="b-title">Same app, larger settings</h2>
+      <p class="note" id="b-note"></p>
+      <div class="phone"><div class="screen" id="p-b"></div></div>
+    </div>
+  </main>
+
+<script>
+/* Android 14+ non-linear font scaling, approximated from the platform's lookup tables:
+   small text grows by the full factor, large text grows much less. */
+const CURVE = {
+  1:   s => s,
+  1.3: s => interp(s, [[8,10.4],[10,13],[12,15.6],[14,18.2],[18,20.8],[20,24],[24,26.4],[30,31.5],[100,100]]),
+  1.5: s => interp(s, [[8,12],[10,15],[12,18],[14,21],[18,23.4],[20,27],[24,28.8],[30,33],[100,100]]),
+  2:   s => interp(s, [[8,16],[10,20],[12,24],[14,28],[18,32],[20,36],[24,38.4],[30,43.5],[100,100]]),
+};
+function interp(x, pts) {
+  for (let i = 1; i < pts.length; i++) {
+    const [x0,y0] = pts[i-1], [x1,y1] = pts[i];
+    if (x <= x1) return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+  }
+  return x;
+}
+/* Type scale in sp (base sizes). */
+const TYPE = { body: 16, small: 14, label: 12, section: 16, title: 24, time: 24, 'time-s': 20 };
+function applyScale(el, f) {
+  for (const [k, sp] of Object.entries(TYPE)) el.style.setProperty(`--fs-${k}`, CURVE[f](sp).toFixed(1) + 'px');
+}
+
+const I = {
+  warn: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>',
+  check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z"/></svg>',
+  box: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-4V4l-2-2h-4L8 4v2H4L2 8v11l2 2h16l2-2V8l-2-2Zm-10-2h4v2h-4V4Zm10 15H4V8h16v11Zm-7-9h-2v3H8v2h3v3h2v-3h3v-2h-3v-3Z"/></svg>',
+  allergy: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-2h2v2Zm0-4h-2V7h2v6Z"/></svg>',
+  back: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20v-2Z"/></svg>',
+  more: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
+  today: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M10 13H4v7h6v-7Zm10-9h-6v7h6V4Zm0 9h-6v7h6v-7ZM10 4H4v7h6V4Z"/></svg>',
+  people: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 2c-2.3 0-7 1.2-7 3.5V19h14v-2.5C15 14.2 10.3 13 8 13Zm8 0h-1a4.3 4.3 0 0 1 2 3.5V19h6v-2.5c0-2.3-4.7-3.5-7-3.5Z"/></svg>',
+  cal: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 16H5V10h14v10ZM7 12h5v5H7v-5Z"/></svg>',
+  cart: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM7.2 14h9.5a2 2 0 0 0 1.8-1L22 6H5.2l-1-2H1v2h2l3.6 7.6L5.2 16A2 2 0 0 0 7 19h12v-2H7.4l1-2Z"/></svg>',
+  menu: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2Zm0-5h18v-2H3v2Zm0-7v2h18V6H3Z"/></svg>',
+  drop: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="m7 10 5 5 5-5H7Z"/></svg>',
+};
+const P = {
+  maria:   { s: 'Maria',   i: 'M', c: 'var(--p-maria)' },
+  antonio: { s: 'António', i: 'A', c: 'var(--p-antonio)' },
+  ana:     { s: 'Mom',     i: 'A', c: 'var(--p-ana)' },
+  you:     { s: 'You',     i: 'L', c: 'var(--p-you)' },
+};
+const av = p => `<span class="avatar" style="--pc-col:${P[p].c}" aria-hidden="true">${P[p].i}</span>`;
+const who = (p, meta) => `<div class="who">${av(p)}<div><b>${P[p].s}</b><span class="meta">${meta}</span></div></div>`;
+
+const nav = active => `
+  <nav class="bottom" aria-label="Main">
+    ${[['today','Today',I.today],['patients','Patients',I.people],['agenda','Agenda',I.cal],['shopping','Shopping',I.cart],['more','More',I.menu]]
+      .map(([k,l,ic]) => `<div class="${k===active?'on':''}"><span class="pill">${ic}</span>${l}</div>`).join('')}
+  </nav>`;
+
+function today() {
+  return `
+  <div class="status"><span>09:12</span><span>82%</span></div>
+  <div class="scroll">
+    <header class="appbar reflow">
+      <h1 class="content">Today<span class="date">Thursday 19 November</span></h1>
+      <span class="chip action">All patients ${I.drop}</span>
+    </header>
+
+    <section aria-label="Needs attention">
+      <div class="attn">
+        <div class="row">
+          <span class="icon">${I.warn}</span>
+          <div>
+            <strong>Maria’s 08:00 medicines aren’t confirmed</strong>
+            <span class="sub">4 medicines. Mom was reminded at 08:00, then you at 08:30.</span>
+          </div>
+        </div>
+        <button class="btn attn-btn block">Give all 4</button>
+        <hr>
+        <div class="row">
+          <span class="icon">${I.box}</span>
+          <div>
+            <strong>Metformin 850 mg is running low</strong>
+            <span class="sub">António has 5 days left. Needs a prescription first.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Doses today">
+      <h3>Doses today</h3>
+      <div class="rail">
+        <div class="time done">08:00</div>
+        <div>
+          <div class="slot done">
+            ${who('antonio', '3 medicines')}
+            <div class="check" style="margin-top:10px">${I.check} Given by Mom at 08:04</div>
+          </div>
+        </div>
+
+        <div class="time">13:00<small>in 3 h 48 min</small></div>
+        <div>
+          <div class="slot next reflow">
+            <div class="content">${who('maria', '2 medicines')}</div>
+            <button class="btn filled action">Give</button>
+          </div>
+        </div>
+
+        <div class="time">21:00</div>
+        <div>
+          ${['you:1','ana:2','maria:1'].map(x => { const [p,n]=x.split(':'); return `
+          <div class="slot reflow">
+            <div class="content">${who(p, `${n} medicine${n>1?'s':''}`)}</div>
+            <button class="btn tonal action">Give</button>
+          </div>`}).join('')}
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Next 7 days">
+      <h3>Next 7 days</h3>
+      <div class="upcoming">
+        <div class="item">
+          <div class="day"><b>23</b><span>Mon</span></div>
+          <div class="txt"><b>Blood test</b><span>António at 08:30, Lab Joaquim Chaves</span></div>
+          <span class="flag">Fasting</span>
+        </div>
+        <div class="item">
+          <div class="day"><b>25</b><span>Wed</span></div>
+          <div class="txt"><b>Cardiology</b><span>Mom at 15:20, Hospital Santa Maria</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+  ${nav('today')}`;
+}
+
+function profile() {
+  const meds = [
+    { n: 'Losartan 50 mg', t: '08:00 and 20:00, 1 tablet', d: 24, pct: 70 },
+    { n: 'Metformin 850 mg', t: '08:00 and 13:00, 1 tablet', d: 5, pct: 14, low: true },
+    { n: 'Atorvastatin 20 mg', t: '21:00, 1 tablet', d: 41, pct: 90 },
+    { n: 'Omeprazole 20 mg', t: '08:00, before breakfast', d: 12, pct: 40 },
+  ];
+  return `
+  <div class="status"><span>09:12</span><span>82%</span></div>
+  <div class="scroll">
+    <header class="topbar"><span>${I.back}</span><span>${I.more}</span></header>
+    <div class="profile-head">
+      ${av('maria')}
+      <div><h1>Grandma Maria</h1><span>84 years old</span></div>
+    </div>
+    <div class="allergy" role="note">
+      <span class="icon">${I.allergy}</span>
+      <b>Allergic to penicillin and ibuprofen</b>
+    </div>
+    <p class="conditions">Hypertension, type 2 diabetes</p>
+    <div class="tabs" role="tablist">
+      <span class="tab on">Medicines</span><span class="tab">Appointments</span><span class="tab">Info</span><span class="tab">History</span>
+    </div>
+    ${meds.map(m => `
+      <div class="med">
+        <b>${m.n}</b>
+        <span class="times">${m.t}</span>
+        <div class="stock ${m.low?'low':''}">
+          <span class="meter ${m.low?'low':''}"><i style="width:${m.pct}%"></i></span>
+          ${m.d} days left
+        </div>
+      </div>`).join('')}
+    <div style="margin-top:18px"><button class="btn tonal block">Add medicine</button></div>
+  </div>
+  ${nav('patients')}`;
+}
+
+/* Measure, don't threshold: the rail stays beside the slots only while the widest time
+   takes at most 26% of the content width. */
+function fitRail(screen) {
+  screen.querySelectorAll('.rail').forEach(r => {
+    r.classList.remove('stacked');
+    const widest = Math.max(...[...r.querySelectorAll('.time')].map(t => t.getBoundingClientRect().width));
+    if (widest > r.getBoundingClientRect().width * 0.26) r.classList.add('stacked');
+  });
+}
+
+const state = { screen: 'today', font: 2, display: 1 };
+function render() {
+  const f = state.screen === 'today' ? today : profile;
+  const a = document.getElementById('p-a'), b = document.getElementById('p-b');
+  applyScale(a, 1); applyScale(b, state.font);
+  b.style.setProperty('--dz', state.display);
+  a.innerHTML = f(); b.innerHTML = f();
+  fitRail(a); fitRail(b);
+  const dp = Math.round(384 / state.display);
+  document.getElementById('b-note').textContent =
+    `${Math.round(state.font*100)}% font, ${['Default','Larger','Largest'][[1,1.15,1.3].indexOf(state.display)].toLowerCase()} display size (${dp}dp wide). Nothing in the app changed: the layout reflows where content stops fitting.`;
+}
+document.querySelectorAll('.bar fieldset').forEach(fs => {
+  fs.addEventListener('click', e => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    fs.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === btn));
+    const v = btn.dataset.v;
+    if (fs.id === 'seed') document.body.dataset.seed = v;
+    if (fs.id === 'mode') v === 'dark' ? document.body.setAttribute('data-dark','') : document.body.removeAttribute('data-dark');
+    if (fs.id === 'screen') state.screen = v;
+    if (fs.id === 'font') state.font = +v;
+    if (fs.id === 'display') state.display = +v;
+    render();
+  });
+});
+document.fonts?.ready.then(render);
+render();
+</script>
+</body>
+</html>

@@ -18,6 +18,9 @@ dependencies {
     api(libs.androidx.compose.ui.graphics)
     api(libs.androidx.compose.ui.tooling.preview)
     api(libs.androidx.compose.material3)
+    // The small built-in icon set (Warning, Info, Check, ShoppingCart). Only
+    // `material-icons-core` is used; `icons-extended` is not a dependency.
+    implementation(libs.androidx.compose.material.icons.core)
 
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment)

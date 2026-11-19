@@ -165,6 +165,16 @@ Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
 
 ---
 
+### D32 — Design system: Material You colour, fixed semantic colours, a bundled typeface
+- **Decision:** The visual system lives in `android/core/ui` (tokens in `core.ui.theme`, stateless components in `core.ui.components`) and is documented in `docs/ux/design-system.md`; the approved reference is `docs/ux/mockups/scaling.html`.
+  - **Colour:** Material You dynamic colour always (minSdk 33, so the dynamic schemes exist on every target); the static green scheme is the `dynamicColor = false` fallback and what previews render. Fixed semantic colours — amber attention, red allergies — and eight patient identity colours never follow the wallpaper; they are exposed as `FamilyCareTheme.colors` and `LocalPatientColors`. "Done" is neutral `onSurfaceVariant`, never green.
+  - **Type:** Atkinson Hyperlegible Next (SIL OFL, licence in `core/ui/licenses/`) bundled as one variable font, 114,552 bytes (~112 KB), with weights 400/500/600/700 as variation settings. The full M3 scale uses that family with tabular numbers, plus 24 sp `time` and 20 sp `timeSmall` styles for the time rail and appointment day numbers.
+  - **Sizing:** text in sp, everything else in dp, 48 dp touch targets, no fixed heights on anything containing text, never truncate medicine names, allergies, times or patient names, and no in-app density setting. Layout reflows by measurement (`ReflowRow`, the 26% time rail, the stock meter), never by `fontScale`.
+  - **Patient colours:** a stable hash of the patient id by default; `rememberOrderedPatientColors` can assign the palette in id order so up to eight patients in a circle never collide.
+- **Why:** Material You makes the app feel native on the user's own phone, but a warning and an allergy must look identical everywhere and a completed dose must not borrow the brand's green. Atkinson Hyperlegible Next is the typeface the mockup was approved with, designed for low-vision readers and still legible at 200% font size; tabular numbers stop times and counts from jumping. Measuring content instead of switching on a font-size threshold is what makes 150–200% work without a parallel large-text layout. Keeping all of it in `core/ui` follows D5: features never depend on each other, and phase 2 can restyle screens without redesigning.
+- **Trade-off accepted:** the brand colour now varies per phone — only the fixed semantic colours and the patient palette are guaranteed; the bundled font adds about 112 KB to the APK (and cannot be updated without an app release); the id-order patient assignment wraps after eight patients, so larger circles can still repeat a colour; phase 1 adds the components without restyling existing screens, so the app shows the new system only as screens adopt it in phase 2.
+
+---
 
 - ~~**Q1 — Default policy for caregiver-patients.**~~ Resolved by D11: self-managed.
 - **Q2 — Security and GDPR deep-dive.** Drafted in [security-and-privacy.md](security-and-privacy.md) D12–D17 accepted. Only S2 (grandparents' agreement) remains open, non-blocking.

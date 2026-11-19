@@ -1,5 +1,8 @@
 # UX: Screens and Daily Use
 
+Colour, type, sizing and the shared components: [design-system.md](design-system.md).
+The approved visual reference is [mockups/scaling.html](mockups/scaling.html).
+
 Wireframes are rough sketches to validate the domain model, not visual design.
 
 ## Navigation
