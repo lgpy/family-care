@@ -90,6 +90,7 @@ import kotlinx.coroutines.SupervisorJob
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 /**
@@ -187,12 +188,12 @@ val appModule: Module = module {
     // The dashboard extension point (architecture.md §5): a feature contributes a
     // card, the shell renders whatever was registered, in order. Today imports no
     // feature module to do it.
-    single<DashboardCard> { MedicationsDashboardCard() }
-    single<DashboardCard> { NeedsAttentionDashboardCard() }
-    single<DashboardCard> { LowStockDashboardCard() }
-    single<DashboardCard> { ReminderHealthDashboardCard() }
+    single<DashboardCard>(named("MedicationsDashboardCard")) { MedicationsDashboardCard() }
+    single<DashboardCard>(named("NeedsAttentionDashboardCard")) { NeedsAttentionDashboardCard() }
+    single<DashboardCard>(named("LowStockDashboardCard")) { LowStockDashboardCard() }
+    single<DashboardCard>(named("ReminderHealthDashboardCard")) { ReminderHealthDashboardCard() }
     // M6: upcoming appointments across patients in the next seven days.
-    single<DashboardCard> { NextSevenDaysDashboardCard() }
+    single<DashboardCard>(named("NextSevenDaysDashboardCard")) { NextSevenDaysDashboardCard() }
     single { DashboardCards(getAll<DashboardCard>()) }
 
     // The patient profile extension point (D29, docs/ux/screens.md §3). The app
@@ -202,14 +203,14 @@ val appModule: Module = module {
     // timeline source. Registries are built from getAll() so the shell names no
     // feature module (D5).
     single<TimelineText> { ResourcesTimelineText(androidContext()) }
-    single<PatientHeader> { AllergiesPatientHeader() }
-    single<PatientTab> { MedicationsPatientTab() }
-    single<PatientTab> { InfoPatientTab() }
-    single<PatientTab> { AppointmentsPatientTab() }
-    single<TimelineSource> {
+    single<PatientHeader>(named("AllergiesPatientHeader")) { AllergiesPatientHeader() }
+    single<PatientTab>(named("MedicationsPatientTab")) { MedicationsPatientTab() }
+    single<PatientTab>(named("InfoPatientTab")) { InfoPatientTab() }
+    single<PatientTab>(named("AppointmentsPatientTab")) { AppointmentsPatientTab() }
+    single<TimelineSource>(named("MedicationsTimelineSource")) {
         MedicationsTimelineSource(medicationRepository = get(), text = get())
     }
-    single<TimelineSource> {
+    single<TimelineSource>(named("AppointmentsTimelineSource")) {
         AppointmentsTimelineSource(appointmentRepository = get(), text = get())
     }
     single { PatientHeaders(getAll<PatientHeader>()) }
@@ -220,26 +221,26 @@ val appModule: Module = module {
     // "Export"). Each source is built from a module's public data API; the
     // registry assembles the JSON document and the PDF's sections, and the
     // exporter writes to cache/exports and logs the export before any file.
-    single<PatientExportSource> {
+    single<PatientExportSource>(named("PatientInfoExportSource")) {
         PatientInfoExportSource(
             patientInfoRepository = get(),
             resources = androidContext().resources,
         )
     }
-    single<PatientExportSource> {
+    single<PatientExportSource>(named("AppointmentsExportSource")) {
         AppointmentsExportSource(
             appointmentRepository = get(),
             resources = androidContext().resources,
         )
     }
-    single<PatientExportSource> {
+    single<PatientExportSource>(named("MedicationsExportSource")) {
         MedicationsExportSource(
             medicationRepository = get(),
             stockRepository = get(),
             resources = androidContext().resources,
         )
     }
-    single<PatientExportSource> {
+    single<PatientExportSource>(named("DoseLogExportSource")) {
         DoseLogExportSource(
             medicationRepository = get(),
             doseLogRepository = get(),
@@ -261,10 +262,10 @@ val appModule: Module = module {
     // The push extension point (D29): a feature claims the message `type`s it
     // owns, and the core's single FCM service routes each payload by `type`. The
     // registry rejects a type claimed twice when it is built (at start-up).
-    single<PushHandler> { MedicationsPushHandler() }
+    single<PushHandler>(named("MedicationsPushHandler")) { MedicationsPushHandler() }
     // M6 appointments (D29): the change push the server sends to owners and
     // caregivers when an appointment is added or changed.
-    single<PushHandler> { AppointmentsPushHandler() }
+    single<PushHandler>(named("AppointmentsPushHandler")) { AppointmentsPushHandler() }
     single { PushHandlers(getAll<PushHandler>()) }
 
     // M4 dose reminders (D4/D19/D25). The scheduler, its local alarm index and
