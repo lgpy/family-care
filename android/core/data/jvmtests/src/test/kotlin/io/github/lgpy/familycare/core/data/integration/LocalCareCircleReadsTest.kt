@@ -64,7 +64,7 @@ class LocalCareCircleReadsTest {
             syncState = syncState,
             rpc = UnusedRpc,
         )
-        patients = PowerSyncPatientRepository(local.database, authState)
+        patients = PowerSyncPatientRepository(local.database, authState, UnusedPatientRpc)
     }
 
     @AfterEach

@@ -48,7 +48,7 @@ class PatientMedicationsViewModel(
             loaded = true,
             patientName = patient?.displayName,
             patientMissing = patient == null,
-            canWrite = role.canWrite,
+            canWrite = patient != null && role.canWrite(patient),
             active = active,
             stopped = stopped,
         )

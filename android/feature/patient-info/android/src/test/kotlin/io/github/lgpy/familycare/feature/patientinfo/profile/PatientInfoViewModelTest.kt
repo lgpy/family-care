@@ -4,6 +4,8 @@ import app.cash.turbine.test
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.feature.patientinfo.FakeCareCircleRepository
 import io.github.lgpy.familycare.feature.patientinfo.FakePatientInfoRepository
+import io.github.lgpy.familycare.feature.patientinfo.FakePatientRepository
+import io.github.lgpy.familycare.feature.patientinfo.patient
 import io.github.lgpy.familycare.feature.patientinfo.patientInfo
 import io.github.lgpy.familycare.feature.patientinfo.testPatientId
 import kotlinx.coroutines.Dispatchers
@@ -28,12 +30,14 @@ class PatientInfoViewModelTest {
 
     private lateinit var info: FakePatientInfoRepository
     private lateinit var circles: FakeCareCircleRepository
+    private lateinit var patients: FakePatientRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         info = FakePatientInfoRepository()
         circles = FakeCareCircleRepository()
+        patients = FakePatientRepository()
     }
 
     @After
@@ -44,6 +48,7 @@ class PatientInfoViewModelTest {
     private fun viewModel() = PatientInfoViewModel(
         patientId = testPatientId.value,
         patientInfoRepository = info,
+        patientRepository = patients,
         careCircleRepository = circles,
     )
 
@@ -127,6 +132,18 @@ class PatientInfoViewModelTest {
             circles.roleFlow.value = MemberRole.VIEWER
             assertFalse(awaitItem().canWrite)
 
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `an archived patient is read-only even for an owner`() = runTest {
+        patients.observed.value = patient(
+            archivedAt = kotlin.time.Instant.parse("2026-11-19T10:00:00Z"),
+        )
+
+        viewModel().uiState.test {
+            assertFalse(awaitItem().canWrite)
             cancelAndIgnoreRemainingEvents()
         }
     }

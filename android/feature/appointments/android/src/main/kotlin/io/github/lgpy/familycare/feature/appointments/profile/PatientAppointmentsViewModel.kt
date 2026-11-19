@@ -44,7 +44,7 @@ class PatientAppointmentsViewModel(
             loaded = true,
             patientName = patient?.displayName,
             patientMissing = patient == null,
-            canWrite = role.canWrite,
+            canWrite = patient != null && role.canWrite(patient),
             today = now.atZone(zone).toLocalDate(),
             upcomingDays = upcoming.groupByDay(ascending = true),
             pastDays = past.groupByDay(ascending = false),

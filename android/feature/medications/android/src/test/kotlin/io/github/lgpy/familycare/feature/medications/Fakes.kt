@@ -3,6 +3,7 @@ package io.github.lgpy.familycare.feature.medications
 import app.cash.turbine.TurbineTestContext
 import io.github.lgpy.familycare.core.domain.circle.CareCircle
 import io.github.lgpy.familycare.core.domain.circle.CareCircleId
+import io.github.lgpy.familycare.core.domain.circle.CoreError
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.CircleMember
 import io.github.lgpy.familycare.core.domain.circle.CircleSetupState
@@ -522,4 +523,23 @@ class FakePatientRepository : PatientRepository {
 
     override suspend fun save(patient: Patient): CoreResult<PatientId> =
         CoreResult.Success(patient.id)
+
+    val archivedFlow = MutableStateFlow(listOf<Patient>())
+    override val archivedPatients: Flow<List<Patient>> = archivedFlow
+
+    override suspend fun archive(patientId: PatientId): CoreResult<PatientId> {
+        val patient = observed[patientId.value]?.value ?: return CoreResult.Failure(CoreError.NotFound)
+        observed.getValue(patientId.value).value =
+            patient.copy(archivedAt = kotlin.time.Instant.parse("2026-11-19T10:00:00Z"))
+        return CoreResult.Success(patientId)
+    }
+
+    override suspend fun unarchive(patientId: PatientId): CoreResult<PatientId> {
+        val patient = observed[patientId.value]?.value ?: return CoreResult.Failure(CoreError.NotFound)
+        observed.getValue(patientId.value).value = patient.copy(archivedAt = null)
+        return CoreResult.Success(patientId)
+    }
+
+    override suspend fun erase(patientId: PatientId): CoreResult<PatientId> =
+        CoreResult.Success(patientId)
 }

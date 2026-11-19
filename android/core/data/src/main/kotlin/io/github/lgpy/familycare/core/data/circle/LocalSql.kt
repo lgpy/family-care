@@ -67,6 +67,18 @@ internal const val SELECT_PATIENTS = """
     ORDER BY display_name COLLATE NOCASE, id
 """
 
+/** The current circle's archived patients, sorted by name. */
+internal const val SELECT_ARCHIVED_PATIENTS = """
+    SELECT id, circle_id, display_name, linked_user_id, reminder_policy, primary_caregiver_id,
+           escalation_delay_minutes, missed_window_minutes, agreement_note, archived_at
+    FROM patients
+    WHERE archived_at IS NOT NULL
+      AND circle_id = (
+          SELECT circle_id FROM memberships WHERE user_id = ? ORDER BY created_at ASC, id ASC LIMIT 1
+      )
+    ORDER BY display_name COLLATE NOCASE, id
+"""
+
 /** One patient, restricted to the circles the user belongs to. */
 internal const val SELECT_PATIENT = """
     SELECT id, circle_id, display_name, linked_user_id, reminder_policy, primary_caregiver_id,
@@ -112,6 +124,11 @@ internal const val UPDATE_PATIENT = """
         agreement_note = ?,
         archived_at = ?
     WHERE id = ?
+"""
+
+/** Sets or clears a patient's `archived_at`; the last parameter is the id. */
+internal const val UPDATE_PATIENT_ARCHIVED_AT = """
+    UPDATE patients SET archived_at = ? WHERE id = ?
 """
 
 /** The signed-in user's own profile row. */

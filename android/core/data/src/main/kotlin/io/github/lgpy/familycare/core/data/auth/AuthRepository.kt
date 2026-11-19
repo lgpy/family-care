@@ -26,4 +26,14 @@ interface AuthRepository {
 
     /** Ends the local session (and revokes the refresh token Supabase-side). */
     suspend fun signOut(): Result<Unit>
+
+    /**
+     * Signs out of **every** device: Supabase revokes all of the user's refresh
+     * tokens, so each session, this one included, ends (D30, docs/domain/
+     * patient-lifecycle.md §Account).
+     *
+     * The default falls back to [signOut] for an implementation that cannot
+     * revoke other sessions; the app's repository always can.
+     */
+    suspend fun signOutEverywhere(): Result<Unit> = signOut()
 }

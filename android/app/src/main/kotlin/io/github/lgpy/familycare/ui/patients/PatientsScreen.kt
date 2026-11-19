@@ -21,6 +21,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -43,6 +46,7 @@ fun PatientsScreen(
 ) {
     val viewModel = koinViewModel<PatientsViewModel>()
     val uiState by viewModel.uiState.collectAsState()
+    var archivedExpanded by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -57,7 +61,7 @@ fun PatientsScreen(
             }
         },
     ) { padding ->
-        if (uiState.patients.isEmpty()) {
+        if (uiState.patients.isEmpty() && uiState.archivedPatients.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -95,6 +99,40 @@ fun PatientsScreen(
                         onClick = { onOpenPatient(row.patient.id.value) },
                     )
                     HorizontalDivider()
+                }
+                if (uiState.archivedPatients.isNotEmpty()) {
+                    item(key = "archived-header") {
+                        // D30: archived patients stay reachable, but out of the way.
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = archivedExpanded,
+                                    role = Role.Button,
+                                    onClick = { archivedExpanded = !archivedExpanded },
+                                )
+                                .padding(top = 16.dp, bottom = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    R.string.patients_archived_section,
+                                    uiState.archivedPatients.size,
+                                ),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        }
+                        HorizontalDivider()
+                    }
+                    if (archivedExpanded) {
+                        items(uiState.archivedPatients, key = { it.patient.id.value }) { row ->
+                            PatientListRow(
+                                row = row,
+                                onClick = { onOpenPatient(row.patient.id.value) },
+                            )
+                            HorizontalDivider()
+                        }
+                    }
                 }
             }
         }

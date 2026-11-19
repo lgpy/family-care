@@ -36,4 +36,9 @@ class PushAwareAuthRepository(
         push.unregisterForSignOut()
         return delegate.signOut()
     }
+
+    override suspend fun signOutEverywhere(): Result<Unit> {
+        push.unregisterForSignOut()
+        return delegate.signOutEverywhere()
+    }
 }

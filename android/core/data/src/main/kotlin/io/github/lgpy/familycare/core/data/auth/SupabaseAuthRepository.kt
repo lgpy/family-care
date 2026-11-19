@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.core.data.auth
 
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
@@ -52,6 +53,9 @@ class SupabaseAuthRepository(
         }
 
     override suspend fun signOut(): Result<Unit> = runAuth { auth.signOut() }
+
+    override suspend fun signOutEverywhere(): Result<Unit> =
+        runAuth { auth.signOut(SignOutScope.GLOBAL) }
 }
 
 /**

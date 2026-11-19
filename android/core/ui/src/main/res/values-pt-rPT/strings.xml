@@ -105,6 +105,23 @@
     <!-- M6/D29: o perfil da pessoa, com os separadores contribuídos e o Histórico. -->
     <string name="patient_profile_edit">Editar pessoa</string>
     <string name="patient_profile_actions">Ações da pessoa</string>
+    <string name="patient_archived_banner">Arquivada. Esta pessoa é só de leitura e está escondida do Hoje, da Agenda e dos lembretes.</string>
+    <string name="patient_archive_action">Arquivar pessoa</string>
+    <string name="patient_unarchive_action">Desarquivar pessoa</string>
+    <string name="patient_delete_action">Eliminar pessoa…</string>
+    <string name="patient_archive_confirm_title">Arquivar %1$s?</string>
+    <string name="patient_archive_confirm_body">A pessoa fica só de leitura para todos e é escondida do Hoje, da Agenda, dos lembretes e da lista de Pessoas. Nada é apagado e pode desarquivá-la quando quiser.</string>
+    <string name="patient_unarchive_confirm_title">Desarquivar %1$s?</string>
+    <string name="patient_unarchive_confirm_body">A pessoa volta a ser editável e volta a aparecer no Hoje, na Agenda e nos lembretes.</string>
+    <string name="patient_delete_dialog_title">Eliminar pessoa?</string>
+    <string name="patient_delete_warning">Isto não pode ser anulado. Toda a medicação, consultas, informação e histórico desta pessoa serão apagados. As cópias de segurança guardam os dados até expirarem, no prazo de um ano.</string>
+    <string name="patient_delete_name_label">Escreva o nome da pessoa (%1$s) para confirmar</string>
+    <string name="patient_delete_confirm">Eliminar pessoa</string>
+    <string name="patient_action_offline">Está sem ligação. Eliminar uma pessoa precisa de ligação à internet.</string>
+    <string name="patient_action_not_allowed">Só o proprietário do círculo pode fazer isto.</string>
+    <string name="patient_action_not_found">Esta pessoa já não existe.</string>
+    <string name="patient_action_failed">Algo falhou. Tente novamente.</string>
+    <string name="patients_archived_section">Arquivadas (%1$d)</string>
     <string name="patient_tab_history">Histórico</string>
     <string name="patient_history_empty">Ainda não há nada. As alterações aos cuidados desta pessoa aparecem aqui.</string>
     <string name="patient_history_today">Hoje</string>
@@ -165,6 +182,11 @@
     <string name="settings_account_signed_in_as">Sessão iniciada como %1$s</string>
     <string name="settings_account_signed_out">Sessão não iniciada.</string>
     <string name="settings_sign_out">Terminar sessão</string>
+    <string name="settings_sign_out_all">Terminar sessão em todos os aparelhos</string>
+    <string name="settings_sign_out_all_failed">Não foi possível terminar sessão em todos os aparelhos. Tente novamente.</string>
+    <string name="sign_out_all_confirm_title">Terminar sessão em todos os aparelhos?</string>
+    <string name="sign_out_all_confirm_body">Todos os aparelhos com sessão iniciada nesta conta serão desconectados, incluindo este, e terão de iniciar sessão com o Google novamente.</string>
+    <string name="sign_out_all_confirm_action">Terminar sessão em todos</string>
     <string name="settings_sign_out_failed">Não foi possível terminar sessão. Tente novamente.</string>
     <string name="sign_out_confirm_title">Terminar sessão?</string>
     <string name="sign_out_confirm_body">Terá de iniciar sessão com o Google novamente para ver a informação de saúde da sua família.</string>
@@ -219,6 +241,7 @@
     <string name="about_open">Sobre</string>
     <string name="about_title">Sobre</string>
     <string name="about_body">A aplicação Family Care está a ser construída passo a passo. Este ecrã existe para confirmar que a navegação funciona.</string>
+    <string name="about_version">Versão %1$s (%2$d)</string>
 
     <!-- M3: cartão "Tomas de hoje" do ecrã Hoje. -->
     <string name="meds_doses_today_title">Tomas de hoje</string>

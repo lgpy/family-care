@@ -17,16 +17,20 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +43,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.lgpy.familycare.core.domain.circle.CoreError
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.patient.PatientHeaders
@@ -93,13 +98,50 @@ fun PatientProfileScreen(
     val historySelected = selectedIndex < 0
     val tabIndex = if (historySelected) contributed.size else selectedIndex
 
+    var confirmingArchive by remember { mutableStateOf(false) }
+    var confirmingUnarchive by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
+    var typedName by remember { mutableStateOf("") }
+
+    // D30: the server deleted the patient; the list is where the user goes next.
+    LaunchedEffect(uiState.erased) {
+        if (uiState.erased) onBack()
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         PatientProfileHeader(
             displayName = uiState.displayName.takeIf { uiState.loaded && !uiState.notFound },
             canWrite = uiState.canWrite,
+            canManage = uiState.canManage && !uiState.notFound,
+            isArchived = uiState.isArchived,
             onBack = onBack,
             onEdit = { onEdit(patientId) },
+            onArchive = { confirmingArchive = true },
+            onUnarchive = { confirmingUnarchive = true },
+            onDelete = {
+                typedName = ""
+                deleting = true
+            },
         )
+
+        if (uiState.isArchived) {
+            Text(
+                text = stringResource(R.string.patient_archived_banner),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+            )
+        }
+
+        uiState.actionError?.let { error ->
+            Text(
+                text = stringResource(error.messageRes()),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            )
+        }
 
         when {
             !uiState.loaded -> CircularProgressIndicator(
@@ -148,14 +190,131 @@ fun PatientProfileScreen(
             }
         }
     }
+
+    if (confirmingArchive) {
+        AlertDialog(
+            onDismissRequest = { confirmingArchive = false },
+            title = {
+                Text(
+                    text = stringResource(
+                        R.string.patient_archive_confirm_title,
+                        uiState.displayName,
+                    ),
+                )
+            },
+            text = { Text(text = stringResource(R.string.patient_archive_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmingArchive = false
+                        viewModel.archive()
+                    },
+                ) {
+                    Text(text = stringResource(R.string.patient_archive_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingArchive = false }) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmingUnarchive) {
+        AlertDialog(
+            onDismissRequest = { confirmingUnarchive = false },
+            title = {
+                Text(
+                    text = stringResource(
+                        R.string.patient_unarchive_confirm_title,
+                        uiState.displayName,
+                    ),
+                )
+            },
+            text = { Text(text = stringResource(R.string.patient_unarchive_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmingUnarchive = false
+                        viewModel.unarchive()
+                    },
+                ) {
+                    Text(text = stringResource(R.string.patient_unarchive_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingUnarchive = false }) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (deleting) {
+        val matches = typedName == uiState.displayName && uiState.displayName.isNotEmpty()
+        AlertDialog(
+            onDismissRequest = { if (!uiState.erasing) deleting = false },
+            title = { Text(text = stringResource(R.string.patient_delete_dialog_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(text = stringResource(R.string.patient_delete_warning))
+                    OutlinedTextField(
+                        value = typedName,
+                        onValueChange = { typedName = it },
+                        label = {
+                            Text(
+                                text = stringResource(
+                                    R.string.patient_delete_name_label,
+                                    uiState.displayName,
+                                ),
+                            )
+                        },
+                        singleLine = true,
+                        enabled = !uiState.erasing,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.erase() },
+                    enabled = matches && !uiState.erasing,
+                ) {
+                    Text(text = stringResource(R.string.patient_delete_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { deleting = false },
+                    enabled = !uiState.erasing,
+                ) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+}
+
+/** The one line a failed lifecycle action shows; never the server's text. */
+@Composable
+private fun CoreError.messageRes(): Int = when (this) {
+    CoreError.Offline -> R.string.patient_action_offline
+    CoreError.NotAllowed -> R.string.patient_action_not_allowed
+    CoreError.NotFound -> R.string.patient_action_not_found
+    else -> R.string.patient_action_failed
 }
 
 @Composable
 private fun PatientProfileHeader(
     displayName: String?,
     canWrite: Boolean,
+    canManage: Boolean,
+    isArchived: Boolean,
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    onArchive: () -> Unit,
+    onUnarchive: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
 
@@ -178,7 +337,7 @@ private fun PatientProfileHeader(
                 .weight(1f)
                 .padding(start = 8.dp),
         )
-        if (canWrite) {
+        if (canWrite || canManage) {
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
@@ -190,13 +349,41 @@ private fun PatientProfileHeader(
                     expanded = menuOpen,
                     onDismissRequest = { menuOpen = false },
                 ) {
-                    DropdownMenuItem(
-                        text = { Text(text = stringResource(R.string.patient_profile_edit)) },
-                        onClick = {
-                            menuOpen = false
-                            onEdit()
-                        },
-                    )
+                    if (canWrite) {
+                        DropdownMenuItem(
+                            text = { Text(text = stringResource(R.string.patient_profile_edit)) },
+                            onClick = {
+                                menuOpen = false
+                                onEdit()
+                            },
+                        )
+                    }
+                    if (canManage) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = stringResource(
+                                        if (isArchived) {
+                                            R.string.patient_unarchive_action
+                                        } else {
+                                            R.string.patient_archive_action
+                                        },
+                                    ),
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                if (isArchived) onUnarchive() else onArchive()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(text = stringResource(R.string.patient_delete_action)) },
+                            onClick = {
+                                menuOpen = false
+                                onDelete()
+                            },
+                        )
+                    }
                 }
             }
         }

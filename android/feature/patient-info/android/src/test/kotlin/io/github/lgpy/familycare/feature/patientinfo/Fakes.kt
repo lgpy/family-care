@@ -10,7 +10,12 @@ import io.github.lgpy.familycare.core.domain.circle.Invitation
 import io.github.lgpy.familycare.core.domain.circle.InvitationId
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.core.domain.circle.MembershipId
+import io.github.lgpy.familycare.core.domain.circle.CoreError
+import io.github.lgpy.familycare.core.domain.circle.Patient
 import io.github.lgpy.familycare.core.domain.circle.PatientId
+import io.github.lgpy.familycare.core.domain.circle.PatientRepository
+import io.github.lgpy.familycare.core.domain.circle.PatientRules
+import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoRepository
 import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoResult
 import io.github.lgpy.familycare.feature.patientinfo.domain.EmergencyContact
@@ -18,6 +23,7 @@ import io.github.lgpy.familycare.feature.patientinfo.domain.PatientInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 /*
  * Fakes and fixtures for the patient-info view-model tests.
@@ -73,6 +79,60 @@ class FakePatientInfoRepository : PatientInfoRepository {
         saves += SaveCall(patientId, info)
         return saveResult
     }
+}
+
+/**
+ * A patient of the test circle, for the read-only check: the view models ask it
+ * whether the patient is archived.
+ */
+fun patient(archivedAt: kotlin.time.Instant? = null): Patient = Patient(
+    id = testPatientId,
+    circleId = testCircle.id,
+    displayName = "Grandma",
+    primaryCaregiverId = "u1",
+    archivedAt = archivedAt,
+)
+
+class FakePatientRepository : PatientRepository {
+
+    val observed = MutableStateFlow<Patient?>(patient())
+    override val patients: Flow<List<Patient>> = observed.map { listOfNotNull(it) }
+    override val archivedPatients: Flow<List<Patient>> = flowOf(emptyList())
+
+    override fun observe(patientId: PatientId): Flow<Patient?> = observed
+
+    override fun newPatient(
+        circleId: CareCircleId,
+        displayName: String,
+        linkedUserId: String?,
+        chosenPrimaryCaregiverId: String?,
+        reminderPolicy: ReminderPolicy,
+        escalationDelayMinutes: Int,
+        missedWindowMinutes: Int,
+        agreementNote: String?,
+    ): Patient = PatientRules.newPatient(
+        id = PatientId("patient-new"),
+        circleId = circleId,
+        displayName = displayName,
+        linkedUserId = linkedUserId,
+        chosenPrimaryCaregiverId = chosenPrimaryCaregiverId,
+        reminderPolicy = reminderPolicy,
+        escalationDelayMinutes = escalationDelayMinutes,
+        missedWindowMinutes = missedWindowMinutes,
+        agreementNote = agreementNote,
+    )
+
+    override suspend fun save(patient: Patient): CoreResult<PatientId> =
+        CoreResult.Success(patient.id)
+
+    override suspend fun archive(patientId: PatientId): CoreResult<PatientId> =
+        CoreResult.Success(patientId)
+
+    override suspend fun unarchive(patientId: PatientId): CoreResult<PatientId> =
+        CoreResult.Success(patientId)
+
+    override suspend fun erase(patientId: PatientId): CoreResult<PatientId> =
+        CoreResult.Success(patientId)
 }
 
 class FakeCareCircleRepository : CareCircleRepository {
