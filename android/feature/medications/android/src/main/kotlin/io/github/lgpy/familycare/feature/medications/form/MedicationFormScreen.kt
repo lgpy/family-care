@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -118,7 +119,9 @@ fun MedicationFormScreen(
     var showOtherTime by remember { mutableStateOf(false) }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding(),
         bottomBar = {
             if (uiState.loaded && !uiState.notFound) {
                 SaveBar(state = uiState, onSave = viewModel::save)
@@ -593,7 +596,8 @@ private fun HowManySection(viewModel: MedicationFormViewModel, state: Medication
     }
 
     Stepper(
-        valueText = state.stockQuantity.ifBlank { "—" },
+        valueText = state.stockQuantity,
+        placeholder = stringResource(R.string.meds_stock_not_counted),
         unit = if (state.stockQuantity.isBlank()) "" else stockUnitName(state.stockUnit),
         enabled = state.canWrite,
         onStep = viewModel::onStockQuantityStep,
@@ -1037,6 +1041,7 @@ private fun Stepper(
     enabled: Boolean,
     onStep: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    placeholder: String? = null,
 ) {
     Row(
         modifier = modifier,
@@ -1048,9 +1053,20 @@ private fun Stepper(
                 contentDescription = stringResource(R.string.meds_decrease),
             )
         }
+        val empty = valueText.isBlank() && placeholder != null
         Text(
-            text = if (unit.isBlank()) valueText else "$valueText $unit",
+            text = when {
+                valueText.isBlank() -> placeholder ?: valueText
+                unit.isBlank() -> valueText
+                else -> "$valueText $unit"
+            },
             style = MaterialTheme.typography.bodyLarge,
+            // A muted prompt, so an uncounted value does not look like a control.
+            color = if (empty) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 4.dp),

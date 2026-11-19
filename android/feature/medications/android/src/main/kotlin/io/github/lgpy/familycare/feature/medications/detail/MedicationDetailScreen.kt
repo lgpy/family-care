@@ -63,8 +63,8 @@ import io.github.lgpy.familycare.feature.medications.domain.DoseOutcome
 import io.github.lgpy.familycare.feature.medications.domain.Medication
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.domain.Regimen
-import io.github.lgpy.familycare.feature.medications.domain.ShoppingStatus
 import io.github.lgpy.familycare.feature.medications.domain.StockSummary
+import io.github.lgpy.familycare.feature.medications.ui.PrescriptionState
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
 import io.github.lgpy.familycare.feature.medications.ui.MedsMetaItem
 import io.github.lgpy.familycare.feature.medications.ui.MedsSectionTitle
@@ -74,11 +74,14 @@ import io.github.lgpy.familycare.feature.medications.ui.formatQuantity
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
 import io.github.lgpy.familycare.feature.medications.ui.labelRes
 import io.github.lgpy.familycare.feature.medications.ui.localizedDate
+import io.github.lgpy.familycare.feature.medications.ui.localizedMonthYear
 import io.github.lgpy.familycare.feature.medications.ui.messageRes
+import io.github.lgpy.familycare.feature.medications.ui.prescriptionState
 import io.github.lgpy.familycare.feature.medications.ui.regimenSummary
 import io.github.lgpy.familycare.feature.medications.ui.stockUnitLabel
 import io.github.lgpy.familycare.feature.medications.ui.timeOfDayIcon
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.time.ZoneId
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -187,10 +190,7 @@ fun MedicationDetailScreen(
                 }
 
                 if (medication.requiresPrescription || medication.prescriptionValidUntil != null) {
-                    PrescriptionSection(
-                        medication = medication,
-                        status = uiState.stock?.summary?.shoppingStatus,
-                    )
+                    PrescriptionSection(medication = medication)
                 }
 
                 if (uiState.history.isNotEmpty()) {
@@ -574,13 +574,18 @@ private fun StockSection(
 }
 
 /**
- * **Prescription**: the last valid day (or "no prescription needed") with the
- * shopping list's state underneath, so a medication that needs a new
- * prescription says so here too.
+ * **Prescription**: one consistent line for the medication's own flags — "No
+ * prescription needed", "Valid until <month year>", or a call to action when a
+ * required prescription is missing or expired.
  */
 @Composable
-private fun PrescriptionSection(medication: Medication, status: ShoppingStatus?) {
+private fun PrescriptionSection(medication: Medication) {
     val validUntil = medication.prescriptionValidUntil
+    val state = prescriptionState(
+        requiresPrescription = medication.requiresPrescription,
+        prescriptionValidUntil = validUntil,
+        today = LocalDate.now(),
+    )
     MedsSectionTitle(
         icon = FcIcons.Prescriptions,
         title = stringResource(R.string.meds_detail_prescription_section),
@@ -605,24 +610,28 @@ private fun PrescriptionSection(medication: Medication, status: ShoppingStatus?)
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
-                    text = if (validUntil != null) {
-                        stringResource(R.string.meds_detail_prescription, localizedDate(validUntil))
-                    } else {
-                        stringResource(R.string.meds_detail_no_prescription)
+                    text = when (state) {
+                        PrescriptionState.NOT_REQUIRED ->
+                            stringResource(R.string.meds_detail_no_prescription)
+
+                        PrescriptionState.NEEDED ->
+                            stringResource(R.string.meds_detail_prescription_needed)
+
+                        PrescriptionState.VALID -> stringResource(
+                            R.string.meds_detail_prescription_valid_until,
+                            validUntil?.let { localizedMonthYear(it) }.orEmpty(),
+                        )
                     },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
+                    color = when (state) {
+                        PrescriptionState.NEEDED -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.onSurface
+                    },
                 )
-                status?.let {
+                if (state == PrescriptionState.NEEDED) {
                     Text(
-                        text = stringResource(
-                            when (it) {
-                                ShoppingStatus.NEEDS_PRESCRIPTION ->
-                                    R.string.meds_stock_needs_prescription
-
-                                ShoppingStatus.READY_TO_BUY -> R.string.meds_stock_ready_to_buy
-                            },
-                        ),
+                        text = stringResource(R.string.meds_detail_prescription_needed_hint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

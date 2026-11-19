@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +28,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -114,7 +116,9 @@ fun AppointmentFormScreen(
     var showTime by remember { mutableStateOf(false) }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding(),
         bottomBar = {
             if (uiState.loaded && !uiState.missing) {
                 SaveBar(state = uiState, onSave = viewModel::save)
@@ -263,8 +267,9 @@ private fun WhatSection(state: AppointmentFormUiState, onKind: (AppointmentKind)
 /**
  * "Who": a chip per patient with their avatar.
  *
- * When the form was opened from a patient's tab the patient is preselected and
- * the chips are disabled — the appointment belongs to that patient.
+ * When the form was opened from a patient's tab the appointment belongs to that
+ * patient, so only that patient is shown — one selected chip at full emphasis
+ * that is not a control — instead of the whole list dimmed as disabled.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -278,27 +283,57 @@ private fun WhoSection(state: AppointmentFormUiState, onPatient: (String) -> Uni
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            state.patients.forEach { option ->
-                FilterChip(
-                    selected = state.patientId == option.id,
-                    onClick = { onPatient(option.id) },
-                    enabled = !state.patientFixed && !state.saving,
-                    label = { Text(text = option.name) },
-                    leadingIcon = {
-                        PatientAvatar(
-                            patientId = PatientId(option.id),
-                            name = option.name,
-                            size = 24.dp,
-                        )
-                    },
-                    modifier = Modifier.heightIn(min = 44.dp),
-                )
+            if (state.patientFixed) {
+                state.patients
+                    .filter { it.id == state.patientId }
+                    .forEach { option -> FixedPatientChip(option) }
+            } else {
+                state.patients.forEach { option ->
+                    FilterChip(
+                        selected = state.patientId == option.id,
+                        onClick = { onPatient(option.id) },
+                        enabled = !state.saving,
+                        label = { Text(text = option.name) },
+                        leadingIcon = {
+                            PatientAvatar(
+                                patientId = PatientId(option.id),
+                                name = option.name,
+                                size = 24.dp,
+                            )
+                        },
+                        modifier = Modifier.heightIn(min = 44.dp),
+                    )
+                }
             }
         }
         FieldError(
             visible = AppointmentField.PATIENT in state.errors,
             message = AppointmentField.PATIENT.errorRes(),
         )
+    }
+}
+
+/** The fixed patient, selected and readable: a chip without a click target. */
+@Composable
+private fun FixedPatientChip(option: PatientOption) {
+    Surface(
+        shape = FilterChipDefaults.shape,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = Modifier.heightIn(min = 44.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            PatientAvatar(
+                patientId = PatientId(option.id),
+                name = option.name,
+                size = 18.dp,
+            )
+            Text(text = option.name, style = MaterialTheme.typography.labelLarge)
+        }
     }
 }
 

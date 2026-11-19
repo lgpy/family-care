@@ -497,6 +497,7 @@
     <string name="meds_remove_custom_time">Remove %1$s</string>
     <string name="meds_each_time">Each time</string>
     <string name="meds_how_many">How many do you have?</string>
+    <string name="meds_stock_not_counted">Not counted</string>
     <string name="meds_optional">optional</string>
     <string name="meds_more_options">More options</string>
     <string name="meds_more_summary">%1$s · %2$s · low-stock threshold: %3$d</string>
@@ -533,6 +534,9 @@
     <string name="meds_detail_instructions">Instructions: %1$s</string>
     <string name="meds_detail_prescription_section">Prescription</string>
     <string name="meds_detail_prescription">Prescription valid until %1$s</string>
+    <string name="meds_detail_prescription_valid_until">Valid until %1$s</string>
+    <string name="meds_detail_prescription_needed">Prescription needed</string>
+    <string name="meds_detail_prescription_needed_hint">Ask the doctor for a new one</string>
     <string name="meds_detail_no_prescription">No prescription needed</string>
     <string name="meds_history_until">%1$s until %2$s</string>
     <string name="meds_history_since">%1$s since %2$s</string>
@@ -584,7 +588,6 @@
     </plurals>
     <string name="meds_stock_no_schedule">No active schedule</string>
     <string name="meds_stock_low_badge">Low stock</string>
-    <string name="meds_stock_needs_prescription">Needs a new prescription first</string>
     <string name="meds_stock_ready_to_buy">Ready to buy</string>
     <string name="meds_stock_refill">Record refill</string>
     <string name="meds_stock_recount">Recount</string>

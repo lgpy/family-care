@@ -321,11 +321,22 @@ class MedicationFormViewModel(
 
     // --- Stock --------------------------------------------------------------
 
-    /** The opening-count stepper ("How many do you have?"). */
+    /**
+     * The opening-count stepper ("How many do you have?").
+     *
+     * The field starts empty ("Not counted"): the first `+` starts from a whole
+     * pack when the catalogue offers one, otherwise from 1, rather than making
+     * the caregiver tap once per tablet. `−` from empty stays at zero.
+     */
     fun onStockQuantityStep(steps: Int) = _uiState.update { state ->
-        val current = parseStockQuantity(state.stockQuantity) ?: BigDecimal.ZERO
-        val next = current
-            .add(BigDecimal(steps))
+        val typed = parseStockQuantity(state.stockQuantity)
+        val next = when {
+            typed != null -> typed.add(BigDecimal(steps))
+            // A single tap on "+" starts from a whole pack when the catalogue
+            // offers one, so the caregiver does not tap once per tablet.
+            steps > 0 -> BigDecimal(state.packOptions.firstOrNull() ?: steps)
+            else -> BigDecimal.ZERO
+        }
             .coerceAtLeast(BigDecimal.ZERO)
             .coerceAtMost(MAX_STOCK_STEP)
         state.copy(

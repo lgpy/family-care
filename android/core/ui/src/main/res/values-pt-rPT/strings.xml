@@ -503,6 +503,7 @@
     <string name="meds_remove_custom_time">Remover %1$s</string>
     <string name="meds_each_time">Em cada toma</string>
     <string name="meds_how_many">Quantos tem?</string>
+    <string name="meds_stock_not_counted">Sem contagem</string>
     <string name="meds_optional">opcional</string>
     <string name="meds_more_options">Mais opções</string>
     <string name="meds_more_summary">%1$s · %2$s · limite de stock: %3$d</string>
@@ -539,6 +540,9 @@
     <string name="meds_detail_instructions">Instruções: %1$s</string>
     <string name="meds_detail_prescription_section">Receita</string>
     <string name="meds_detail_prescription">Receita válida até %1$s</string>
+    <string name="meds_detail_prescription_valid_until">Válida até %1$s</string>
+    <string name="meds_detail_prescription_needed">Receita necessária</string>
+    <string name="meds_detail_prescription_needed_hint">Peça uma nova ao médico</string>
     <string name="meds_detail_no_prescription">Não precisa de receita</string>
     <string name="meds_history_until">%1$s até %2$s</string>
     <string name="meds_history_since">%1$s desde %2$s</string>
@@ -590,7 +594,6 @@
     </plurals>
     <string name="meds_stock_no_schedule">Sem esquema ativo</string>
     <string name="meds_stock_low_badge">Stock baixo</string>
-    <string name="meds_stock_needs_prescription">Precisa primeiro de uma nova receita</string>
     <string name="meds_stock_ready_to_buy">Pronto a comprar</string>
     <string name="meds_stock_refill">Registar reabastecimento</string>
     <string name="meds_stock_recount">Recontar</string>

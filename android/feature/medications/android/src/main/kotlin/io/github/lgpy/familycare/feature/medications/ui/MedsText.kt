@@ -65,6 +65,15 @@ fun localizedDate(date: LocalDate): String {
     }
 }
 
+/** The month and year of a prescription's last valid day (`nov 2026`). */
+@Composable
+fun localizedMonthYear(date: LocalDate): String {
+    val locale = LocalConfiguration.current.locales[0]
+    return remember(date, locale) {
+        date.format(DateTimeFormatter.ofPattern("MMM yyyy", locale))
+    }
+}
+
 /**
  * "3 tablets left" / "3 comprimidos em stock".
  *

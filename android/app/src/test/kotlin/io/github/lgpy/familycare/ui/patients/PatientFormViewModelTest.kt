@@ -265,6 +265,23 @@ class PatientFormViewModelTest {
     }
 
     @Test
+    fun theBirthYearKeepsOnlyDigitsAndFourOfThem() {
+        val viewModel = viewModel()
+
+        viewModel.onBirthYearChanged("19.40")
+        assertEquals("1940", viewModel.uiState.value.birthYear)
+
+        viewModel.onBirthYearChanged(" 1-9,4 0 ")
+        assertEquals("1940", viewModel.uiState.value.birthYear)
+
+        viewModel.onBirthYearChanged("12345")
+        assertEquals("1234", viewModel.uiState.value.birthYear)
+
+        viewModel.onBirthYearChanged("abcd")
+        assertEquals("", viewModel.uiState.value.birthYear)
+    }
+
+    @Test
     fun anExistingPatientLoadsAndIsUpdatedInPlace() {
         val existing = Patient(
             id = PatientId("patient-1"),

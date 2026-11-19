@@ -127,11 +127,15 @@ class PatientFormViewModel(
      * Keeps the half-typed year as text; [save] parses it. The rule is 1900 up
      * to the current year: a year of birth in the future is a typo, even though
      * the database's wider 1900..2100 range would accept it.
+     *
+     * The number keypad still offers `.`, `,`, `-` and space on some phones, so
+     * only digits are kept, at most the four of a year.
      */
     fun onBirthYearChanged(value: String) {
+        val digits = value.filter { it.isDigit() }.take(4)
         _uiState.update {
             it.copy(
-                birthYear = value,
+                birthYear = digits,
                 errors = it.errors - CoreField.PATIENT_BIRTH_YEAR,
             )
         }
