@@ -141,6 +141,18 @@ class CareCircleErrorMappingTest {
     }
 
     @Test
+    fun `the activity feed is refused for a non-owner and is offline with no response`() {
+        assertEquals(
+            CoreError.NotAllowed,
+            error(403, "42501", "only a circle owner can see its activity", RpcCall.CIRCLE_ACTIVITY),
+        )
+        assertEquals(
+            CoreError.Offline,
+            error(status = null, postgresCode = null, call = RpcCall.CIRCLE_ACTIVITY),
+        )
+    }
+
+    @Test
     fun `a server error is unknown`() {
         assertEquals(CoreError.Unknown, error(500, null, "boom"))
         assertEquals(CoreError.Unknown, error(503, "XX000", "boom"))

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.time.Instant
 
 /**
  * The client half of `core.can_circle(circle_id, action)`.
@@ -46,6 +47,24 @@ class AccessRulesTest {
         assertFalse(noRole.can(CircleAction.READ))
         assertFalse(noRole.can(CircleAction.WRITE))
         assertFalse(noRole.can(CircleAction.MANAGE))
+    }
+
+    @Test
+    fun `an archived patient is read-only for everyone`() {
+        val patient = Patient(
+            id = PatientId("patient-1"),
+            circleId = CareCircleId("circle-1"),
+            displayName = "Avó",
+        )
+
+        assertTrue(MemberRole.OWNER.canWrite(patient))
+        assertTrue(MemberRole.CAREGIVER.canWrite(patient))
+
+        val archived = patient.copy(archivedAt = Instant.parse("2026-11-19T10:00:00Z"))
+        assertTrue(archived.isArchived)
+        MemberRole.entries.forEach { role ->
+            assertFalse(role.canWrite(archived), "$role must not write an archived patient")
+        }
     }
 
     @Test

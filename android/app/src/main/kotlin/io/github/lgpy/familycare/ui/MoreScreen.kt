@@ -34,6 +34,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.data.auth.AuthRepository
 import io.github.lgpy.familycare.core.domain.auth.AuthState
+import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
+import io.github.lgpy.familycare.core.domain.circle.canManage
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.locale.AppLanguage
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
@@ -50,12 +52,17 @@ fun MoreScreen(
     onOpenFamilyCircle: () -> Unit,
     onOpenReminders: () -> Unit,
     onOpenYourName: () -> Unit,
+    onOpenActivity: () -> Unit,
     onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val languageController = koinInject<AppLanguageController>()
     val viewModel = koinViewModel<MoreViewModel>()
     var selectedLanguage by remember { mutableStateOf(languageController.current()) }
+
+    // D30: the activity feed is owner-only, so its entry is too.
+    val careCircleRepository = koinInject<CareCircleRepository>()
+    val myRole by careCircleRepository.myRole.collectAsState(initial = null)
 
     // What "System default" means here, resolved only when the user picks it.
     val deviceLanguageTags = remember {
@@ -100,6 +107,14 @@ fun MoreScreen(
             body = R.string.more_your_name_body,
             onClick = onOpenYourName,
         )
+        // D30: owners see who changed what in the circle.
+        if (myRole.canManage) {
+            MoreEntry(
+                title = R.string.more_activity,
+                body = R.string.more_activity_body,
+                onClick = onOpenActivity,
+            )
+        }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 

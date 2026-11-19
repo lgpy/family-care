@@ -185,6 +185,29 @@ class AppointmentsRepositoryTest {
         assertNull(local.database.getNextCrudTransaction())
     }
 
+    @Test
+    fun `an archived patient's appointments leave the agenda but stay on the profile`() = runBlocking {
+        seedCircleAndPatient()
+        val repository = repository()
+        repository.create(appointment())
+        local.database.drainUploadQueue()
+
+        // Archive the patient, which is an ordinary local write of one column (D30).
+        local.database.execute(
+            "UPDATE patients SET archived_at = ? WHERE id = ?",
+            listOf(ARCHIVED_AT, PATIENT_1),
+        )
+        local.database.drainUploadQueue()
+
+        val perPatient = withTimeout(5_000) {
+            repository.observeForPatient(PatientId(PATIENT_1)).first { it.isNotEmpty() }
+        }
+        assertEquals(1, perPatient.size, "The profile still shows the appointment")
+
+        val agenda = withTimeout(5_000) { repository.observeAgenda().first() }
+        assertTrue(agenda.isEmpty(), "The circle agenda hides archived patients")
+    }
+
     // --- Fixtures ------------------------------------------------------------
 
     private suspend fun seedCircleAndPatient() {
@@ -217,6 +240,7 @@ class AppointmentsRepositoryTest {
         const val APPOINTMENT_1 = "33333333-3333-4333-8333-333333333331"
         const val PATIENT_1 = "44444444-4444-4444-8444-444444444441"
         const val COMPANION = "55555555-5555-4555-8555-555555555555"
+        const val ARCHIVED_AT = "2026-11-19T10:00:00.000Z"
 
         val NOW: Instant = Instant.parse("2026-11-18T10:00:00Z")
     }

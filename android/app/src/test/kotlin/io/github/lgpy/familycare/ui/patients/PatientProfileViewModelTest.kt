@@ -1,6 +1,8 @@
 package io.github.lgpy.familycare.ui.patients
 
 import app.cash.turbine.test
+import io.github.lgpy.familycare.core.domain.circle.CoreError
+import io.github.lgpy.familycare.core.domain.circle.CoreResult
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.core.domain.circle.Patient
 import io.github.lgpy.familycare.core.domain.circle.PatientId
@@ -28,6 +30,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -160,6 +163,90 @@ class PatientProfileViewModelTest {
             assertTrue(awaitWhere { it.loaded }.notFound)
         }
     }
+
+    @Test
+    fun anArchivedPatientIsReadOnlyButStillManageableByAnOwner() = runTest {
+        patients.setPatient(patient(archived = true))
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded }
+
+            assertTrue(state.isArchived)
+            assertFalse("An archived patient is read-only", state.canWrite)
+            assertTrue("The owner may still unarchive or erase", state.canManage)
+        }
+    }
+
+    @Test
+    fun archiveAndUnarchiveAskTheRepository() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            viewModel.archive()
+            assertEquals(listOf(patientId), patients.archived)
+
+            viewModel.unarchive()
+            assertEquals(listOf(patientId), patients.unarchived)
+        }
+    }
+
+    @Test
+    fun anArchiveFailureIsShownUntilDismissed() = runTest {
+        patients.archiveResult = CoreResult.Failure(CoreError.NotAllowed)
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            viewModel.archive()
+            assertEquals(CoreError.NotAllowed, awaitWhere { it.actionError != null }.actionError)
+
+            viewModel.clearActionError()
+            assertNull(awaitWhere { it.actionError == null }.actionError)
+        }
+    }
+
+    @Test
+    fun eraseEndsInTheErasedState() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            viewModel.erase()
+
+            val state = awaitWhere { it.erased }
+            assertFalse("The in-flight flag clears on success", state.erasing)
+            assertEquals(listOf(patientId), patients.erased)
+        }
+    }
+
+    @Test
+    fun aFailedEraseReportsTheErrorAndDoesNotNavigateBack() = runTest {
+        patients.eraseResult = CoreResult.Failure(CoreError.Offline)
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            viewModel.erase()
+
+            val state = awaitWhere { it.actionError != null }
+            assertEquals(CoreError.Offline, state.actionError)
+            assertFalse(state.erasing)
+            assertFalse(state.erased)
+            assertEquals(listOf(patientId), patients.erased)
+        }
+    }
+
+    private fun patient(archived: Boolean): Patient = Patient(
+        id = patientId,
+        circleId = testCircle.id,
+        displayName = "Avó Maria",
+        archivedAt = if (archived) kotlin.time.Instant.parse("2026-11-19T10:00:00Z") else null,
+    )
 
     private class FakeSource(
         private val flow: MutableStateFlow<List<TimelineEntry>>,

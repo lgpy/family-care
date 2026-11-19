@@ -29,6 +29,8 @@ internal enum class RpcCall {
 
     /** `core.log_patient_export` (D30): owners and caregivers, before a file. */
     LOG_PATIENT_EXPORT,
+    /** `core.circle_activity` (D30): owner only, online only. */
+    CIRCLE_ACTIVITY,
 }
 
 /**

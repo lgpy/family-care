@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.core.data.integration
 
 import com.powersync.db.crud.UpdateType
+import io.github.lgpy.familycare.core.data.circle.PatientRpc
 import io.github.lgpy.familycare.core.data.circle.PowerSyncPatientRepository
 import io.github.lgpy.familycare.core.data.sync.PATIENTS_TABLE
 import io.github.lgpy.familycare.core.domain.auth.AuthState
@@ -11,6 +12,7 @@ import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -22,6 +24,7 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -41,6 +44,7 @@ class LocalPatientRepositoryTest {
 
     private lateinit var local: LocalDatabase
     private lateinit var repository: PowerSyncPatientRepository
+    private val rpc = FakePatientRpc()
     private val authState = MutableStateFlow<AuthState>(AuthState.SignedOut)
 
     @BeforeEach
@@ -55,7 +59,7 @@ class LocalPatientRepositoryTest {
         repository = PowerSyncPatientRepository(
             database = local.database,
             authState = authState,
-            rpc = UnusedPatientRpc,
+            rpc = rpc,
             newId = { PATIENT_ID },
         )
     }
@@ -205,8 +209,200 @@ class LocalPatientRepositoryTest {
         viewer.close()
     }
 
+    @Test
+    fun `an owner archiving sets archived_at locally and queues a PATCH of only it`() = runBlocking {
+        seedLivePatient()
+        val repository = repository(now = { ARCHIVED_AT })
+
+        assertEquals(
+            CoreResult.Success(PatientId(PATIENT_ID)),
+            repository.archive(PatientId(PATIENT_ID)),
+        )
+
+        val stored = withTimeout(READ_TIMEOUT) {
+            repository.observe(PatientId(PATIENT_ID)).first { it?.archivedAt != null }
+        }!!
+        assertEquals(ARCHIVED_AT, stored.archivedAt)
+
+        val entry = local.database.nextTransaction().crud.single()
+        assertEquals(UpdateType.PATCH, entry.op)
+        assertEquals(PATIENTS_TABLE, entry.table)
+        assertEquals(
+            JsonObject(mapOf("archived_at" to JsonPrimitive(ARCHIVED_AT.toString()))),
+            entry.opData!!.jsonValues,
+        )
+    }
+
+    @Test
+    fun `unarchiving clears archived_at and queues an explicit null`() = runBlocking {
+        local.seedPatient(
+            patientId = PATIENT_ID,
+            displayName = "Grandma",
+            archivedAt = ARCHIVED_AT.toString(),
+        )
+        local.database.drainUploadQueue()
+        val repository = repository()
+
+        assertEquals(
+            CoreResult.Success(PatientId(PATIENT_ID)),
+            repository.unarchive(PatientId(PATIENT_ID)),
+        )
+
+        val stored = withTimeout(READ_TIMEOUT) {
+            repository.observe(PatientId(PATIENT_ID)).first { it?.archivedAt == null }
+        }!!
+        assertFalse(stored.isArchived)
+
+        val entry = local.database.nextTransaction().crud.single()
+        assertEquals(UpdateType.PATCH, entry.op)
+        assertEquals(
+            JsonObject(mapOf("archived_at" to JsonNull)),
+            entry.opData!!.jsonValues,
+        )
+    }
+
+    @Test
+    fun `a caregiver or viewer cannot archive and nothing is queued`() = runBlocking {
+        for (role in listOf(LocalDatabase.CAREGIVER, LocalDatabase.VIEWER)) {
+            val other = LocalDatabase(LocalDatabase.testDirectory("archive-$role"))
+            try {
+                other.seedCircle()
+                other.seedMembership(userId = other.userId, role = role)
+                other.seedPatient(patientId = PATIENT_ID, displayName = "Grandma")
+                other.database.drainUploadQueue()
+                val state = MutableStateFlow<AuthState>(
+                    AuthState.SignedIn(other.userId, "$role@example.test"),
+                )
+                val otherRepository = PowerSyncPatientRepository(
+                    database = other.database,
+                    authState = state,
+                    rpc = rpc,
+                    newId = { PATIENT_ID },
+                )
+
+                assertEquals(
+                    CoreResult.Failure(CoreError.NotAllowed),
+                    otherRepository.archive(PatientId(PATIENT_ID)),
+                )
+                assertNull(other.database.getNextCrudTransaction())
+                assertNull(
+                    withTimeout(READ_TIMEOUT) {
+                        otherRepository.observe(PatientId(PATIENT_ID)).first()
+                    }?.archivedAt,
+                )
+            } finally {
+                other.close()
+            }
+        }
+    }
+
+    @Test
+    fun `only an owner erases, through the RPC, and the local row waits for the sync`() = runBlocking {
+        seedLivePatient()
+        val fakeRpc = FakePatientRpc()
+        val repository = repository(rpc = fakeRpc)
+
+        assertEquals(
+            CoreResult.Success(PatientId(PATIENT_ID)),
+            repository.erase(PatientId(PATIENT_ID)),
+        )
+
+        assertEquals(listOf(PATIENT_ID), fakeRpc.erased)
+        // The repository never queues a direct local delete (the server refuses it).
+        assertNull(local.database.getNextCrudTransaction())
+        assertEquals(
+            PatientId(PATIENT_ID),
+            withTimeout(READ_TIMEOUT) { repository.observe(PatientId(PATIENT_ID)).first() }?.id,
+        )
+    }
+
+    @Test
+    fun `a caregiver cannot erase and the RPC is never called`() = runBlocking {
+        val other = LocalDatabase(LocalDatabase.testDirectory("erase-caregiver"))
+        try {
+            other.seedCircle()
+            other.seedMembership(userId = other.userId, role = LocalDatabase.CAREGIVER)
+            other.seedPatient(patientId = PATIENT_ID, displayName = "Grandma")
+            other.database.drainUploadQueue()
+            val state = MutableStateFlow<AuthState>(
+                AuthState.SignedIn(other.userId, "caregiver@example.test"),
+            )
+            val fakeRpc = FakePatientRpc()
+            val otherRepository = PowerSyncPatientRepository(
+                database = other.database,
+                authState = state,
+                rpc = fakeRpc,
+                newId = { PATIENT_ID },
+            )
+
+            assertEquals(
+                CoreResult.Failure(CoreError.NotAllowed),
+                otherRepository.erase(PatientId(PATIENT_ID)),
+            )
+            assertTrue(fakeRpc.erased.isEmpty())
+        } finally {
+            other.close()
+        }
+    }
+
+    @Test
+    fun `a failed erase is mapped and leaves the patient in place`() = runBlocking {
+        seedLivePatient()
+        val repository = repository(rpc = FakePatientRpc(failure = RuntimeException("no network")))
+
+        assertEquals(
+            CoreResult.Failure(CoreError.Offline),
+            repository.erase(PatientId(PATIENT_ID)),
+        )
+        assertEquals(
+            PatientId(PATIENT_ID),
+            withTimeout(READ_TIMEOUT) { repository.observe(PatientId(PATIENT_ID)).first() }?.id,
+        )
+    }
+
+    @Test
+    fun `the active list excludes archived patients and the archive list holds them`() = runBlocking {
+        local.seedPatient(patientId = PATIENT_ID, displayName = "Grandma")
+        local.seedPatient(
+            patientId = ARCHIVED_ID,
+            displayName = "Grandpa",
+            archivedAt = ARCHIVED_AT.toString(),
+        )
+        local.database.drainUploadQueue()
+        val repository = repository()
+
+        val active = withTimeout(READ_TIMEOUT) {
+            repository.patients.first { it.isNotEmpty() }
+        }
+        val archived = withTimeout(READ_TIMEOUT) {
+            repository.archivedPatients.first { it.isNotEmpty() }
+        }
+
+        assertEquals(listOf(PATIENT_ID), active.map { it.id.value })
+        assertEquals(listOf(ARCHIVED_ID), archived.map { it.id.value })
+        assertTrue(archived.single().isArchived)
+    }
+
+    private fun repository(
+        now: () -> Instant = { ARCHIVED_AT },
+        rpc: PatientRpc = this.rpc,
+    ): PowerSyncPatientRepository = PowerSyncPatientRepository(
+        database = local.database,
+        authState = authState,
+        rpc = rpc,
+        newId = { PATIENT_ID },
+        now = now,
+    )
+
+    private suspend fun seedLivePatient() {
+        local.seedPatient(patientId = PATIENT_ID, displayName = "Grandma")
+        local.database.drainUploadQueue()
+    }
+
     private companion object {
         const val PATIENT_ID = "33333333-3333-4333-8333-333333333333"
+        const val ARCHIVED_ID = "44444444-4444-4444-8444-444444444444"
+        val ARCHIVED_AT: Instant = Instant.parse("2026-11-19T10:00:00Z")
         val READ_TIMEOUT = 15.seconds
     }
 }

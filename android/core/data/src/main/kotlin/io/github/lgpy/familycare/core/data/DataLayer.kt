@@ -7,6 +7,8 @@ import com.powersync.encryption.AndroidEncryptedDatabaseFactory
 import com.powersync.encryption.Key
 import com.powersync.sync.configureSyncHttpClient
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.lgpy.familycare.core.data.activity.ActivityRepository
+import io.github.lgpy.familycare.core.data.activity.SupabaseActivityRepository
 import io.github.lgpy.familycare.core.data.auth.AuthRepository
 import io.github.lgpy.familycare.core.data.auth.SupabaseAuthRepository
 import io.github.lgpy.familycare.core.data.circle.PowerSyncCareCircleRepository
@@ -58,6 +60,11 @@ class DataLayer internal constructor(
     val careCircleRepository: CareCircleRepository,
     val patientRepository: PatientRepository,
     val profileRepository: ProfileRepository,
+    /**
+     * The owner-only activity feed (D30). Online only: the audit log is not
+     * synced, so this read goes straight to the server's RPC.
+     */
+    val activityRepository: ActivityRepository,
     /**
      * The local, encrypted database. Feature data modules run their own SQL on
      * it (D5: a module owns its tables); the app's DI passes it to their
@@ -168,6 +175,7 @@ class DataLayer internal constructor(
                     database = database,
                     authState = authRepository.state,
                 ),
+                activityRepository = SupabaseActivityRepository(supabase.postgrest),
                 database = database,
                 authState = authRepository.state,
                 pushDeviceRepository = SupabasePushDeviceRepository(supabase.postgrest),
