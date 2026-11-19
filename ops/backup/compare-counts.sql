@@ -19,6 +19,6 @@ select n.nspname as schema_name,
   from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where c.relkind in ('r', 'p')
-   and (n.nspname in ('core', 'meds')
+   and (n.nspname in ('core', 'meds', 'appointments', 'info')
         or (n.nspname = 'auth' and c.relname = 'users'))
  order by n.nspname, c.relname;
