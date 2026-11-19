@@ -1,5 +1,6 @@
 package io.github.lgpy.familycare.ui.patients
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import android.content.Intent
@@ -805,7 +806,7 @@ private data class ProfileTab(
     val icon: PatientTabIcon,
 )
 
-/** Breathing room a fixed tab needs on each side of its label. */
+/** Total horizontal room a fixed tab keeps around its label (half on each side). */
 private val FixedTabLabelGap = 8.dp
 
 /**
@@ -844,7 +845,8 @@ private fun ProfileTabRow(
 ) {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val style = MaterialTheme.typography.titleSmall
+    // Icon over a small label, like the bottom navigation: four fit a phone.
+    val style = MaterialTheme.typography.labelMedium
 
     // The row's own width, not the screen's: a split-screen window measures its
     // quarter from what the tabs actually get.
@@ -870,14 +872,27 @@ private fun ProfileTabRow(
                 Tab(
                     selected = selected,
                     onClick = { onSelect(tab.id) },
-                    icon = {
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .heightIn(min = 64.dp)
+                            .padding(horizontal = FixedTabLabelGap / 2, vertical = 8.dp),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
                         Icon(
                             imageVector = tab.icon.image(selected),
                             contentDescription = null,
                         )
-                    },
-                    text = { Text(text = tab.label) },
-                )
+                        Text(
+                            text = tab.label,
+                            style = style,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
             }
         }
 

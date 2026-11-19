@@ -214,6 +214,17 @@ private val TileGap = 12.dp
  * stacks, the text keeps the whole row, so Compose only breaks a word that is
  * itself wider than the card (design-system §6: reflow by measurement).
  */
+/**
+ * Width an attention row's content needs beside its action: the icon indent
+ * plus the text wrapped onto about two lines (with 15% slack for uneven
+ * breaks), and never less than the content's longest word.
+ */
+internal fun attentionContentNeed(natural: Int, longestWord: Int, indent: Int): Int {
+    val text = (natural - indent).coerceAtLeast(0)
+    val twoLines = indent + (text * 0.575f).toInt()
+    return maxOf(twoLines, longestWord)
+}
+
 @Composable
 private fun AttentionRowLayout(
     modifier: Modifier = Modifier,
@@ -238,8 +249,15 @@ private fun AttentionRowLayout(
             val contentNatural = contentMeasurable.maxIntrinsicWidth(maxHeight)
             val actionNatural = actionMeasurable?.maxIntrinsicWidth(maxHeight) ?: 0
             val actionIsEmpty = actionMeasurable == null || actionNatural == 0
+            // The text may take two lines before the action moves below it, but
+            // never less than its longest word (so words never break inside).
+            val contentNeed = attentionContentNeed(
+                natural = contentNatural,
+                longestWord = contentMeasurable.minIntrinsicWidth(maxHeight),
+                indent = indentPx,
+            )
             val sideBySide = !actionIsEmpty &&
-                reflowFits(available, contentNatural, actionNatural, spacingPx)
+                reflowFits(available, contentNeed, actionNatural, spacingPx)
 
             if (actionIsEmpty) {
                 val contentPlaceable = contentMeasurable.measure(
