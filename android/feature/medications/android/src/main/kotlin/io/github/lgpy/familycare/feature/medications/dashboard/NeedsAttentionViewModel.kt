@@ -47,12 +47,18 @@ class NeedsAttentionViewModel(
         val patientNames = medications.associate { it.patient.patientId to it.patient.displayName }
         val memberNames = members.associate { it.userId to it.displayName }
         val myUserId = members.firstOrNull { it.isMe }?.userId
+        val pillLooks = medications.associate { it.medication.id.value to it.medication.pillLook }
         state.copy(
             loaded = true,
             canWrite = role.canWrite,
             groups = groups
                 .map { group ->
-                    group.toUi(patientNames[group.patientId].orEmpty(), memberNames, myUserId)
+                    group.toUi(
+                        patientName = patientNames[group.patientId].orEmpty(),
+                        memberNames = memberNames,
+                        myUserId = myUserId,
+                        pillLooks = pillLooks,
+                    )
                 }
                 .filter { group ->
                     group.state == DoseGroupState.OVERDUE || group.state == DoseGroupState.MISSED

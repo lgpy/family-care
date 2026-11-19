@@ -2,6 +2,9 @@ package io.github.lgpy.familycare.feature.medications.dashboard
 
 import app.cash.turbine.test
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
+import io.github.lgpy.familycare.core.domain.medication.PillColor
+import io.github.lgpy.familycare.core.domain.medication.PillLook
+import io.github.lgpy.familycare.core.domain.medication.PillShape
 import io.github.lgpy.familycare.feature.medications.FakeCareCircleRepository
 import io.github.lgpy.familycare.feature.medications.FakeDoseLogRepository
 import io.github.lgpy.familycare.feature.medications.FakeMedicationRepository
@@ -79,6 +82,36 @@ class DosesTodayViewModelTest {
             assertEquals(DoseGroupState.DUE, row.state)
             assertEquals(8, row.time.hour)
             assertTrue(state.canWrite)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `pill looks follow the dose order of the group`() = runTest {
+        val metformin = PillLook(
+            shape = PillShape.OBLONG,
+            color = PillColor.WHITE,
+            score = true,
+        )
+        val amlodipine = PillLook(
+            shape = PillShape.ROUND,
+            color = PillColor.YELLOW,
+        )
+        meds.activeFlow.value = listOf(
+            withRegimens(
+                medication(id = "med-1", name = "Metformin", pillLook = metformin),
+                listOf(firstRegimen),
+            ),
+            withRegimens(
+                medication(id = "med-2", name = "Amlodipine", pillLook = amlodipine),
+                listOf(secondRegimen),
+            ),
+        )
+        doses.todayFlow.value = listOf(todayGroup(listOf(firstSlot, secondSlot)))
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            assertEquals(listOf(metformin, amlodipine), state.groups.single().pills)
             cancelAndIgnoreRemainingEvents()
         }
     }

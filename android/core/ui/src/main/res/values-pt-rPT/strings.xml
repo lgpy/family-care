@@ -241,6 +241,11 @@
         <item quantity="one">%1$d toma</item>
         <item quantity="other">%1$d tomas</item>
     </plurals>
+    <!-- A fila de comprimidos de uma toma: quantos desenha. -->
+    <plurals name="meds_slot_pills">
+        <item quantity="one">%1$d comprimido</item>
+        <item quantity="other">%1$d comprimidos</item>
+    </plurals>
     <!-- Fase 2: a contagem decrescente do próximo grupo e a linha de uma toma confirmada. -->
     <string name="meds_countdown_now">agora</string>
     <string name="meds_countdown_minutes">daqui a %1$d min</string>
@@ -268,12 +273,12 @@
     <string name="meds_attention_group_title">Tomas de %1$s das %2$s por confirmar</string>
     <string name="meds_attention_low_stock_title">%1$s está a acabar</string>
     <plurals name="meds_attention_low_stock">
-        <item quantity="one">Resta %2$d dia a %1$s.</item>
-        <item quantity="other">Restam %2$d dias a %1$s.</item>
+        <item quantity="one">%1$s, resta %2$d dia</item>
+        <item quantity="other">%1$s, restam %2$d dias</item>
     </plurals>
     <plurals name="meds_attention_low_stock_prescription">
-        <item quantity="one">Resta %2$d dia a %1$s. É preciso receita primeiro.</item>
-        <item quantity="other">Restam %2$d dias a %1$s. É preciso receita primeiro.</item>
+        <item quantity="one">%1$s, resta %2$d dia · precisa de receita</item>
+        <item quantity="other">%1$s, restam %2$d dias · precisa de receita</item>
     </plurals>
     <string name="meds_give_anyway">Dar mesmo assim</string>
     <string name="meds_already_given_title">Já foi dada</string>
@@ -709,9 +714,12 @@
     <string name="appointments_push_body">Uma consulta foi marcada ou alterada</string>
     <string name="appointments_card_title">Próximos 7 dias</string>
     <string name="appointments_card_more">+%1$d mais</string>
-    <!-- Fase 2: a linha de detalhe de uma consulta na lista "próximos". -->
-    <string name="appointments_card_line">%1$s às %2$s, %3$s</string>
-    <string name="appointments_card_line_no_place">%1$s às %2$s</string>
+    <!-- A ligação do cabeçalho da secção para a Agenda. -->
+    <string name="appointments_card_agenda">Agenda</string>
+    <!-- A etiqueta de uma linha cuja preparação menciona jejum. -->
+    <string name="appointments_card_fasting">Jejum</string>
+    <!-- Os detalhes de uma linha: a pessoa e a hora. -->
+    <string name="appointments_card_when">%1$s, %2$s</string>
 
     <!-- M7/D30: exportação de dados da pessoa (JSON e o PDF para o médico). -->
     <string name="patient_export_action">Exportar dados…</string>

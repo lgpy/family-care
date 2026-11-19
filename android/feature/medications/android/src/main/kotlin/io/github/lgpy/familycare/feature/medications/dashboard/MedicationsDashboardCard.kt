@@ -9,12 +9,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.DoseSlotState
 import io.github.lgpy.familycare.core.ui.components.DoseSlotUi
 import io.github.lgpy.familycare.core.ui.components.DoseTimeGroup
+import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.SectionHeader
 import io.github.lgpy.familycare.core.ui.components.TimeRail
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
 import io.github.lgpy.familycare.feature.medications.MedicationsRoutes
@@ -29,13 +30,16 @@ import org.koin.compose.viewmodel.koinViewModel
  * system's [TimeRail] (docs/ux/screens.md §1, docs/ux/mockups/scaling.html).
  *
  * One [DoseTimeGroup] per wall-clock time, one [DoseSlotUi] per patient at that
- * time. A confirmed group is **Done** (neutral, dashed, with "Given by X at
- * HH:MM" when the log has it), the first unconfirmed group still at or after
- * now is **Next** (primary container, with the countdown under the time), and
- * everything later is **Upcoming**. Tapping a slot opens the existing dose-slot
- * screen; "Give" is the existing one-tap group confirmation, so the module's
- * behaviour is unchanged and only the presentation moved to the shared
- * components.
+ * time, each with a row of the medicines' pill pictures. A confirmed group is
+ * **Done** (neutral, dashed, with "Given by X at HH:MM" when the log has it),
+ * the first unconfirmed group still at or after now is **Next** (primary
+ * container, with the countdown under the time), and everything later is
+ * **Upcoming**. Tapping a slot opens the existing dose-slot screen; "Give" is
+ * the existing one-tap group confirmation, so the module's behaviour is
+ * unchanged and only the presentation moved to the shared components.
+ *
+ * The section header carries the medicines icon, like every other section title
+ * on Today (docs/ux/design-system.md §3, §6).
  */
 class MedicationsDashboardCard : DashboardCard {
 
@@ -48,10 +52,9 @@ class MedicationsDashboardCard : DashboardCard {
         val now = LocalDateTime.now()
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = stringResource(R.string.meds_doses_today_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+            SectionHeader(
+                title = stringResource(R.string.meds_doses_today_title),
+                icon = FcIcons.Medication,
             )
 
             if (uiState.groups.isEmpty()) {
@@ -126,6 +129,7 @@ private fun DosesTodayUiState.toTimeGroups(
                             time == nextTime -> DoseSlotState.NEXT
                             else -> DoseSlotState.UPCOMING
                         },
+                        pills = group.pills,
                         givenText = if (done && group.state != DoseGroupState.SKIPPED) {
                             givenByText(group)
                         } else {

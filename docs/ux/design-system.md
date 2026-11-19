@@ -144,7 +144,8 @@ ibuprofen").
 | `ScreenHeader` | the title (and optional subtitle) every top-level tab starts with: `headlineMedium` bold on `onSurface`, `bodyLarge` on `onSurfaceVariant`, no truncation. |
 | `ReflowRow` | content + action side by side while both fit, else action below, full width. Pure fit function `reflowFits` is unit-tested. |
 | `PatientAvatar` | fixed-dp circle with the patient's initial in their identity colour. |
-| `AttentionCard` / `AttentionItem` / `AttentionAction` | the amber "needs attention" card: icon + bold title + supporting text per item, 18% divider, optional full-width accent button. |
+| `AttentionCard` / `AttentionItem` / `AttentionAction` | the one amber "needs attention" card on Today: compact rows, each a tinted icon tile + bold title + one-line detail + a small accent button or a chevron; 14% dividers. All attention rows share one card. |
+| `SectionHeader` | a section title: primary-tinted icon + `titleMedium` bold `onSurface` + optional trailing link. Every Today section and detail-screen block uses it. |
 | `AllergyBanner` | the red allergy line: critical container, icon, bold text, never truncated. |
 | `StockMeter` | 8 dp bar (primary, or attention accent when low) plus "N days left"; label moves under the bar when it does not fit. |
 | `TimeRail` / `DoseTimeGroup` / `DoseSlot` / `DoseSlotUi` / `DoseSlotState` | doses today: time column beside slots while the widest *time* is ≤ 26% of the width (`TimeRailMaxTimeWidthFraction`), otherwise times as headings; countdowns wrap under the time. Dose slots are done (dashed outline, neutral), next (primary container) or upcoming (surface container). |

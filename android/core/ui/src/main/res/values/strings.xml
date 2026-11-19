@@ -241,6 +241,11 @@
         <item quantity="one">%1$d dose</item>
         <item quantity="other">%1$d doses</item>
     </plurals>
+    <!-- The dose slot's pill row: how many pills it draws. -->
+    <plurals name="meds_slot_pills">
+        <item quantity="one">%1$d pill</item>
+        <item quantity="other">%1$d pills</item>
+    </plurals>
     <!-- Phase 2: the time rail's next-group countdown and a confirmed slot's line. -->
     <string name="meds_countdown_now">now</string>
     <string name="meds_countdown_minutes">in %1$d min</string>
@@ -263,14 +268,14 @@
         <item quantity="other">Give all %1$d</item>
     </plurals>
     <string name="meds_attention_group_title">%1$s\'s %2$s medicines aren\'t confirmed</string>
-    <string name="meds_attention_low_stock_title">%1$s is running low</string>
+    <string name="meds_attention_low_stock_title">%1$s running low</string>
     <plurals name="meds_attention_low_stock">
-        <item quantity="one">%1$s has %2$d day left.</item>
-        <item quantity="other">%1$s has %2$d days left.</item>
+        <item quantity="one">%1$s, %2$d day left</item>
+        <item quantity="other">%1$s, %2$d days left</item>
     </plurals>
     <plurals name="meds_attention_low_stock_prescription">
-        <item quantity="one">%1$s has %2$d day left. Needs a prescription first.</item>
-        <item quantity="other">%1$s has %2$d days left. Needs a prescription first.</item>
+        <item quantity="one">%1$s, %2$d day left · needs prescription</item>
+        <item quantity="other">%1$s, %2$d days left · needs prescription</item>
     </plurals>
     <string name="meds_give_anyway">Give anyway</string>
     <string name="meds_already_given_title">Already given</string>
@@ -707,9 +712,12 @@
     <string name="appointments_push_body">An appointment was added or changed</string>
     <string name="appointments_card_title">Next 7 days</string>
     <string name="appointments_card_more">+%1$d more</string>
-    <!-- Phase 2: one "upcoming" row's detail line. -->
-    <string name="appointments_card_line">%1$s at %2$s, %3$s</string>
-    <string name="appointments_card_line_no_place">%1$s at %2$s</string>
+    <!-- The section header's trailing link to the Agenda tab. -->
+    <string name="appointments_card_agenda">Agenda</string>
+    <!-- The tag of a row whose preparation mentions fasting. -->
+    <string name="appointments_card_fasting">Fasting</string>
+    <!-- A row's meta: the patient, then the time. -->
+    <string name="appointments_card_when">%1$s, %2$s</string>
 
     <!-- M7/D30: patient export (JSON and the readable PDF). -->
     <string name="patient_export_action">Export data…</string>

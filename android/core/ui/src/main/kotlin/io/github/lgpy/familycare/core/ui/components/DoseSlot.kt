@@ -4,14 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -32,10 +32,15 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.PatientId
+import io.github.lgpy.familycare.core.domain.medication.PillColor
+import io.github.lgpy.familycare.core.domain.medication.PillLook
+import io.github.lgpy.familycare.core.domain.medication.PillShape
+import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareDimens
 
 /**
@@ -54,8 +59,11 @@ enum class DoseSlotState { DONE, NEXT, UPCOMING }
  *
  * @param patientId Identifies the patient for the avatar colour.
  * @param patientName The short name shown next to the avatar ("Maria", "Mom").
- * @param meta The supporting line ("2 medicines").
+ * @param meta The supporting line used when [pills] is empty ("2 medicines").
  * @param state Which of the three looks to use.
+ * @param pills How each medicine of the dose looks, in dose order. A null
+ *   entry (a medicine with no look set) draws the neutral pill glyph, so the
+ *   row never has a hole in it.
  * @param givenText For [DoseSlotState.DONE]: "Given by Mom at 08:04".
  * @param actionLabel The button label ("Give"), null for no action.
  * @param onAction What the button does; required when [actionLabel] is set.
@@ -68,6 +76,7 @@ data class DoseSlotUi(
     val patientName: String,
     val meta: String,
     val state: DoseSlotState,
+    val pills: List<PillLook?> = emptyList(),
     val givenText: String? = null,
     val actionLabel: String? = null,
     val onAction: (() -> Unit)? = null,
@@ -77,13 +86,17 @@ data class DoseSlotUi(
 /**
  * One patient's doses at one time, as a card.
  *
- * Avatar, name and meta on the left; the action (when there is one) on the
- * right via [ReflowRow], so at a large system font the button drops below the
- * name instead of squeezing it. Corner radius 20 dp, padding 12×14 dp.
+ * Avatar, name and the row of pill pictures on the left; the action (when there
+ * is one) on the right via [ReflowRow], so at a large system font the button
+ * drops below the name instead of squeezing it. Corner radius 20 dp, padding
+ * 12×14 dp.
  *
- * The medicine names and the patient name are never truncated; they wrap.
+ * Under the name comes a wrapping row of 22 dp [PillImage]s, one per medicine
+ * of the dose, followed by "N pills" when there is more than one to count. With
+ * no pill looks it falls back to [DoseSlotUi.meta], so a slot never loses its
+ * count. Names and pill rows are never truncated; they wrap.
  * [DoseSlotState.DONE] draws a transparent slot with a 1 dp dashed
- * outlineVariant border and neutral text, plus a check line with
+ * outlineVariant border and neutral text, plus a check-circle line with
  * [DoseSlotUi.givenText].
  *
  * Stateless.
@@ -153,7 +166,7 @@ fun DoseSlot(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Check,
+                        imageVector = FcIcons.CheckCircle,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                     )
@@ -167,6 +180,7 @@ fun DoseSlot(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WhoRow(slot: DoseSlotUi) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -180,11 +194,39 @@ private fun WhoRow(slot: DoseSlotUi) {
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
             )
-            Text(
-                text = slot.meta,
-                style = MaterialTheme.typography.bodyMedium,
-                color = LocalContentColor.current.copy(alpha = 0.8f),
-            )
+            if (slot.pills.isEmpty()) {
+                Text(
+                    text = slot.meta,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LocalContentColor.current.copy(alpha = 0.8f),
+                )
+            } else {
+                FlowRow(
+                    modifier = Modifier.padding(top = 3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    slot.pills.forEach { look ->
+                        PillImage(
+                            look = look,
+                            size = 22.dp,
+                            contentDescription = null,
+                        )
+                    }
+                    if (slot.pills.size > 1) {
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.meds_slot_pills,
+                                slot.pills.size,
+                                slot.pills.size,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LocalContentColor.current.copy(alpha = 0.8f),
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -236,6 +278,16 @@ private fun Modifier.dashedOutline(color: Color, radius: Dp): Modifier = drawBeh
 @Composable
 private fun DoseSlotPreview() {
     val scheme = MaterialTheme.colorScheme
+    val losartan = PillLook(
+        shape = PillShape.ROUND,
+        color = PillColor.WHITE,
+        score = true,
+    )
+    val omeprazole = PillLook(
+        shape = PillShape.CAPSULE,
+        color = PillColor.PURPLE,
+        color2 = PillColor.PINK,
+    )
     Surface {
         Column(
             modifier = Modifier
@@ -250,6 +302,7 @@ private fun DoseSlotPreview() {
                     patientName = "António",
                     meta = "3 medicines",
                     state = DoseSlotState.DONE,
+                    pills = listOf(losartan, omeprazole, null),
                     givenText = "Given by Mom at 08:04",
                 ),
             )
@@ -259,6 +312,7 @@ private fun DoseSlotPreview() {
                     patientName = "Maria",
                     meta = "2 medicines",
                     state = DoseSlotState.NEXT,
+                    pills = listOf(omeprazole, losartan),
                     actionLabel = "Give",
                     onAction = {},
                 ),

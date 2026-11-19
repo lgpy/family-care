@@ -47,7 +47,7 @@ data class LowStockUiState(
 }
 
 /**
- * The Today card for low stock (M5; D28; dashboard order 50).
+ * The low-stock rows of Today's single attention card (M5; D28).
  *
  * It watches [StockRepository.overviews] — every active medication of the circle
  * with its derived stock summary — and keeps the low ones. The list re-emits on

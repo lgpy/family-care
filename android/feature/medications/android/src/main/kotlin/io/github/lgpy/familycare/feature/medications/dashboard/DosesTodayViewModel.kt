@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.canWrite
+import io.github.lgpy.familycare.core.domain.medication.PillLook
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.GivenBy
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
@@ -51,6 +52,8 @@ data class DoseGroupUi(
     val state: DoseGroupState,
     val givenBy: GivenByUi?,
     val at: LocalTime?,
+    /** How each medicine of the dose looks, in dose-slot order. */
+    val pills: List<PillLook?>,
 ) {
 
     val patientId: PatientId get() = group.patientId
@@ -104,11 +107,17 @@ class DosesTodayViewModel(
         val patientNames = medications.associate { it.patient.patientId to it.patient.displayName }
         val memberNames = members.associate { it.userId to it.displayName }
         val myUserId = members.firstOrNull { it.isMe }?.userId
+        val pillLooks = medications.associate { it.medication.id.value to it.medication.pillLook }
         state.copy(
             loaded = true,
             canWrite = role.canWrite,
             groups = groups.map { group ->
-                group.toUi(patientNames[group.patientId].orEmpty(), memberNames, myUserId)
+                group.toUi(
+                    patientName = patientNames[group.patientId].orEmpty(),
+                    memberNames = memberNames,
+                    myUserId = myUserId,
+                    pillLooks = pillLooks,
+                )
             },
         )
     }.stateIn(
@@ -170,6 +179,7 @@ internal fun TodayDoseGroup.toUi(
     patientName: String,
     memberNames: Map<String, String?>,
     myUserId: String?,
+    pillLooks: Map<String, PillLook?> = emptyMap(),
 ): DoseGroupUi {
     val latest = statuses.flatMap { it.effectiveEntries }.maxByOrNull { it.actualAt }
     return DoseGroupUi(
@@ -178,6 +188,7 @@ internal fun TodayDoseGroup.toUi(
         state = aggregateState(statuses.map { it.state }),
         givenBy = latest?.toGivenByUi(memberNames, myUserId),
         at = latest?.actualAt?.atZone(ZoneId.systemDefault())?.toLocalTime(),
+        pills = slots.map { slot -> pillLooks[slot.medicationId.value] },
     )
 }
 

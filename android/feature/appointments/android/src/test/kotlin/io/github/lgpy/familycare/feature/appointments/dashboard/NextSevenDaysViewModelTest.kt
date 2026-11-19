@@ -3,6 +3,7 @@ package io.github.lgpy.familycare.feature.appointments.dashboard
 import io.github.lgpy.familycare.feature.appointments.FakeAppointmentRepository
 import io.github.lgpy.familycare.feature.appointments.appointment
 import io.github.lgpy.familycare.feature.appointments.entry
+import io.github.lgpy.familycare.feature.appointments.grandpaId
 import io.github.lgpy.familycare.feature.appointments.testNow
 import java.time.Instant
 import java.time.LocalDateTime
@@ -47,6 +48,7 @@ class NextSevenDaysViewModelTest {
         assertTrue(state.isVisible)
         assertEquals(listOf("sooner", "later"), state.lines.map { it.appointmentId })
         assertEquals("Grandma", state.lines.first().patientName)
+        assertEquals(grandpaId, state.lines.first().patientId)
         assertEquals(15, state.lines.first().time.hour)
         assertEquals(30, state.lines.first().time.minute)
         assertEquals("2026-11-19", state.lines.first().date.toString())

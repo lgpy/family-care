@@ -2,6 +2,7 @@ package io.github.lgpy.familycare.feature.appointments.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentEntry
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentRepository
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentKind
@@ -78,6 +79,7 @@ class NextSevenDaysViewModel(
 /** One appointment line of the card, in the shell's words. */
 data class CardLine(
     val appointmentId: String,
+    val patientId: PatientId,
     val patientName: String,
     val date: LocalDate,
     val time: LocalTime,
@@ -91,6 +93,7 @@ data class CardLine(
     companion object {
         internal fun of(entry: AppointmentEntry): CardLine = CardLine(
             appointmentId = entry.appointment.id.value,
+            patientId = entry.appointment.patientId,
             patientName = entry.patientName,
             date = entry.appointment.localDate,
             time = entry.appointment.localTime,

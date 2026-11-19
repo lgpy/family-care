@@ -48,10 +48,8 @@ import io.github.lgpy.familycare.feature.appointments.push.AppointmentsPushHandl
 import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentReminderCoordinator
 import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentReminderScheduler
 import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentRemindersStore
-import io.github.lgpy.familycare.feature.medications.dashboard.LowStockDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.MedicationsDashboardCard
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionDashboardCard
-import io.github.lgpy.familycare.feature.medications.dashboard.ReminderHealthDashboardCard
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationsData
@@ -188,9 +186,9 @@ val appModule: Module = module {
     // card, the shell renders whatever was registered, in order. Today imports no
     // feature module to do it.
     single<DashboardCard>(named("MedicationsDashboardCard")) { MedicationsDashboardCard() }
+    // One attention card: unconfirmed doses, low stock and reminder health, in
+    // that order (mockup `const today`).
     single<DashboardCard>(named("NeedsAttentionDashboardCard")) { NeedsAttentionDashboardCard() }
-    single<DashboardCard>(named("LowStockDashboardCard")) { LowStockDashboardCard() }
-    single<DashboardCard>(named("ReminderHealthDashboardCard")) { ReminderHealthDashboardCard() }
     // M6: upcoming appointments across patients in the next seven days.
     single<DashboardCard>(named("NextSevenDaysDashboardCard")) { NextSevenDaysDashboardCard() }
     single { DashboardCards(getAll<DashboardCard>()) }
