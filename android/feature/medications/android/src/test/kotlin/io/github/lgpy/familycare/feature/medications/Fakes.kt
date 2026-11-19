@@ -21,6 +21,7 @@ import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.GivenBy
 import io.github.lgpy.familycare.feature.medications.data.MedsResult
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
+import io.github.lgpy.familycare.feature.medications.data.MedicationCatalogRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationWithRegimens
 import io.github.lgpy.familycare.feature.medications.data.PatientDoseSettings
 import io.github.lgpy.familycare.feature.medications.data.StockOverview
@@ -37,6 +38,7 @@ import io.github.lgpy.familycare.feature.medications.domain.DoseTime
 import io.github.lgpy.familycare.feature.medications.domain.Medication
 import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
 import io.github.lgpy.familycare.feature.medications.domain.MedicationId
+import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestion
 import io.github.lgpy.familycare.feature.medications.domain.Regimen
 import io.github.lgpy.familycare.feature.medications.domain.RegimenId
 import io.github.lgpy.familycare.feature.medications.domain.ScheduleType
@@ -307,6 +309,20 @@ data class CreateCall(
     val regimen: Regimen,
     val openingQuantity: BigDecimal?,
 )
+
+/** The bundled catalogue's repository (D31): canned results, recorded queries. */
+class FakeMedicationCatalogRepository : MedicationCatalogRepository {
+
+    var results: List<MedicationSuggestion> = emptyList()
+    var failure: Throwable? = null
+    val queries = mutableListOf<String>()
+
+    override suspend fun search(query: String, limit: Int): List<MedicationSuggestion> {
+        queries += query
+        failure?.let { throw it }
+        return results.take(limit)
+    }
+}
 
 class FakeDoseLogRepository : DoseLogRepository {
 

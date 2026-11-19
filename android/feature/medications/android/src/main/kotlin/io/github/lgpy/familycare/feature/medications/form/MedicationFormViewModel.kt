@@ -10,14 +10,18 @@ import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.domain.circle.canWrite
 import io.github.lgpy.familycare.feature.medications.data.MedsError
 import io.github.lgpy.familycare.feature.medications.data.MedsResult
+import io.github.lgpy.familycare.feature.medications.data.MedicationCatalogRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationWithRegimens
 import io.github.lgpy.familycare.feature.medications.data.StockRepository
 import io.github.lgpy.familycare.feature.medications.domain.Medication
+import io.github.lgpy.familycare.feature.medications.domain.MedicationCatalog
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
 import io.github.lgpy.familycare.feature.medications.domain.MedicationId
 import io.github.lgpy.familycare.feature.medications.domain.MedicationRules
+import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestion
+import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestionRules
 import io.github.lgpy.familycare.feature.medications.domain.RegimenId
 import io.github.lgpy.familycare.feature.medications.domain.StockMovementKind
 import io.github.lgpy.familycare.feature.medications.ui.DoseTimeEntry
@@ -35,6 +39,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -77,6 +82,7 @@ class MedicationFormViewModel(
     private val stockRepository: StockRepository,
     private val patientRepository: PatientRepository,
     private val careCircleRepository: CareCircleRepository,
+    private val catalogRepository: MedicationCatalogRepository,
     private val newId: () -> String = { UUID.randomUUID().toString() },
     private val timeZone: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel() {
@@ -86,6 +92,12 @@ class MedicationFormViewModel(
 
     private var existing: Medication? = null
 
+    /** The search in flight; a newer keystroke cancels the older one. */
+    private var searchJob: Job? = null
+
+    /** The circle's own medications, the first suggestions (D31). */
+    private var circleMedications: List<Medication> = emptyList()
+
     init {
         viewModelScope.launch { load() }
     }
@@ -94,6 +106,7 @@ class MedicationFormViewModel(
         val role = careCircleRepository.myRole.first()
         val members = careCircleRepository.members.first().sortedWith(MemberOrder)
         val patient = patientRepository.observe(PatientId(patientId)).first()
+        circleMedications = medicationRepository.activeMedications.first().map { it.medication }
 
         val loaded = medicationId?.let { medicationRepository.observeMedication(MedicationId(it)).first() }
         val medication = loaded?.medication
@@ -144,7 +157,33 @@ class MedicationFormViewModel(
 
     // --- Step 1 --------------------------------------------------------------
 
-    fun onNameChanged(value: String) = updateDetails { it.copy(name = value) }
+    /**
+     * Typing the name searches the bundled catalogue (D31). The filled fields
+     * are left alone, so editing a picked name afterwards keeps its ingredient,
+     * strength and form.
+     */
+    fun onNameChanged(value: String) {
+        updateDetails { it.copy(name = value) }
+        requestSuggestions(value)
+    }
+
+    /** Picks a suggestion: fills what it knows, leaves the rest as it is. */
+    fun onSuggestionPicked(suggestion: MedicationSuggestion) {
+        _uiState.update { state ->
+            state.copy(
+                name = suggestion.name,
+                activeIngredient = suggestion.dci.ifBlank { state.activeIngredient },
+                strength = suggestion.strength.ifBlank { state.strength },
+                form = suggestion.form,
+                stockUnit = if (state.stockUnitEdited) state.stockUnit else defaultStockUnit(suggestion.form),
+                requiresPrescription = !suggestion.otc,
+                packUnits = suggestion.packOptions.firstOrNull(),
+                packOptions = suggestion.packOptions,
+                suggestions = emptyList(),
+                errors = emptySet(),
+            )
+        }
+    }
 
     fun onActiveIngredientChanged(value: String) =
         updateDetails { it.copy(activeIngredient = value) }
@@ -221,6 +260,15 @@ class MedicationFormViewModel(
     /** "How many <stock unit> are there now?" — the opening count. */
     fun onStockQuantityChanged(value: String) =
         _uiState.update { it.copy(stockQuantity = value, errors = it.errors - MedicationField.STOCK_QUANTITY) }
+
+    /**
+     * The one-tap "1 pack = N" chip of the stock step (D31): fills the opening
+     * count with the pack's unit count when the box says how many it holds.
+     */
+    fun onUsePackQuantity(units: Int) =
+        _uiState.update {
+            it.copy(stockQuantity = units.toString(), errors = it.errors - MedicationField.STOCK_QUANTITY)
+        }
 
     fun onLowStockThresholdChanged(value: String) =
         _uiState.update {
@@ -353,6 +401,31 @@ class MedicationFormViewModel(
     private fun updateDetails(block: (MedicationFormUiState) -> MedicationFormUiState) =
         _uiState.update { state -> block(state).copy(errors = emptySet()) }
 
+    /**
+     * Looks up suggestions for [rawQuery] off the main thread: the circle's own
+     * medications first (a family re-adds what it already has), then the
+     * bundled catalogue. The result is applied only while the field still holds
+     * the same text, so a fast typist never sees stale suggestions.
+     */
+    private fun requestSuggestions(rawQuery: String) {
+        searchJob?.cancel()
+        val query = rawQuery.trim()
+        if (query.length < MedicationCatalog.MIN_QUERY_LENGTH) {
+            _uiState.update { it.copy(suggestions = emptyList()) }
+            return
+        }
+        searchJob = viewModelScope.launch {
+            val catalogue = runCatching {
+                catalogRepository.search(query, SUGGESTION_LIMIT)
+            }.getOrDefault(emptyList())
+            val circle = MedicationSuggestionRules.circleSuggestions(query, circleMedications, SUGGESTION_LIMIT)
+            val merged = MedicationSuggestionRules.merge(circle, catalogue, SUGGESTION_LIMIT)
+            _uiState.update { state ->
+                if (state.name.trim() == query) state.copy(suggestions = merged) else state
+            }
+        }
+    }
+
     private fun updateSchedule(block: (ScheduleFormState) -> ScheduleFormState) =
         _uiState.update { it.copy(schedule = block(it.schedule), errors = emptySet()) }
 
@@ -386,6 +459,9 @@ private val STOCK_STEP_FIELDS: Set<MedicationField> = setOf(
     MedicationField.MEDICATION_LOW_STOCK_THRESHOLD,
 )
 
+/** How many catalogue suggestions the name field shows at once. */
+private const val SUGGESTION_LIMIT = 12
+
 /** What the four steps hold, what is wrong, and whether it is saving. */
 data class MedicationFormUiState(
     val loaded: Boolean = false,
@@ -396,6 +472,12 @@ data class MedicationFormUiState(
     val patientName: String? = null,
     val members: List<CircleMember> = emptyList(),
     val name: String = "",
+    /** Catalogue suggestions for the name field (D31); empty below two characters. */
+    val suggestions: List<MedicationSuggestion> = emptyList(),
+    /** The pack sizes of the picked suggestion, for the stock step's chips. */
+    val packOptions: List<Int> = emptyList(),
+    /** The pack size the form offers first ("1 pack = N"), when known. */
+    val packUnits: Int? = null,
     val activeIngredient: String = "",
     val strength: String = "",
     val form: MedicationForm = MedicationForm.TABLET,

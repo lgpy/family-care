@@ -1,0 +1,18 @@
+{
+  "built_at": "2026-11-19T09:32:19+00:00",
+  "sources": {
+    "spr": "https://app10.infarmed.pt/genericos/genericos_II/lista_genericos.php?tabela=spr&fonte=todos&excel=true",
+    "disp": "https://app10.infarmed.pt/genericos/genericos_II/lista_genericos.php?tabela=disp&fonte=todos&excel=true",
+    "mnsrm_page": "https://app10.infarmed.pt/pt/comparticipacao_medicamentos/lista_mnsrm/lista_mnsrm.php",
+    "mnsrm_excel": "https://app10.infarmed.pt/pt/comparticipacao_medicamentos/lista_mnsrm/lista_excel.php"
+  },
+  "rows": {
+    "spr": 5073,
+    "disp": 4544,
+    "mnsrm": 2474,
+    "products": 7916
+  },
+  "asset": "meds_catalog.tsv.gz",
+  "asset_bytes_gz": 128540,
+  "asset_bytes_tsv": 1068849
+}

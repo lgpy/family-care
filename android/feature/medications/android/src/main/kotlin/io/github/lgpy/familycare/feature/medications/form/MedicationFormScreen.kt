@@ -1,5 +1,6 @@
 package io.github.lgpy.familycare.feature.medications.form
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -22,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +40,7 @@ import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
+import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestion
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
 import io.github.lgpy.familycare.feature.medications.ui.ScheduleFields
 import io.github.lgpy.familycare.feature.medications.ui.labelRes
@@ -175,6 +179,65 @@ private fun MedicationFormUiState.stepTitleRes(): Int = when (step) {
     else -> R.string.meds_step_who
 }
 
+/**
+ * The catalogue suggestions under the name field (D31): one row per medicine,
+ * its strength and form, and an OTC tag when no prescription is needed. Tapping
+ * a row fills the step; typing on keeps the rows and free text both available.
+ */
+@Composable
+private fun SuggestionList(
+    suggestions: List<MedicationSuggestion>,
+    enabled: Boolean,
+    onPick: (MedicationSuggestion) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        suggestions.forEach { suggestion ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = enabled) { onPick(suggestion) }
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = suggestionLine(suggestion),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (suggestion.otc) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.small,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.meds_catalog_otc),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** "Name · strength · form", skipping what the entry does not have. */
+@Composable
+private fun suggestionLine(suggestion: MedicationSuggestion): String {
+    val parts = buildList {
+        add(suggestion.name)
+        if (suggestion.strength.isNotBlank()) add(suggestion.strength)
+        if (suggestion.formText.isNotBlank()) add(stringResource(suggestion.form.labelRes()))
+    }
+    return parts.joinToString(stringResource(R.string.meds_list_separator))
+}
+
 @Composable
 private fun DetailsStep(viewModel: MedicationFormViewModel, state: MedicationFormUiState) {
     val enabled = state.canWrite
@@ -190,6 +253,18 @@ private fun DetailsStep(viewModel: MedicationFormViewModel, state: MedicationFor
         modifier = Modifier.fillMaxWidth(),
     )
     FieldError(MedicationField.MEDICATION_NAME in errors, R.string.meds_error_name)
+
+    if (state.suggestions.isNotEmpty()) {
+        SuggestionList(
+            suggestions = state.suggestions,
+            enabled = enabled,
+            onPick = viewModel::onSuggestionPicked,
+        )
+        Text(
+            text = stringResource(R.string.meds_catalog_footnote),
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
 
     OutlinedTextField(
         value = state.activeIngredient,
@@ -376,6 +451,20 @@ private fun StockStep(viewModel: MedicationFormViewModel, state: MedicationFormU
         modifier = Modifier.fillMaxWidth(),
     )
     FieldError(MedicationField.STOCK_QUANTITY in state.errors, R.string.meds_error_stock_quantity)
+
+    // D31: the picked pack knows how many units the box holds. Only offered
+    // while the count is still empty, so it never overwrites a typed number.
+    if (state.stockQuantity.isBlank() && state.packOptions.isNotEmpty()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            state.packOptions.forEach { units ->
+                AssistChip(
+                    onClick = { viewModel.onUsePackQuantity(units) },
+                    enabled = enabled,
+                    label = { Text(text = stringResource(R.string.meds_stock_pack_chip, units)) },
+                )
+            }
+        }
+    }
 
     OutlinedTextField(
         value = state.lowStockThresholdDays,

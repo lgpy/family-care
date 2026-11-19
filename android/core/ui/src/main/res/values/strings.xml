@@ -317,6 +317,9 @@
     <string name="meds_next">Next</string>
     <string name="meds_previous">Back</string>
     <string name="meds_name_label">Name</string>
+    <string name="meds_catalog_otc">OTC</string>
+    <string name="meds_catalog_footnote">From INFARMED\'s public lists. Some brand-only medicines are missing — type them by hand.</string>
+    <string name="meds_stock_pack_chip">1 pack = %1$d</string>
     <string name="meds_ingredient_label">Active ingredient (optional)</string>
     <string name="meds_strength_label">Strength (optional)</string>
     <string name="meds_strength_helper">As printed on the box, for example 500 mg.</string>
