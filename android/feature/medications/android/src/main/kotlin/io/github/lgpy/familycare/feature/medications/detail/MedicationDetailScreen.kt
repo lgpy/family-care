@@ -37,12 +37,12 @@ import io.github.lgpy.familycare.feature.medications.domain.Regimen
 import io.github.lgpy.familycare.feature.medications.domain.ShoppingStatus
 import io.github.lgpy.familycare.feature.medications.domain.StockSummary
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
-import io.github.lgpy.familycare.feature.medications.ui.formatQuantity
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
 import io.github.lgpy.familycare.feature.medications.ui.labelRes
 import io.github.lgpy.familycare.feature.medications.ui.localizedDate
 import io.github.lgpy.familycare.feature.medications.ui.messageRes
 import io.github.lgpy.familycare.feature.medications.ui.regimenSummary
+import io.github.lgpy.familycare.feature.medications.ui.stockLeftText
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -309,11 +309,7 @@ private fun StockSection(summary: StockSummary, stockUnit: String) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = stringResource(
-                R.string.meds_stock_left,
-                formatQuantity(summary.displayStock),
-                stockUnit,
-            ),
+            text = stockLeftText(summary.displayStock, stockUnit),
             style = MaterialTheme.typography.bodyLarge,
         )
         if (summary.low) {

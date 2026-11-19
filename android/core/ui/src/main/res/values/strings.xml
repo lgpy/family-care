@@ -136,6 +136,7 @@
     <string name="patient_info_contacts_title">Emergency contacts</string>
     <string name="patient_info_notes_title">Notes</string>
     <string name="patient_info_empty">No medical information recorded yet.</string>
+    <string name="patient_info_no_details">No other information recorded yet.</string>
     <string name="patient_info_edit">Edit</string>
     <string name="patient_info_edit_title">Edit info</string>
     <string name="patient_info_save">Save</string>
@@ -256,9 +257,9 @@
     <string name="meds_status_partly">partly confirmed</string>
     <string name="meds_you">you</string>
     <string name="meds_someone_else">someone else</string>
-    <string name="meds_give">Give ✓</string>
+    <string name="meds_give">Give</string>
     <plurals name="meds_give_all">
-        <item quantity="one">Give %1$d</item>
+        <item quantity="one">Give it</item>
         <item quantity="other">Give all %1$d</item>
     </plurals>
     <string name="meds_attention_group_title">%1$s\'s %2$s medicines aren\'t confirmed</string>
@@ -387,6 +388,7 @@
     <string name="meds_error_start">Enter a valid start date (YYYY-MM-DD).</string>
     <string name="meds_error_end">The end date must be on or after the start date.</string>
     <string name="meds_error_times">Add at least one time with an amount, as HH:MM.</string>
+    <string name="meds_error_times_duplicate">Two doses have the same time. Change one of them.</string>
     <string name="meds_error_overlap">These dates overlap another schedule of this medication.</string>
     <string name="meds_error_stock_quantity">Enter a quantity between 0 and 100000, with up to three decimals.</string>
     <string name="meds_error_stock_quantity_positive">Enter a quantity greater than 0, with up to three decimals.</string>
@@ -424,7 +426,36 @@
     <string name="meds_not_found">This medication is not available.</string>
 
     <!-- M5: stock (D28). The section, its actions and their errors. -->
-    <string name="meds_stock_left">%1$s %2$s left</string>
+    <plurals name="meds_stock_left">
+        <item quantity="one">%1$s %2$s left</item>
+        <item quantity="other">%1$s %2$s left</item>
+    </plurals>
+    <!-- The stock unit is stored as a plain token ("tablet", "drop"); these are
+         how the label pluralises the ones the form fills in. -->
+    <plurals name="meds_unit_tablet">
+        <item quantity="one">tablet</item>
+        <item quantity="other">tablets</item>
+    </plurals>
+    <plurals name="meds_unit_capsule">
+        <item quantity="one">capsule</item>
+        <item quantity="other">capsules</item>
+    </plurals>
+    <plurals name="meds_unit_drop">
+        <item quantity="one">drop</item>
+        <item quantity="other">drops</item>
+    </plurals>
+    <plurals name="meds_unit_dose">
+        <item quantity="one">dose</item>
+        <item quantity="other">doses</item>
+    </plurals>
+    <plurals name="meds_unit_patch">
+        <item quantity="one">patch</item>
+        <item quantity="other">patches</item>
+    </plurals>
+    <plurals name="meds_unit_unit">
+        <item quantity="one">unit</item>
+        <item quantity="other">units</item>
+    </plurals>
     <plurals name="meds_stock_days_left">
         <item quantity="one">About %1$d day left</item>
         <item quantity="other">About %1$d days left</item>
@@ -512,12 +543,13 @@
     <string name="reminders_needs_attention_title">Needs attention</string>
     <string name="reminders_needs_attention_line">%1$s · %2$s · %3$s · not confirmed</string>
     <string name="reminders_health_card_title">Reminders need attention</string>
-    <string name="reminders_health_card_body">This phone may not remind you on time. Check the settings.</string>
+    <string name="reminders_health_card_body">This phone may not remind you on time. Check: %1$s.</string>
     <string name="reminders_health_card_action">Fix reminders</string>
-    <string name="reminders_health_notifications">Notifications</string>
-    <string name="reminders_health_exact_alarms">Exact alarms</string>
-    <string name="reminders_health_battery">Battery optimisation</string>
-    <string name="reminders_health_alarms">Alarms scheduled</string>
+    <string name="reminders_health_and">" and "</string>
+    <string name="reminders_health_notifications">notifications</string>
+    <string name="reminders_health_exact_alarms">exact alarms</string>
+    <string name="reminders_health_battery">battery exemption</string>
+    <string name="reminders_health_alarms">scheduled alarms</string>
 
     <string name="more_reminders">Reminders</string>
     <string name="more_reminders_body">Check that this phone can remind you on time.</string>

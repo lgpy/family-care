@@ -37,6 +37,7 @@ import io.github.lgpy.familycare.feature.medications.ui.uiError
 import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 import kotlinx.coroutines.Job
@@ -235,8 +236,10 @@ class MedicationFormViewModel(
     }
 
     fun onAddTime() = updateSchedule { state ->
-        val last = state.times.lastOrNull()?.time ?: "08:00"
-        val next = parseTime(last)?.plusHours(8) ?: java.time.LocalTime.of(8, 0)
+        val last = parseTime(state.times.lastOrNull()?.time ?: "08:00")
+            ?: LocalTime.of(8, 0)
+        val taken = state.times.mapNotNull { parseTime(it.time) }.toSet()
+        val next = nextFreeTime(last, taken)
         state.copy(
             times = state.times + DoseTimeEntry(
                 time = next.hour.toString().padStart(2, '0') +
@@ -458,6 +461,28 @@ private val STOCK_STEP_FIELDS: Set<MedicationField> = setOf(
     MedicationField.STOCK_QUANTITY,
     MedicationField.MEDICATION_LOW_STOCK_THRESHOLD,
 )
+
+/**
+ * The time a new row starts at: eight hours after [last], moved on one hour at
+ * a time while [taken] already has it.
+ *
+ * "Add time" must never fill in a duplicate: rows at 08:00, 16:00 and 00:00
+ * would otherwise offer 08:00 again, and the duplicate blocked Next with a
+ * message the user had no reason to connect to the row they had just added.
+ */
+private fun nextFreeTime(last: LocalTime, taken: Set<LocalTime>): LocalTime {
+    var candidate = last.plusHours(NEW_DOSE_GAP_HOURS)
+    repeat(HOURS_PER_DAY) {
+        if (candidate !in taken) return candidate
+        candidate = candidate.plusHours(1)
+    }
+    return candidate
+}
+
+/** The gap between the times "Add time" offers. */
+private const val NEW_DOSE_GAP_HOURS: Long = 8
+
+private const val HOURS_PER_DAY: Int = 24
 
 /** How many catalogue suggestions the name field shows at once. */
 private const val SUGGESTION_LIMIT = 12

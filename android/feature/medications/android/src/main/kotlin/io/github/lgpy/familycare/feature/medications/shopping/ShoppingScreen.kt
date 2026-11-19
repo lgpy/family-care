@@ -37,13 +37,14 @@ import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
+import io.github.lgpy.familycare.core.ui.components.ScreenHeader
 import io.github.lgpy.familycare.core.ui.components.StockMeter
 import io.github.lgpy.familycare.core.ui.components.stockMeterFraction
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
-import io.github.lgpy.familycare.feature.medications.ui.formatQuantity
 import io.github.lgpy.familycare.feature.medications.ui.localizedDate
 import io.github.lgpy.familycare.feature.medications.ui.messageRes
+import io.github.lgpy.familycare.feature.medications.ui.stockLeftText
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -69,13 +70,13 @@ fun ShoppingScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(24.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         item {
-            Text(
-                text = stringResource(R.string.shopping_title),
-                style = MaterialTheme.typography.headlineMedium,
+            ScreenHeader(
+                title = stringResource(R.string.shopping_title),
+                modifier = Modifier.padding(bottom = 8.dp),
             )
         }
 
@@ -227,11 +228,7 @@ private fun ShoppingRow(
                         )
                     }
                     Text(
-                        text = stringResource(
-                            R.string.meds_stock_left,
-                            formatQuantity(item.displayStock),
-                            item.stockUnit,
-                        ),
+                        text = stockLeftText(item.displayStock, item.stockUnit),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     prescriptionLine(item)?.let { line ->

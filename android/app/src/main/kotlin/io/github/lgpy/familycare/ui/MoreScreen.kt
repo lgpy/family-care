@@ -37,6 +37,7 @@ import io.github.lgpy.familycare.core.domain.auth.AuthState
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.canManage
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.ScreenHeader
 import io.github.lgpy.familycare.core.ui.locale.AppLanguage
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
 import kotlinx.coroutines.launch
@@ -82,13 +83,10 @@ fun MoreScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = stringResource(R.string.more_title),
-            style = MaterialTheme.typography.headlineMedium,
-        )
+        ScreenHeader(title = stringResource(R.string.more_title))
 
         // M2: the care circle's people and invitations, and the user's own name.
         MoreEntry(

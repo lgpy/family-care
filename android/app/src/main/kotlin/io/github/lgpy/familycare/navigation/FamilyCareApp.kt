@@ -2,6 +2,9 @@ package io.github.lgpy.familycare.navigation
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
@@ -9,6 +12,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -18,7 +23,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -28,6 +36,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.rememberCappedFontSize
 import io.github.lgpy.familycare.feature.appointments.AppointmentsRoutes
 import io.github.lgpy.familycare.feature.appointments.agenda.AgendaScreen
 import io.github.lgpy.familycare.feature.appointments.detail.AppointmentDetailScreen
@@ -103,7 +112,38 @@ fun FamilyCareApp(
                                     contentDescription = null,
                                 )
                             },
-                            label = { Text(text = stringResource(destination.labelRes())) },
+                            label = {
+                                val labelStyle = MaterialTheme.typography.labelMedium
+                                val capped = rememberCappedFontSize(labelStyle.fontSize)
+                                // One line, never clipped: grows with the system font up
+                                // to the cap, then shrinks to fit if a long label (or
+                                // translation) still doesn't fit its fifth of the bar.
+                                BasicText(
+                                    text = stringResource(destination.labelRes()),
+                                    style = labelStyle.copy(
+                                        color = LocalContentColor.current,
+                                        lineHeight = capped,
+                                    ),
+                                    // Wrapping stays on: with maxLines = 1 a word that doesn't
+                                    // fit becomes an overflow, which is what autoSize shrinks
+                                    // for (with softWrap = false it is silently clipped).
+                                    maxLines = 1,
+                                    // The item measures its label without a width limit, so
+                                    // autoSize would never shrink: bound it to one item's
+                                    // share of the bar (5 items, 8 dp bar padding each side,
+                                    // 8 dp between items).
+                                    modifier = Modifier.widthIn(
+                                        max = (LocalConfiguration.current.screenWidthDp.dp - 48.dp) / 5,
+                                    ),
+                                    autoSize = TextAutoSize.StepBased(
+                                        // Relative to the cap: `capped` is already divided by the font
+                                        // scale, so a fixed sp minimum could exceed it.
+                                        minFontSize = capped * 0.7f,
+                                        maxFontSize = capped,
+                                        stepSize = 0.5.sp,
+                                    ),
+                                )
+                            },
                         )
                     }
                 }

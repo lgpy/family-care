@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.feature.medications.domain.DoseState
@@ -62,6 +63,43 @@ fun localizedDate(date: LocalDate): String {
     return remember(date, locale) {
         date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
     }
+}
+
+/**
+ * "3 tablets left" / "3 comprimidos em stock".
+ *
+ * The stock unit is a stored token, not screen text ([defaultStockUnit] in the
+ * form), so the label is the one place that can say it in the user's language
+ * and in the right number: the units the form fills in are pluralised through
+ * their own resources, and a unit the caregiver typed is shown exactly as
+ * entered. The count is the whole part of the stock, which is what picks the
+ * plural form; the number itself keeps its fraction ([formatQuantity]).
+ */
+@Composable
+fun stockLeftText(quantity: BigDecimal, stockUnit: String): String {
+    val count = quantity.max(BigDecimal.ZERO).toInt()
+    return pluralStringResource(
+        R.plurals.meds_stock_left,
+        count,
+        formatQuantity(quantity),
+        stockUnitLabel(stockUnit, count),
+    )
+}
+
+/** The plural form of a default stock unit, or the typed token unchanged. */
+@Composable
+private fun stockUnitLabel(unit: String, count: Int): String {
+    val words = when (unit.trim().lowercase()) {
+        "tablet" -> R.plurals.meds_unit_tablet
+        "capsule" -> R.plurals.meds_unit_capsule
+        "drop" -> R.plurals.meds_unit_drop
+        "dose" -> R.plurals.meds_unit_dose
+        "patch" -> R.plurals.meds_unit_patch
+        "unit" -> R.plurals.meds_unit_unit
+        // "ml" and "g" are symbols: the same in both numbers and languages.
+        else -> return unit
+    }
+    return pluralStringResource(words, count)
 }
 
 /** "1 at 08:00 · ½ at 21:00", the times and amounts of one version. */

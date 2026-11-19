@@ -5,14 +5,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -87,8 +91,15 @@ fun PatientAppointmentsSection(
     ) {
         if (uiState.canWrite && !uiState.patientMissing) {
             item {
-                TextButton(onClick = onAdd) {
-                    Text(text = stringResource(R.string.appointments_new))
+                FilledTonalButton(
+                    onClick = onAdd,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Icon(imageVector = Icons.Filled.Add, contentDescription = null)
+                    Text(
+                        text = stringResource(R.string.appointments_new),
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
                 }
             }
         }

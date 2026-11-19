@@ -28,7 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -211,7 +211,13 @@ fun PatientProfileScreen(
 
                 // History is the shell's tab, so it is drawn after the
                 // contributions rather than registered as one.
-                ScrollableTabRow(selectedTabIndex = tabIndex) {
+                // The profile's tabs span the screen and scroll to its edges;
+                // 16 dp edge padding lines the first tab up with the head above,
+                // and a long label is never clipped inside a content padding.
+                PrimaryScrollableTabRow(
+                    selectedTabIndex = tabIndex,
+                    edgePadding = 16.dp,
+                ) {
                     contributed.forEach { tab ->
                         Tab(
                             selected = !historySelected && tab.id == selectedTabId,

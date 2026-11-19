@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -18,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.PatientId
@@ -30,9 +32,12 @@ import io.github.lgpy.familycare.core.ui.theme.LocalPatientColors
  * colour with their initial in the surface colour.
  *
  * The circle is dp (never scaled) and the initial is sized from the circle, so
- * a large system font cannot push the letter out of it. The initial is hidden
- * from TalkBack: the patient's name is always next to the avatar, and reading
- * a lone letter adds nothing.
+ * a large system font cannot push the letter out of it. The letter's line box
+ * is trimmed to the glyph and centred in the circle, so it is optically centred
+ * at 100%, 150% and 200%; a default line height (which is sp and does scale)
+ * would leave the letter off-centre. The initial is hidden from TalkBack: the
+ * patient's name is always next to the avatar, and reading a lone letter adds
+ * nothing.
  *
  * [name] is the name the avatar introduces; the initial is its first letter.
  * Pass the short name ("Maria", "Mom") where the screen shows a longer one
@@ -47,9 +52,23 @@ fun PatientAvatar(
 ) {
     val color = LocalPatientColors.current(patientId)
     val initial = name.firstOrNull { it.isLetter() }?.uppercase() ?: "?"
-    // Dp -> sp at the current font scale: the letter keeps the circle's size
-    // instead of growing with the system font.
-    val fontSize = with(LocalDensity.current) { size.toSp() * 0.45f }
+    val density = LocalDensity.current
+    // Dp.toSp() divides by the system font scale and Text multiplies the sp
+    // back by the same scale when it draws. The letter therefore keeps a fixed
+    // fraction of the fixed-dp circle instead of growing with the system font.
+    val fontSize = with(density) { (size * InitialSizeFraction).toSp() }
+    val letterStyle = MaterialTheme.typography.bodyLarge.copy(
+        fontSize = fontSize,
+        lineHeight = fontSize,
+        fontWeight = FontWeight.Bold,
+        // Trim the font's leading above and below the glyph and centre what is
+        // left: the letter's own height, not a scaled line box, is what the
+        // circle centres.
+        lineHeightStyle = LineHeightStyle(
+            alignment = LineHeightStyle.Alignment.Center,
+            trim = LineHeightStyle.Trim.Both,
+        ),
+    )
 
     Box(
         modifier = modifier
@@ -62,11 +81,16 @@ fun PatientAvatar(
         Text(
             text = initial,
             color = MaterialTheme.colorScheme.surface,
-            fontSize = fontSize,
-            fontWeight = FontWeight.Bold,
+            style = letterStyle,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.wrapContentSize(Alignment.Center),
         )
     }
 }
+
+/** The initial's share of the circle's diameter: a little under half. */
+private const val InitialSizeFraction = 0.46f
 
 @ScalePreviews
 @Composable

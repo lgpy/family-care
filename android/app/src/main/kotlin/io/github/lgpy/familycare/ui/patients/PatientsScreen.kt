@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
+import io.github.lgpy.familycare.core.ui.components.ScreenHeader
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -50,6 +52,9 @@ fun PatientsScreen(
     var archivedExpanded by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
+        // A tab inside the app's Scaffold: the outer one already handles the
+        // system bars, so this one must not add the status bar again.
+        contentWindowInsets = WindowInsets(0),
         modifier = modifier.fillMaxSize(),
         floatingActionButton = {
             if (uiState.canWrite) {
@@ -67,13 +72,10 @@ fun PatientsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(24.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text(
-                    text = stringResource(R.string.patients_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                )
+                ScreenHeader(title = stringResource(R.string.patients_title))
                 Text(
                     text = stringResource(R.string.patients_empty),
                     style = MaterialTheme.typography.bodyLarge,
@@ -84,13 +86,17 @@ fun PatientsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = 24.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 item {
-                    Text(
-                        text = stringResource(R.string.patients_title),
-                        style = MaterialTheme.typography.headlineMedium,
+                    ScreenHeader(
+                        title = stringResource(R.string.patients_title),
                         modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }

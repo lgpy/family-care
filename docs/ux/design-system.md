@@ -109,7 +109,25 @@ and stock counts align as digits change.
   `maxLines` or ellipsis on those; they wrap and the container grows.
 - **Avatars and icons are fixed dp** (avatar 32 dp, profile 56 dp, icons
   24 dp, check 18 dp). The initial in an avatar is sized from the circle, so a
-  200% font cannot push it out.
+  200% font cannot push it out. It is fixed: `Dp.toSp()` divides by the font
+  scale, and the glyph's line box is trimmed and centred, so the letter is
+  optically centred at every size.
+- **Fixed-width chrome may cap its font scale at 1.3×.** A bottom-navigation
+  label has the width of its tab and nothing to reflow into, so at 200% it must
+  not break mid-word. `rememberCappedFontSize` in `core/ui.components` returns a
+  size that stops growing past `FixedChromeMaxFontScale`; such a label also sets
+  `maxLines = 1` and `softWrap = false`. This is the **only** place a cap is
+  allowed: anything whose text can wrap (names, allergies, times, places,
+  button labels) grows with the system font instead.
+- **Horizontally scrolling rows span the screen.** A tab row or a filter-chip
+  row sits outside the screen's 16 dp content padding, with 16 dp
+  `edgePadding`/`contentPadding` at both ends, so its content scrolls to the
+  screen edge instead of being clipped at the padding.
+- **Screen headers and section titles are consistent.** Every top-level tab
+  starts with `ScreenHeader` (title `headlineMedium` bold, subtitle
+  `bodyLarge`/`onSurfaceVariant), inside the same 16 dp horizontal padding;
+  a section title inside a screen is `titleMedium`, bold, `onSurface` (never an
+  accent colour).
 - **Reflow instead of breakpoints.** Components decide by measuring:
   `ReflowRow` puts content and action on one line while
   `content + spacing + action <= available` and otherwise stacks them,
@@ -123,6 +141,7 @@ ibuprofen").
 
 | Component | What it is |
 |---|---|
+| `ScreenHeader` | the title (and optional subtitle) every top-level tab starts with: `headlineMedium` bold on `onSurface`, `bodyLarge` on `onSurfaceVariant`, no truncation. |
 | `ReflowRow` | content + action side by side while both fit, else action below, full width. Pure fit function `reflowFits` is unit-tested. |
 | `PatientAvatar` | fixed-dp circle with the patient's initial in their identity colour. |
 | `AttentionCard` / `AttentionItem` / `AttentionAction` | the amber "needs attention" card: icon + bold title + supporting text per item, 18% divider, optional full-width accent button. |

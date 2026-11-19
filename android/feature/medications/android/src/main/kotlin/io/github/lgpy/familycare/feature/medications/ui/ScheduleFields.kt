@@ -142,6 +142,12 @@ fun ScheduleFields(
             text = stringResource(R.string.meds_times_label),
             style = MaterialTheme.typography.titleSmall,
         )
+        // A duplicate time is its own mistake (the domain rejects it because the
+        // second quantity would be ambiguous), so it gets its own line instead
+        // of the "add at least one time" one.
+        val parsedTimes = state.times.mapNotNull { parseTime(it.time) }
+        val timesHaveDuplicates = parsedTimes.size != parsedTimes.toSet().size
+        val timesHaveUnparsable = parsedTimes.size != state.times.size
         state.times.forEachIndexed { index, entry ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -186,7 +192,12 @@ fun ScheduleFields(
             )
         }
         FieldError(
-            visible = MedicationField.REGIMEN_TIMES in errors,
+            visible = MedicationField.REGIMEN_TIMES in errors && timesHaveDuplicates,
+            message = R.string.meds_error_times_duplicate,
+        )
+        FieldError(
+            visible = MedicationField.REGIMEN_TIMES in errors &&
+                (!timesHaveDuplicates || timesHaveUnparsable),
             message = R.string.meds_error_times,
         )
         TextButton(onClick = onAddTime, enabled = enabled) {

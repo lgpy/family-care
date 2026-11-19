@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Family Care</string>
     <string name="loading">A carregar…</string>
     <string name="back">Voltar</string>
@@ -136,6 +136,7 @@
     <string name="patient_info_contacts_title">Contactos de emergência</string>
     <string name="patient_info_notes_title">Notas</string>
     <string name="patient_info_empty">Ainda não há informação médica registada.</string>
+    <string name="patient_info_no_details">Ainda não há mais informação registada.</string>
     <string name="patient_info_edit">Editar</string>
     <string name="patient_info_edit_title">Editar informação</string>
     <string name="patient_info_save">Guardar</string>
@@ -256,10 +257,13 @@
     <string name="meds_status_partly">confirmada em parte</string>
     <string name="meds_you">você</string>
     <string name="meds_someone_else">outra pessoa</string>
-    <string name="meds_give">Dar ✓</string>
-    <plurals name="meds_give_all">
-        <item quantity="one">Dar %1$d</item>
-        <item quantity="other">Dar as %1$d</item>
+    <string name="meds_give">Dar</string>
+    <!-- ImpliedQuantity: in Portuguese "one" also covers 0. These have no
+         number on purpose: "give all" only shows for 1+ open doses, and the unit
+         words are joined to a number printed by stockLeftText(). -->
+    <plurals name="meds_give_all" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Dar</item>
+        <item quantity="other">Dar todos (%1$d)</item>
     </plurals>
     <string name="meds_attention_group_title">Tomas de %1$s das %2$s por confirmar</string>
     <string name="meds_attention_low_stock_title">%1$s está a acabar</string>
@@ -387,6 +391,7 @@
     <string name="meds_error_start">Indique uma data de início válida (AAAA-MM-DD).</string>
     <string name="meds_error_end">A data de fim tem de ser igual ou posterior à data de início.</string>
     <string name="meds_error_times">Adicione pelo menos uma hora com quantidade, no formato HH:MM.</string>
+    <string name="meds_error_times_duplicate">Duas tomas têm a mesma hora. Altere uma delas.</string>
     <string name="meds_error_overlap">Estas datas sobrepõem-se a outro esquema desta medicação.</string>
     <string name="meds_error_stock_quantity">Indique uma quantidade entre 0 e 100000, com até três casas decimais.</string>
     <string name="meds_error_stock_quantity_positive">Indique uma quantidade superior a 0, com até três casas decimais.</string>
@@ -424,7 +429,36 @@
     <string name="meds_not_found">Esta medicação não está disponível.</string>
 
     <!-- M5: stock (D28). A secção, as ações e os respetivos erros. -->
-    <string name="meds_stock_left">%1$s %2$s em stock</string>
+    <plurals name="meds_stock_left">
+        <item quantity="one">%1$s %2$s em stock</item>
+        <item quantity="other">%1$s %2$s em stock</item>
+    </plurals>
+    <!-- A unidade de stock é guardada como token ("tablet", "drop"); estas são
+         as formas que a etiqueta usa no plural. -->
+    <plurals name="meds_unit_tablet" tools:ignore="ImpliedQuantity">
+        <item quantity="one">comprimido</item>
+        <item quantity="other">comprimidos</item>
+    </plurals>
+    <plurals name="meds_unit_capsule" tools:ignore="ImpliedQuantity">
+        <item quantity="one">cápsula</item>
+        <item quantity="other">cápsulas</item>
+    </plurals>
+    <plurals name="meds_unit_drop" tools:ignore="ImpliedQuantity">
+        <item quantity="one">gota</item>
+        <item quantity="other">gotas</item>
+    </plurals>
+    <plurals name="meds_unit_dose" tools:ignore="ImpliedQuantity">
+        <item quantity="one">dose</item>
+        <item quantity="other">doses</item>
+    </plurals>
+    <plurals name="meds_unit_patch" tools:ignore="ImpliedQuantity">
+        <item quantity="one">adesivo</item>
+        <item quantity="other">adesivos</item>
+    </plurals>
+    <plurals name="meds_unit_unit" tools:ignore="ImpliedQuantity">
+        <item quantity="one">unidade</item>
+        <item quantity="other">unidades</item>
+    </plurals>
     <plurals name="meds_stock_days_left">
         <item quantity="one">Cerca de %1$d dia para acabar</item>
         <item quantity="other">Cerca de %1$d dias para acabar</item>
@@ -511,12 +545,13 @@
     <string name="reminders_needs_attention_title">Precisa de atenção</string>
     <string name="reminders_needs_attention_line">%1$s · %2$s · %3$s · por confirmar</string>
     <string name="reminders_health_card_title">Os lembretes precisam de atenção</string>
-    <string name="reminders_health_card_body">Este telemóvel pode não o lembrar a tempo. Verifique as definições.</string>
+    <string name="reminders_health_card_body">Este telemóvel pode não o lembrar a tempo. Verifique: %1$s.</string>
     <string name="reminders_health_card_action">Corrigir lembretes</string>
-    <string name="reminders_health_notifications">Notificações</string>
-    <string name="reminders_health_exact_alarms">Alarmes exatos</string>
-    <string name="reminders_health_battery">Otimização da bateria</string>
-    <string name="reminders_health_alarms">Alarmes agendados</string>
+    <string name="reminders_health_and">" e "</string>
+    <string name="reminders_health_notifications">as notificações</string>
+    <string name="reminders_health_exact_alarms">os alarmes exatos</string>
+    <string name="reminders_health_battery">a isenção da bateria</string>
+    <string name="reminders_health_alarms">os alarmes agendados</string>
 
     <string name="more_reminders">Lembretes</string>
     <string name="more_reminders_body">Confirme que este telemóvel o consegue lembrar a tempo.</string>

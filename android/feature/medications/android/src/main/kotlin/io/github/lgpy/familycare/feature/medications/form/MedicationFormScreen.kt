@@ -129,6 +129,18 @@ fun MedicationFormScreen(
                     else -> RemindersStep(viewModel, uiState)
                 }
 
+                // The field's own red line can sit above the fold when Next is
+                // pressed at the bottom of a long step (step 2 is the tall one),
+                // which reads as an unresponsive button. This is the same
+                // message next to the button, so a refusal is always visible.
+                if (uiState.errors.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.meds_error_invalid),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
                 uiState.error?.let { error ->
                     Text(
                         text = stringResource(error.messageRes()),

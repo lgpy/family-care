@@ -61,18 +61,17 @@ class ReminderHealthDashboardCard : DashboardCard {
         val current = health ?: return
         if (current.isHealthy) return
 
-        val body = stringResource(R.string.reminders_health_card_body)
-        val problems = current.problems
-            .map { problemLabel(it) }
-            .joinToString(stringResource(R.string.meds_list_comma))
+        val body = stringResource(
+            R.string.reminders_health_card_body,
+            problemList(current.problems),
+        )
 
         AttentionCard(
             items = listOf(
                 AttentionItem(
                     icon = Icons.Filled.Warning,
                     title = stringResource(R.string.reminders_health_card_title),
-                    supportingText = listOf(body, problems).filter { it.isNotBlank() }
-                        .joinToString(" "),
+                    supportingText = body,
                     action = AttentionAction(
                         label = stringResource(R.string.reminders_health_card_action),
                         onClick = { onNavigate(ReminderRoutes.SETUP) },
@@ -80,6 +79,22 @@ class ReminderHealthDashboardCard : DashboardCard {
                 ),
             ),
         )
+    }
+
+    /**
+     * The problems as one phrase: "notifications and battery exemption",
+     * "notifications, exact alarms and scheduled alarms". Built from the same
+     * [ReminderHealth.problems] the checks found, so the sentence never lists
+     * something that is fine.
+     */
+    @Composable
+    private fun problemList(problems: List<ReminderProblem>): String {
+        val labels = problems.map { problemLabel(it) }
+        if (labels.size <= 1) return labels.joinToString("")
+        val separator = stringResource(R.string.meds_list_comma)
+        return labels.dropLast(1).joinToString(separator) +
+            stringResource(R.string.reminders_health_and) +
+            labels.last()
     }
 
     @Composable

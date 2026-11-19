@@ -69,6 +69,9 @@ class NextSevenDaysDashboardCard : DashboardCard {
                     text = stringResource(R.string.appointments_card_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    // A section title like "Doses today", not an accent link;
+                    // the button is only the tap target that opens the Agenda.
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 

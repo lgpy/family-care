@@ -2,6 +2,7 @@ package io.github.lgpy.familycare.feature.appointments.agenda
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.ScreenHeader
 import io.github.lgpy.familycare.feature.appointments.ui.AppointmentLine
 import io.github.lgpy.familycare.feature.appointments.ui.dayLabel
 import org.koin.compose.viewmodel.koinViewModel
@@ -48,6 +50,9 @@ fun AgendaScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
+        // A tab inside the app's Scaffold: the outer one already handles the
+        // system bars, so this one must not add the status bar again.
+        contentWindowInsets = WindowInsets(0),
         modifier = modifier.fillMaxSize(),
         floatingActionButton = {
             if (uiState.canWrite) {
@@ -64,19 +69,27 @@ fun AgendaScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 96.dp),
+            // Vertical only: the patient chips below span the whole screen so a
+            // chip scrolls to the edge instead of being clipped inside the
+            // padding. Every other item pads itself by 16 dp.
+            contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             item {
-                Text(
-                    text = stringResource(R.string.appointments_agenda_title),
-                    style = MaterialTheme.typography.headlineMedium,
+                ScreenHeader(
+                    title = stringResource(R.string.appointments_agenda_title),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
                 )
             }
 
             if (uiState.patients.size > 1) {
                 item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         item {
                             FilterChip(
                                 selected = uiState.selectedPatientId == null,
@@ -96,7 +109,12 @@ fun AgendaScreen(
             }
 
             item {
-                TextButton(onClick = viewModel::togglePast) {
+                TextButton(
+                    onClick = viewModel::togglePast,
+                    // The button's own 12 dp padding plus 4 dp starts its label
+                    // on the same 16 dp line as everything else.
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                ) {
                     Text(
                         text = stringResource(
                             if (uiState.showPast) {
@@ -110,13 +128,16 @@ fun AgendaScreen(
             }
 
             if (!uiState.loaded) {
-                item { CircularProgressIndicator() }
+                item {
+                    CircularProgressIndicator(modifier = Modifier.padding(horizontal = 16.dp))
+                }
             } else {
                 if (uiState.isEmpty) {
                     item {
                         Text(
                             text = stringResource(R.string.appointments_empty),
                             style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(horizontal = 16.dp),
                         )
                     }
                 }
@@ -132,7 +153,7 @@ fun AgendaScreen(
                         Text(
                             text = stringResource(R.string.appointments_past),
                             style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(top = 16.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
                         )
                     }
                     dayGroups(
@@ -159,6 +180,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dayGroups(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
                     .padding(top = 12.dp, bottom = 4.dp),
             )
         }
@@ -167,8 +189,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dayGroups(
                 entry = entry,
                 showPatient = true,
                 onClick = { onOpenAppointment(entry.appointment.id.value) },
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
-            HorizontalDivider()
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         }
     }
 }

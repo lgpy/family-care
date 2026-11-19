@@ -67,4 +67,19 @@ data class PatientInfoUiState(
 
     /** The Info tab's empty state: no field carries a value. */
     val isEmpty: Boolean get() = info?.isEmpty != false
+
+    /**
+     * Whether the tab itself has a row to show. Allergies and conditions are
+     * drawn in the profile's header above the tabs, so a record with only those
+     * is empty *here*: the tab would otherwise show nothing but "Edit".
+     */
+    val hasDetails: Boolean
+        get() = info?.let { record ->
+            !record.snsNumber.isNullOrBlank() ||
+                !record.familyDoctor.isNullOrBlank() ||
+                !record.healthCentre.isNullOrBlank() ||
+                !record.healthCentrePhone.isNullOrBlank() ||
+                record.emergencyContacts.isNotEmpty() ||
+                !record.notes.isNullOrBlank()
+        } == true
 }

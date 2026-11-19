@@ -10,13 +10,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -60,8 +64,15 @@ fun PatientInfoSection(
     ) {
         if (uiState.loaded && uiState.canWrite) {
             item {
-                TextButton(onClick = onEdit) {
-                    Text(text = stringResource(R.string.patient_info_edit))
+                FilledTonalButton(
+                    onClick = onEdit,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Icon(imageVector = Icons.Filled.Edit, contentDescription = null)
+                    Text(
+                        text = stringResource(R.string.patient_info_edit),
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
                 }
             }
         }
@@ -71,58 +82,73 @@ fun PatientInfoSection(
             return@LazyColumn
         }
 
-        val info = uiState.info
-        if (info == null || uiState.isEmpty) {
-            item {
-                Text(
-                    text = stringResource(R.string.patient_info_empty),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+        when {
+            uiState.isEmpty -> {
+                item {
+                    Text(
+                        text = stringResource(R.string.patient_info_empty),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
             }
-            return@LazyColumn
-        }
 
-        info.snsNumber?.let { sns ->
-            item {
-                InfoRow(label = stringResource(R.string.patient_info_sns_label), value = sns)
+            // Allergies/conditions live in the header above the tabs, so this
+            // tab can have nothing else: say so instead of showing only "Edit".
+            !uiState.hasDetails -> {
+                item {
+                    Text(
+                        text = stringResource(R.string.patient_info_no_details),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
             }
-        }
-        info.familyDoctor?.let { doctor ->
-            item {
-                InfoRow(label = stringResource(R.string.patient_info_doctor_label), value = doctor)
-            }
-        }
-        if (info.healthCentre != null || info.healthCentrePhone != null) {
-            item {
-                InfoRow(
-                    label = stringResource(R.string.patient_info_centre_label),
-                    value = info.healthCentre.orEmpty(),
-                    detail = info.healthCentrePhone,
-                    onDial = info.healthCentrePhone?.let { phone ->
-                        { dial(context, phone) }
-                    },
-                )
-            }
-        }
 
-        if (info.emergencyContacts.isNotEmpty()) {
-            item {
-                Text(
-                    text = stringResource(R.string.patient_info_contacts_title),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
-            itemsIndexed(info.emergencyContacts) { _, contact ->
-                ContactRow(
-                    contact = contact,
-                    onDial = { dial(context, contact.phone) },
-                )
-            }
-        }
+            else -> {
+                val info = uiState.info ?: return@LazyColumn
 
-        info.notes?.let { notes ->
-            item {
-                InfoRow(label = stringResource(R.string.patient_info_notes_title), value = notes)
+                info.snsNumber?.let { sns ->
+                    item {
+                        InfoRow(label = stringResource(R.string.patient_info_sns_label), value = sns)
+                    }
+                }
+                info.familyDoctor?.let { doctor ->
+                    item {
+                        InfoRow(label = stringResource(R.string.patient_info_doctor_label), value = doctor)
+                    }
+                }
+                if (info.healthCentre != null || info.healthCentrePhone != null) {
+                    item {
+                        InfoRow(
+                            label = stringResource(R.string.patient_info_centre_label),
+                            value = info.healthCentre.orEmpty(),
+                            detail = info.healthCentrePhone,
+                            onDial = info.healthCentrePhone?.let { phone ->
+                                { dial(context, phone) }
+                            },
+                        )
+                    }
+                }
+
+                if (info.emergencyContacts.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.patient_info_contacts_title),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                    itemsIndexed(info.emergencyContacts) { _, contact ->
+                        ContactRow(
+                            contact = contact,
+                            onDial = { dial(context, contact.phone) },
+                        )
+                    }
+                }
+
+                info.notes?.let { notes ->
+                    item {
+                        InfoRow(label = stringResource(R.string.patient_info_notes_title), value = notes)
+                    }
+                }
             }
         }
     }
