@@ -14,7 +14,7 @@
       },
       "oauth_client": [
         {
-          "client_id": "792893337272-u3j0mu7mdhtiueq52nu80gbphgns7na5.apps.googleusercontent.com",
+          "client_id": "792893337272-b9n59idjc4kicka344t7241k967sit34.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
@@ -27,7 +27,36 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "792893337272-u3j0mu7mdhtiueq52nu80gbphgns7na5.apps.googleusercontent.com",
+              "client_id": "792893337272-b9n59idjc4kicka344t7241k967sit34.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:792893337272:android:c3e1df0b1a24d207a24e4d",
+        "android_client_info": {
+          "package_name": "io.github.lgpy.familycare.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "792893337272-b9n59idjc4kicka344t7241k967sit34.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxyg3bqITUcszK0F4ZWqJeT5qLHaSagrE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "792893337272-b9n59idjc4kicka344t7241k967sit34.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

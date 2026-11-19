@@ -3,6 +3,7 @@ package io.github.lgpy.familycare
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -44,14 +45,10 @@ class MainActivity : FragmentActivity() {
                 // D32: one order-based patient palette for the whole app, all
                 // screens and every feature module, archived patients included.
                 OrderedPatientColors {
-                    val appLockController = koinInject<AppLockController>()
-                    AppLockGate(
-                        controller = appLockController,
-                        activity = this@MainActivity,
-                    ) {
-                        // D12: the app lock comes first, then the Supabase session,
-                        // then the care-circle gate (M2). A signed-out user, or one
-                        // who belongs to no family, never sees app content.
+                    // D12: the app lock comes first, then the Supabase session,
+                    // then the care-circle gate (M2). A signed-out user, or one
+                    // who belongs to no family, never sees app content.
+                    val app: @Composable () -> Unit = {
                         AuthGate(activity = this@MainActivity) {
                             // D8: a new phone follows the account's language until
                             // the user chooses one here.
@@ -63,6 +60,15 @@ class MainActivity : FragmentActivity() {
                                 )
                             }
                         }
+                    }
+                    if (BuildConfig.APP_LOCK_ENABLED) {
+                        AppLockGate(
+                            controller = koinInject<AppLockController>(),
+                            activity = this@MainActivity,
+                            content = app,
+                        )
+                    } else {
+                        app()
                     }
                 }
             }

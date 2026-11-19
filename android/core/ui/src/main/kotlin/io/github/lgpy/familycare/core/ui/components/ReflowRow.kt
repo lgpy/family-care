@@ -93,16 +93,12 @@ fun ReflowRow(
             val contentNatural = contentMeasurable.maxIntrinsicWidth(maxHeight)
             val actionNatural = actionMeasurable?.maxIntrinsicWidth(maxHeight) ?: 0
 
-            // Measure the action once, loosely, to learn its real width.
-            val actionPlaceable = actionMeasurable?.measure(
-                Constraints(
-                    maxWidth = if (bounded) available else Constraints.Infinity,
-                    maxHeight = maxHeight,
-                ),
-            )
-            val actionIsEmpty =
-                actionPlaceable == null ||
-                    (actionPlaceable.width == 0 && actionPlaceable.height == 0)
+            // Decide from intrinsics first and measure each child exactly once:
+            // Compose throws if a measurable is measured twice in one pass
+            // (this crashed the app at 200% font, where rows stack).
+            val actionIsEmpty = actionMeasurable == null || actionNatural == 0
+            val sideBySide = !actionIsEmpty &&
+                (!bounded || reflowFits(available, contentNatural, actionNatural, spacingPx))
 
             if (actionIsEmpty) {
                 // No action: the content owns the whole row (and full width).
@@ -111,7 +107,13 @@ fun ReflowRow(
                     Constraints(minWidth = width, maxWidth = width, maxHeight = maxHeight),
                 )
                 layout(width, placeable.height) { placeable.place(0, 0) }
-            } else if (!bounded || reflowFits(available, contentNatural, actionNatural, spacingPx)) {
+            } else if (sideBySide) {
+                val actionPlaceable = actionMeasurable!!.measure(
+                    Constraints(
+                        maxWidth = if (bounded) available else Constraints.Infinity,
+                        maxHeight = maxHeight,
+                    ),
+                )
                 val contentWidth = if (bounded) {
                     (available - spacingPx - actionPlaceable.width).coerceAtLeast(0)
                 } else {
@@ -135,7 +137,7 @@ fun ReflowRow(
                 val contentPlaceable = contentMeasurable.measure(
                     Constraints(minWidth = width, maxWidth = width, maxHeight = maxHeight),
                 )
-                val stackedAction = actionMeasurable.measure(
+                val stackedAction = actionMeasurable!!.measure(
                     Constraints(minWidth = width, maxWidth = width, maxHeight = maxHeight),
                 )
                 val height = contentPlaceable.height + spacingPx + stackedAction.height

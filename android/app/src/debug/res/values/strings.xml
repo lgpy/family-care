@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Debug builds install next to the release app, so the launcher needs to
+         tell them apart. This override applies to the debug variant only; the
+         release label stays "Family Care" (core/ui strings). -->
+    <string name="app_name">Family Care (debug)</string>
+</resources>

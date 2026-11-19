@@ -96,6 +96,25 @@ android {
         }
     }
 
+    buildTypes {
+        getByName("debug") {
+            // A debug build is a separate app from the release build the family
+            // uses: its own package, its own (dev) backend session and its own
+            // data. Without the suffix both ids are io.github.lgpy.familycare, so
+            // installing a debug APK would overwrite (or be blocked as a
+            // signature conflict by) the real release-signed app on the phone.
+            applicationIdSuffix = ".debug"
+            // The debug app only talks to the dev backend (test data), and the
+            // lock blocks adb-driven checks such as screenshots at 200% font.
+            // Release, and a debug build pointed at any other environment, keep
+            // the mandatory lock (D12).
+            buildConfigField("boolean", "APP_LOCK_ENABLED", (environmentName != "dev").toString())
+        }
+        getByName("release") {
+            buildConfigField("boolean", "APP_LOCK_ENABLED", "true")
+        }
+    }
+
     buildFeatures {
         // AGP 9 does not generate BuildConfig unless asked.
         buildConfig = true
