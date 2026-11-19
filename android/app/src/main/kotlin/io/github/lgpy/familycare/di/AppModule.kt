@@ -33,6 +33,7 @@ import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
 import io.github.lgpy.familycare.core.ui.patient.PatientAlerts
 import io.github.lgpy.familycare.core.ui.patient.PatientHeader
 import io.github.lgpy.familycare.core.ui.patient.PatientHeaders
+import io.github.lgpy.familycare.core.ui.status.MoreStatusSource
 import io.github.lgpy.familycare.core.ui.patient.PatientSummarySource
 import io.github.lgpy.familycare.core.ui.patient.PatientSummarySources
 import io.github.lgpy.familycare.core.ui.patient.PatientSummaryText
@@ -67,6 +68,7 @@ import io.github.lgpy.familycare.feature.medications.profile.MedicationsTimeline
 import io.github.lgpy.familycare.feature.medications.push.MedicationsPushHandler
 import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealthChecker
+import io.github.lgpy.familycare.feature.medications.reminders.ReminderMoreStatusSource
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderSchedulerCoordinator
 import io.github.lgpy.familycare.feature.medications.reminders.ScheduledRemindersStore
 import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoData
@@ -311,6 +313,10 @@ val appModule: Module = module {
         )
     }
     single { ReminderHealthChecker(androidContext(), get(), get(), get()) }
+    // D5: More is the shell's screen, so the medications module contributes the
+    // reminder row's status through this core contract instead of being named
+    // there.
+    single<MoreStatusSource> { ReminderMoreStatusSource(checker = get()) }
     single {
         ReminderSchedulerCoordinator(
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
@@ -425,7 +431,7 @@ val appModule: Module = module {
     }
     viewModel { FamilyCircleViewModel(careCircleRepository = get()) }
     viewModel { YourNameViewModel(profileRepository = get()) }
-    viewModel { MoreViewModel(profileRepository = get()) }
+    viewModel { MoreViewModel(profileRepository = get(), statusSource = get()) }
     viewModel { ActivityViewModel(activityRepository = get(), careCircleRepository = get()) }
 
     // App shell: the message about a change the server refused. It only needs

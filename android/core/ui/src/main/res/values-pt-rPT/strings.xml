@@ -149,10 +149,37 @@
     <string name="patient_info_centre_phone_label">Telefone do centro de saúde</string>
     <string name="patient_info_contacts_title">Contactos de emergência</string>
     <string name="patient_info_notes_title">Notas</string>
+    <string name="patient_info_call">Ligar a %1$s</string>
+    <string name="patient_info_copy_sns">Copiar número de utente</string>
+    <string name="patient_info_sns_copied">Número de utente copiado</string>
+    <string name="patient_info_optional">%1$s (opcional)</string>
+    <string name="patient_info_more">Mais</string>
+    <string name="patient_info_more_summary">Número de utente, centro de saúde, notas</string>
+    <string name="patient_info_other">Outro…</string>
+    <string-array name="patient_info_allergy_suggestions">
+        <item>Penicilina</item>
+        <item>Aspirina</item>
+        <item>Ibuprofeno</item>
+        <item>Látex</item>
+        <item>Sulfamidas</item>
+        <item>Iodo</item>
+        <item>Pólen</item>
+    </string-array>
+    <string-array name="patient_info_condition_suggestions">
+        <item>Hipertensão</item>
+        <item>Diabetes tipo 2</item>
+        <item>Asma</item>
+        <item>Insuficiência cardíaca</item>
+        <item>DPOC</item>
+        <item>Fibrilhação auricular</item>
+        <item>Osteoporose</item>
+        <item>Demência</item>
+    </string-array>
     <string name="patient_info_empty">Ainda não há informação médica registada.</string>
     <string name="patient_info_no_details">Ainda não há mais informação registada.</string>
-    <string name="patient_info_edit">Editar</string>
+    <string name="patient_info_edit">Editar informação</string>
     <string name="patient_info_edit_title">Editar informação</string>
+    <string name="patient_info_edit_for">Informação de %1$s</string>
     <string name="patient_info_save">Guardar</string>
     <string name="patient_info_add">Adicionar</string>
     <string name="patient_info_remove">Remover %1$s</string>
@@ -182,6 +209,26 @@
     <string name="more_family_circle_body">Membros, convites e quem é o proprietário.</string>
     <string name="more_your_name">O seu nome</string>
     <string name="more_your_name_body">O nome que os outros membros veem.</string>
+    <string name="more_group_family">Família</string>
+    <string name="more_group_reminders">Lembretes</string>
+    <string name="more_group_app">Aplicação</string>
+    <string name="more_group_data">Dados</string>
+    <string name="more_circle_members">Membros do círculo</string>
+    <string name="more_invite">Convidar alguém</string>
+    <string name="more_invite_status">Envie um código por WhatsApp</string>
+    <string name="more_reminders_reliable">Tornar os lembretes fiáveis</string>
+    <string name="more_reminders_all_set">Tudo em ordem</string>
+    <string name="more_who_reminded">Quem é lembrado</string>
+    <string name="more_who_reminded_status">Por pessoa</string>
+    <string name="more_app_lock_status">Sempre ativo</string>
+    <string name="more_about_status">Versão %1$s</string>
+    <string name="more_export_patient">Exportar uma pessoa</string>
+    <string name="more_export_patient_status">PDF para o médico ou JSON</string>
+    <plurals name="more_reminders_problems">
+        <item quantity="one">%1$d coisa a corrigir neste telemóvel</item>
+        <item quantity="many">%1$d coisas a corrigir neste telemóvel</item>
+        <item quantity="other">%1$d coisas a corrigir neste telemóvel</item>
+    </plurals>
 
     <string name="settings_account_title">Conta</string>
     <string name="settings_account_signed_in_as">Sessão iniciada como %1$s</string>

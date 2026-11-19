@@ -149,10 +149,37 @@
     <string name="patient_info_centre_phone_label">Health centre phone</string>
     <string name="patient_info_contacts_title">Emergency contacts</string>
     <string name="patient_info_notes_title">Notes</string>
+    <string name="patient_info_call">Call %1$s</string>
+    <string name="patient_info_copy_sns">Copy SNS number</string>
+    <string name="patient_info_sns_copied">SNS number copied</string>
+    <string name="patient_info_optional">%1$s (optional)</string>
+    <string name="patient_info_more">More</string>
+    <string name="patient_info_more_summary">SNS number, health centre, notes</string>
+    <string name="patient_info_other">Other…</string>
+    <string-array name="patient_info_allergy_suggestions">
+        <item>Penicillin</item>
+        <item>Aspirin</item>
+        <item>Ibuprofen</item>
+        <item>Latex</item>
+        <item>Sulfa drugs</item>
+        <item>Iodine</item>
+        <item>Pollen</item>
+    </string-array>
+    <string-array name="patient_info_condition_suggestions">
+        <item>Hypertension</item>
+        <item>Type 2 diabetes</item>
+        <item>Asthma</item>
+        <item>Heart failure</item>
+        <item>COPD</item>
+        <item>Atrial fibrillation</item>
+        <item>Osteoporosis</item>
+        <item>Dementia</item>
+    </string-array>
     <string name="patient_info_empty">No medical information recorded yet.</string>
     <string name="patient_info_no_details">No other information recorded yet.</string>
-    <string name="patient_info_edit">Edit</string>
+    <string name="patient_info_edit">Edit info</string>
     <string name="patient_info_edit_title">Edit info</string>
+    <string name="patient_info_edit_for">%1$s’s info</string>
     <string name="patient_info_save">Save</string>
     <string name="patient_info_add">Add</string>
     <string name="patient_info_remove">Remove %1$s</string>
@@ -182,6 +209,25 @@
     <string name="more_family_circle_body">Members, invitations and who is the owner.</string>
     <string name="more_your_name">Your name</string>
     <string name="more_your_name_body">The name the other members see.</string>
+    <string name="more_group_family">Family</string>
+    <string name="more_group_reminders">Reminders</string>
+    <string name="more_group_app">App</string>
+    <string name="more_group_data">Data</string>
+    <string name="more_circle_members">Circle members</string>
+    <string name="more_invite">Invite someone</string>
+    <string name="more_invite_status">Send a code by WhatsApp</string>
+    <string name="more_reminders_reliable">Make reminders reliable</string>
+    <string name="more_reminders_all_set">All set</string>
+    <string name="more_who_reminded">Who gets reminded</string>
+    <string name="more_who_reminded_status">Per patient</string>
+    <string name="more_app_lock_status">Always on</string>
+    <string name="more_about_status">Version %1$s</string>
+    <string name="more_export_patient">Export a patient</string>
+    <string name="more_export_patient_status">PDF for the doctor, or JSON</string>
+    <plurals name="more_reminders_problems">
+        <item quantity="one">%1$d thing to fix on this phone</item>
+        <item quantity="other">%1$d things to fix on this phone</item>
+    </plurals>
 
     <string name="settings_account_title">Account</string>
     <string name="settings_account_signed_in_as">Signed in as %1$s</string>

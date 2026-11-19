@@ -30,6 +30,7 @@ val patientInfoModule: Module = module {
         PatientInfoEditViewModel(
             patientId = patientId,
             patientInfoRepository = get(),
+            patientRepository = get(),
             careCircleRepository = get(),
         )
     }

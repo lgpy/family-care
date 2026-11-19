@@ -3,6 +3,7 @@ package io.github.lgpy.familycare.feature.patientinfo.edit
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.feature.patientinfo.FakeCareCircleRepository
 import io.github.lgpy.familycare.feature.patientinfo.FakePatientInfoRepository
+import io.github.lgpy.familycare.feature.patientinfo.FakePatientRepository
 import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoError
 import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoResult
 import io.github.lgpy.familycare.feature.patientinfo.domain.EmergencyContact
@@ -31,12 +32,14 @@ class PatientInfoEditViewModelTest {
 
     private lateinit var info: FakePatientInfoRepository
     private lateinit var circles: FakeCareCircleRepository
+    private lateinit var patients: FakePatientRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         info = FakePatientInfoRepository()
         circles = FakeCareCircleRepository()
+        patients = FakePatientRepository()
     }
 
     @After
@@ -47,6 +50,7 @@ class PatientInfoEditViewModelTest {
     private fun viewModel() = PatientInfoEditViewModel(
         patientId = testPatientId.value,
         patientInfoRepository = info,
+        patientRepository = patients,
         careCircleRepository = circles,
     )
 
@@ -142,6 +146,43 @@ class PatientInfoEditViewModelTest {
         viewModel.removeCondition(0)
 
         assertTrue(viewModel.uiState.value.conditions.isEmpty())
+    }
+
+    @Test
+    fun `a suggestion chip adds its entry`() {
+        val viewModel = viewModel()
+
+        viewModel.addAllergyEntry("Penicillin")
+        viewModel.addConditionEntry("Asthma")
+
+        assertEquals(listOf("Penicillin"), viewModel.uiState.value.allergies)
+        assertEquals(listOf("Asthma"), viewModel.uiState.value.conditions)
+    }
+
+    @Test
+    fun `an entry already selected is not added twice`() {
+        val viewModel = viewModel()
+        viewModel.addAllergyEntry("Penicillin")
+
+        viewModel.addAllergyEntry("penicillin")
+
+        assertEquals(listOf("Penicillin"), viewModel.uiState.value.allergies)
+    }
+
+    @Test
+    fun `other free text is trimmed and kept as typed`() {
+        val viewModel = viewModel()
+
+        viewModel.addAllergyEntry("  Shellfish  ")
+        viewModel.addConditionEntry("  Post-viral fatigue  ")
+
+        assertEquals(listOf("Shellfish"), viewModel.uiState.value.allergies)
+        assertEquals(listOf("Post-viral fatigue"), viewModel.uiState.value.conditions)
+    }
+
+    @Test
+    fun `the patient name titles the form`() {
+        assertEquals("Grandma", viewModel().uiState.value.patientName)
     }
 
     // --- Contacts ------------------------------------------------------------
@@ -251,6 +292,22 @@ class PatientInfoEditViewModelTest {
 
         assertEquals("123456789", info.saves.single().info.snsNumber)
         assertEquals("Call before 10:00.", info.saves.single().info.notes)
+    }
+
+    @Test
+    fun `stored lists round-trip unchanged when nothing is edited`() {
+        info.setInfo(
+            info = patientInfo(
+                allergies = listOf("Penicillin", "Nuts"),
+                conditions = listOf("Type 2 diabetes", "Asthma"),
+            ),
+        )
+
+        viewModel().save()
+
+        val saved = info.saves.single().info
+        assertEquals(listOf("Penicillin", "Nuts"), saved.allergies)
+        assertEquals(listOf("Type 2 diabetes", "Asthma"), saved.conditions)
     }
 
     @Test

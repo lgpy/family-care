@@ -4,12 +4,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.lgpy.familycare.core.domain.circle.ProfileRepository
 import io.github.lgpy.familycare.core.ui.locale.AppLanguage
+import io.github.lgpy.familycare.core.ui.status.MoreStatus
+import io.github.lgpy.familycare.core.ui.status.MoreStatusSource
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * More → Language (D8): the device language is set by the platform in the
- * screen; this view model stores the same choice on the user's profile, so the
- * server writes notifications in it (M4) and a new phone follows the account.
+ * More's two pieces of state that do not belong to the screen itself:
+ *
+ * - Language (D8): the device language is set by the platform in the screen;
+ *   this view model stores the same choice on the user's profile, so the server
+ *   writes notifications in it (M4) and a new phone follows the account.
+ * - Reminder health (D19/D5): the medications feature contributes the count
+ *   through a core [MoreStatusSource], so the shell never imports that module's
+ *   checker.
  *
  * "System default" is resolved to a concrete server code on the device first:
  * `core.profiles.preferred_language` is `not null` and only accepts `pt-PT` and
@@ -17,7 +27,24 @@ import kotlinx.coroutines.launch
  */
 class MoreViewModel(
     private val profileRepository: ProfileRepository,
+    private val statusSource: MoreStatusSource,
 ) : ViewModel() {
+
+    private val _reminderStatus = MutableStateFlow<MoreStatus?>(null)
+
+    /** The reminder health count, or null until (or when) the check cannot run. */
+    val reminderStatus: StateFlow<MoreStatus?> = _reminderStatus.asStateFlow()
+
+    init {
+        refreshReminderStatus()
+    }
+
+    /** Re-runs the extension point's check, e.g. when the screen becomes visible. */
+    fun refreshReminderStatus() {
+        viewModelScope.launch {
+            _reminderStatus.value = statusSource.reminders()
+        }
+    }
 
     /**
      * Saves the language that [language] means on this device

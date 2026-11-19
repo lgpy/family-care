@@ -237,6 +237,9 @@ fun FamilyCareApp(
                     onOpenYourName = { navController.navigate(Destination.YourName.route) },
                     onOpenActivity = { navController.navigate(Destination.Activity.route) },
                     onOpenAbout = { navController.navigate(Destination.About.route) },
+                    // Export starts from the patient: the profile's menu owns the
+                    // format dialog and the file, so this row opens the list.
+                    onOpenPatients = { navController.navigate(Destination.Patients.route) },
                 )
             }
             composable(Destination.FamilyCircle.route) {

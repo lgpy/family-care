@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientId
+import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.canWrite
 import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoError
 import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoRepository
@@ -32,10 +33,11 @@ data class ContactDraft(
 /**
  * The edit form of a patient's info (docs/domain/patient-info.md "Screens").
  *
- * The lists are edited as chips: the draft field adds an entry, a chip's remove
- * button takes it away. Nothing is trimmed away silently — the form builds the
- * domain record as typed, so a blank entry is flagged by
- * [PatientInfoRules.validate] instead of disappearing.
+ * The lists are edited as chips. The suggestion chips and the "Other…" dialog
+ * both add one entry; a chip's remove button takes it away. Nothing is trimmed
+ * away silently — the form builds the domain record as typed, so a blank entry
+ * is flagged by [PatientInfoRules.validate] instead of disappearing, and an
+ * entry that came from an older record is written back exactly as it was.
  *
  * The record is read once (the form is not a live mirror of the synced row) and
  * written with [PatientInfoRepository.save], which inserts the row on the first
@@ -45,6 +47,7 @@ data class ContactDraft(
 class PatientInfoEditViewModel(
     private val patientId: String,
     private val patientInfoRepository: PatientInfoRepository,
+    private val patientRepository: PatientRepository,
     private val careCircleRepository: CareCircleRepository,
 ) : ViewModel() {
 
@@ -58,11 +61,13 @@ class PatientInfoEditViewModel(
     private suspend fun load() {
         val role = careCircleRepository.myRole.first()
         val info = patientInfoRepository.observe(PatientId(patientId)).first()
+        val patient = patientRepository.observe(PatientId(patientId)).first()
 
         _uiState.update { state ->
             state.copy(
                 loaded = true,
                 canWrite = role.canWrite,
+                patientName = patient?.displayName.orEmpty(),
                 allergies = info?.allergies.orEmpty(),
                 conditions = info?.conditions.orEmpty(),
                 snsNumber = info?.snsNumber.orEmpty(),
@@ -86,11 +91,21 @@ class PatientInfoEditViewModel(
     fun onAllergyDraftChanged(value: String) = update { it.copy(allergyDraft = value) }
 
     /** Adds the draft as an allergy, unless it is blank or the list is full. */
-    fun addAllergy() = update { state ->
-        val entry = state.allergyDraft.trim()
+    fun addAllergy() = addAllergyEntry(_uiState.value.allergyDraft)
+
+    /**
+     * Adds [value] as an allergy: a suggestion chip or the "Other…" dialog.
+     * Surrounding whitespace is trimmed; an entry already in the list is kept
+     * once rather than duplicated.
+     */
+    fun addAllergyEntry(value: String) = update { state ->
+        val entry = value.trim()
         when {
             entry.isEmpty() -> state
             state.allergies.size >= PatientInfoRules.MAX_ALLERGIES -> state
+            state.allergies.any { it.equals(entry, ignoreCase = true) } -> state.copy(
+                allergyDraft = "",
+            )
             else -> state.copy(
                 allergies = state.allergies + entry,
                 allergyDraft = "",
@@ -106,11 +121,17 @@ class PatientInfoEditViewModel(
     fun onConditionDraftChanged(value: String) = update { it.copy(conditionDraft = value) }
 
     /** Adds the draft as a condition, unless it is blank or the list is full. */
-    fun addCondition() = update { state ->
-        val entry = state.conditionDraft.trim()
+    fun addCondition() = addConditionEntry(_uiState.value.conditionDraft)
+
+    /** Adds [value] as a condition from a suggestion chip or the "Other…" dialog. */
+    fun addConditionEntry(value: String) = update { state ->
+        val entry = value.trim()
         when {
             entry.isEmpty() -> state
             state.conditions.size >= PatientInfoRules.MAX_CONDITIONS -> state
+            state.conditions.any { it.equals(entry, ignoreCase = true) } -> state.copy(
+                conditionDraft = "",
+            )
             else -> state.copy(
                 conditions = state.conditions + entry,
                 conditionDraft = "",
@@ -287,6 +308,8 @@ class PatientInfoEditViewModel(
 data class PatientInfoEditUiState(
     val loaded: Boolean = false,
     val canWrite: Boolean = false,
+    /** The patient's name, for the "<Name>'s info" top bar. */
+    val patientName: String = "",
     val allergies: List<String> = emptyList(),
     val allergyDraft: String = "",
     val conditions: List<String> = emptyList(),
