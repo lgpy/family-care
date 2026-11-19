@@ -13,6 +13,7 @@ import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderContract
 import io.github.lgpy.familycare.navigation.FamilyCareApp
 import io.github.lgpy.familycare.ui.AuthGate
+import io.github.lgpy.familycare.ui.OrderedPatientColors
 import io.github.lgpy.familycare.ui.circle.CircleGate
 import io.github.lgpy.familycare.ui.profile.ProfileLanguageSync
 import org.koin.compose.koinInject
@@ -40,23 +41,27 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             FamilyCareTheme {
-                val appLockController = koinInject<AppLockController>()
-                AppLockGate(
-                    controller = appLockController,
-                    activity = this@MainActivity,
-                ) {
-                    // D12: the app lock comes first, then the Supabase session,
-                    // then the care-circle gate (M2). A signed-out user, or one
-                    // who belongs to no family, never sees app content.
-                    AuthGate(activity = this@MainActivity) {
-                        // D8: a new phone follows the account's language until
-                        // the user chooses one here.
-                        ProfileLanguageSync()
-                        CircleGate {
-                            FamilyCareApp(
-                                initialRoute = pendingRoute,
-                                onInitialRouteOpened = { pendingRoute = null },
-                            )
+                // D32: one order-based patient palette for the whole app, all
+                // screens and every feature module, archived patients included.
+                OrderedPatientColors {
+                    val appLockController = koinInject<AppLockController>()
+                    AppLockGate(
+                        controller = appLockController,
+                        activity = this@MainActivity,
+                    ) {
+                        // D12: the app lock comes first, then the Supabase session,
+                        // then the care-circle gate (M2). A signed-out user, or one
+                        // who belongs to no family, never sees app content.
+                        AuthGate(activity = this@MainActivity) {
+                            // D8: a new phone follows the account's language until
+                            // the user chooses one here.
+                            ProfileLanguageSync()
+                            CircleGate {
+                                FamilyCareApp(
+                                    initialRoute = pendingRoute,
+                                    onInitialRouteOpened = { pendingRoute = null },
+                                )
+                            }
                         }
                     }
                 }

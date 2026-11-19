@@ -27,13 +27,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.PatientAvatar
+import io.github.lgpy.familycare.core.ui.components.StockMeter
+import io.github.lgpy.familycare.core.ui.components.stockMeterFraction
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
 import io.github.lgpy.familycare.feature.medications.ui.formatQuantity
@@ -184,35 +189,55 @@ private fun ShoppingRow(
     onPrescription: (() -> Unit)?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(text = item.patientName, style = MaterialTheme.typography.bodySmall)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(role = Role.Button, onClick = onOpen)
-                .padding(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = item.strength?.let { "${item.medication.name} $it" }
-                    ?: item.medication.name,
-                style = MaterialTheme.typography.bodyLarge,
+            PatientAvatar(
+                patientId = PatientId(item.patientId),
+                name = item.patientName,
             )
-            item.daysRemaining?.let { days ->
-                Text(
-                    text = pluralStringResource(R.plurals.meds_stock_days_left, days, days),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            Text(
-                text = stringResource(
-                    R.string.meds_stock_left,
-                    formatQuantity(item.displayStock),
-                    item.stockUnit,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            prescriptionLine(item)?.let { line ->
-                Text(text = line, style = MaterialTheme.typography.bodyMedium)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(text = item.patientName, style = MaterialTheme.typography.bodySmall)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(role = Role.Button, onClick = onOpen)
+                        .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = item.strength?.let { "${item.medication.name} $it" }
+                            ?: item.medication.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    item.daysRemaining?.let { days ->
+                        StockMeter(
+                            daysLeft = pluralStringResource(
+                                R.plurals.meds_stock_days_left,
+                                days,
+                                days,
+                            ),
+                            fraction = stockMeterFraction(days),
+                            low = true,
+                        )
+                    }
+                    Text(
+                        text = stringResource(
+                            R.string.meds_stock_left,
+                            formatQuantity(item.displayStock),
+                            item.stockUnit,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    prescriptionLine(item)?.let { line ->
+                        Text(text = line, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
         }
 

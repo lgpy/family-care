@@ -1,38 +1,41 @@
 package io.github.lgpy.familycare.feature.medications.dashboard
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.DoseSlotState
+import io.github.lgpy.familycare.core.ui.components.DoseSlotUi
+import io.github.lgpy.familycare.core.ui.components.DoseTimeGroup
+import io.github.lgpy.familycare.core.ui.components.TimeRail
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
 import io.github.lgpy.familycare.feature.medications.MedicationsRoutes
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
 import io.github.lgpy.familycare.feature.medications.ui.messageRes
-import java.time.LocalTime
+import java.time.Duration
+import java.time.LocalDateTime
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The medications module's contribution to Today: "Doses today"
- * (docs/ux/screens.md §1, docs/build-plan.md M3).
+ * The medications module's contribution to Today: "Doses today" as the design
+ * system's [TimeRail] (docs/ux/screens.md §1, docs/ux/mockups/scaling.html).
  *
- * The card sits after the needs-attention items and before the coming week. It
- * opens the dose-slot screen itself through [onNavigate], so the shell imports
- * neither the screen nor the module's view models.
+ * One [DoseTimeGroup] per wall-clock time, one [DoseSlotUi] per patient at that
+ * time. A confirmed group is **Done** (neutral, dashed, with "Given by X at
+ * HH:MM" when the log has it), the first unconfirmed group still at or after
+ * now is **Next** (primary container, with the countdown under the time), and
+ * everything later is **Upcoming**. Tapping a slot opens the existing dose-slot
+ * screen; "Give" is the existing one-tap group confirmation, so the module's
+ * behaviour is unchanged and only the presentation moved to the shared
+ * components.
  */
 class MedicationsDashboardCard : DashboardCard {
 
@@ -42,45 +45,31 @@ class MedicationsDashboardCard : DashboardCard {
     override fun Content(onNavigate: (String) -> Unit) {
         val viewModel = koinViewModel<DosesTodayViewModel>()
         val uiState by viewModel.uiState.collectAsState()
+        val now = LocalDateTime.now()
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = stringResource(R.string.meds_doses_today_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            if (uiState.groups.isEmpty()) {
                 Text(
-                    text = stringResource(R.string.meds_doses_today_title),
-                    style = MaterialTheme.typography.titleMedium,
+                    text = stringResource(R.string.meds_doses_today_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (uiState.groups.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.meds_doses_today_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                uiState.groups.forEach { group ->
-                    DoseGroupRow(
-                        group = group,
-                        canWrite = uiState.canWrite,
-                        saving = uiState.saving,
-                        onOpen = {
-                            onNavigate(
-                                MedicationsRoutes.doseSlot(
-                                    patientId = group.patientId.value,
-                                    scheduledLocal = group.scheduledLocal,
-                                ),
-                            )
-                        },
-                        onGive = { viewModel.give(group.patientId, group.scheduledLocal) },
-                    )
-                }
-                uiState.error?.let { error ->
-                    Text(
-                        text = stringResource(error.messageRes()),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+            } else {
+                TimeRail(groups = uiState.toTimeGroups(now, uiState.canWrite, viewModel, onNavigate))
+            }
+
+            uiState.error?.let { error ->
+                Text(
+                    text = stringResource(error.messageRes()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         }
 
@@ -99,75 +88,102 @@ class MedicationsDashboardCard : DashboardCard {
     }
 }
 
+/** One rail group per time, the next group first-class and the countdown on it. */
 @Composable
-private fun DoseGroupRow(
-    group: DoseGroupUi,
+private fun DosesTodayUiState.toTimeGroups(
+    now: LocalDateTime,
     canWrite: Boolean,
-    saving: Boolean,
-    onOpen: () -> Unit,
-    onGive: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClickLabel = stringResource(R.string.meds_open_slot, formatTime(group.time)), onClick = onOpen)
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = formatTime(group.time) + " · " + group.patientName,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = groupStatusLine(group),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        if (canWrite && !group.allConfirmed) {
-            TextButton(onClick = onGive, enabled = !saving) {
-                Text(text = stringResource(R.string.meds_give))
-            }
-        }
+    viewModel: DosesTodayViewModel,
+    onNavigate: (String) -> Unit,
+): List<DoseTimeGroup> {
+    val byTime = groups
+        .groupBy { it.time }
+        .toSortedMap()
+
+    val nextTime = byTime
+        .filterValues { timeGroups -> timeGroups.any { !it.allConfirmed } }
+        .keys
+        .firstOrNull { time -> !time.isBefore(now.toLocalTime()) }
+
+    return byTime.map { (time, timeGroups) ->
+        DoseTimeGroup(
+            time = formatTime(time),
+            secondary = if (time == nextTime) countdown(now, timeGroups.first().scheduledLocal) else null,
+            slots = timeGroups
+                .sortedBy { it.patientName.lowercase() }
+                .map { group ->
+                    val done = group.allConfirmed
+                    DoseSlotUi(
+                        patientId = group.patientId,
+                        patientName = group.patientName,
+                        meta = pluralStringResource(
+                            R.plurals.meds_doses_count,
+                            group.doseCount,
+                            group.doseCount,
+                        ),
+                        state = when {
+                            done -> DoseSlotState.DONE
+                            time == nextTime -> DoseSlotState.NEXT
+                            else -> DoseSlotState.UPCOMING
+                        },
+                        givenText = if (done && group.state != DoseGroupState.SKIPPED) {
+                            givenByText(group)
+                        } else {
+                            null
+                        },
+                        actionLabel = if (!done && canWrite) stringResource(R.string.meds_give) else null,
+                        onAction = if (!done && canWrite) {
+                            { viewModel.give(group.patientId, group.scheduledLocal) }
+                        } else {
+                            null
+                        },
+                        onClick = {
+                            onNavigate(
+                                MedicationsRoutes.doseSlot(
+                                    patientId = group.patientId.value,
+                                    scheduledLocal = group.scheduledLocal,
+                                ),
+                            )
+                        },
+                    )
+                },
+        )
     }
 }
 
-/** "3 doses · due", plus "by Mom at 08:04" once something is recorded. */
+/**
+ * "Given by Mom at 08:04" for a confirmed group, or null when the log has no
+ * time to show. Never invents a giver.
+ */
 @Composable
-private fun groupStatusLine(group: DoseGroupUi): String {
-    val separator = stringResource(R.string.meds_list_separator)
-    val count = pluralStringResource(R.plurals.meds_doses_count, group.doseCount, group.doseCount)
-    val state = stringResource(group.state.labelRes())
-    val given = givenByLine(group.givenBy, group.at)
-    return listOfNotNull(count, state, given).joinToString(separator)
-}
-
-@Composable
-private fun givenByLine(givenBy: GivenByUi?, at: LocalTime?): String? {
-    if (at == null) return null
+private fun givenByText(group: DoseGroupUi): String? {
+    val at = group.at ?: return null
     val time = formatTime(at)
+    val givenBy = group.givenBy
     return when {
         givenBy == null -> null
         givenBy.someoneElse ->
-            givenBy.name?.let { stringResource(R.string.meds_given_by_name, it, time) }
-                ?: stringResource(R.string.meds_given_by_someone, time)
+            givenBy.name?.let { stringResource(R.string.meds_slot_given_by_name, it, time) }
+                ?: stringResource(R.string.meds_slot_given_by_someone, time)
 
-        givenBy.isMe -> stringResource(R.string.meds_given_by_you, time)
+        givenBy.isMe -> stringResource(R.string.meds_slot_given_by_you, time)
         else ->
-            givenBy.name?.let { stringResource(R.string.meds_given_by_name, it, time) }
-                ?: stringResource(R.string.meds_given_by_someone, time)
+            givenBy.name?.let { stringResource(R.string.meds_slot_given_by_name, it, time) }
+                ?: stringResource(R.string.meds_slot_given_by_someone, time)
     }
 }
 
+/** "in 3 h 48 min", "in 12 min" or "now", only for the Next group. */
 @Composable
-private fun DoseGroupState.labelRes(): Int =
-    when (this) {
-        DoseGroupState.UPCOMING -> R.string.meds_status_upcoming
-        DoseGroupState.DUE -> R.string.meds_status_due
-        DoseGroupState.OVERDUE -> R.string.meds_status_overdue
-        DoseGroupState.MISSED -> R.string.meds_status_missed
-        DoseGroupState.TAKEN -> R.string.meds_status_taken
-        DoseGroupState.SKIPPED -> R.string.meds_status_skipped
-        DoseGroupState.PARTLY -> R.string.meds_status_partly
+private fun countdown(now: LocalDateTime, at: LocalDateTime): String {
+    val minutes = Duration.between(now, at).toMinutes()
+    return when {
+        minutes <= 0 -> stringResource(R.string.meds_countdown_now)
+        minutes < 60 -> stringResource(R.string.meds_countdown_minutes, minutes)
+        else -> stringResource(
+            R.string.meds_countdown_hours,
+            minutes / 60,
+            minutes % 60,
+        )
     }
+}

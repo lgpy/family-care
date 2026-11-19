@@ -3,6 +3,7 @@ package io.github.lgpy.familycare.feature.appointments.ui
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
@@ -10,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -17,6 +19,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentEntry
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentField
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentKind
@@ -116,28 +119,45 @@ fun AppointmentLine(
             .fillMaxWidth()
             .selectable(selected = false, role = Role.Button, onClick = onClick)
             .padding(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        val kindLabel = stringResource(appointment.kind.labelRes())
-        val headline = formatAppointmentTime(appointment.localTime) +
-            " · " +
-            (appointment.title ?: kindLabel)
-        Text(
-            text = headline,
-            style = MaterialTheme.typography.bodyLarge,
-            textDecoration = if (cancelled) TextDecoration.LineThrough else null,
-        )
-        if (showPatient && entry.patientName.isNotBlank()) {
-            Text(text = entry.patientName, style = MaterialTheme.typography.bodyMedium)
-        }
-        appointment.place?.let { place ->
-            Text(text = place, style = MaterialTheme.typography.bodyMedium)
-        }
-        if (cancelled) {
-            Text(
-                text = stringResource(R.string.appointments_cancelled),
-                style = MaterialTheme.typography.labelMedium,
-            )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            // A patient is identified by their avatar wherever a list spans
+            // patients (D32); inside one patient's tab there is nothing to tell apart.
+            if (showPatient && entry.patientName.isNotBlank()) {
+                PatientAvatar(
+                    patientId = appointment.patientId,
+                    name = entry.patientName,
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                val kindLabel = stringResource(appointment.kind.labelRes())
+                val headline = formatAppointmentTime(appointment.localTime) +
+                    " · " +
+                    (appointment.title ?: kindLabel)
+                Text(
+                    text = headline,
+                    style = MaterialTheme.typography.bodyLarge,
+                    textDecoration = if (cancelled) TextDecoration.LineThrough else null,
+                )
+                if (showPatient && entry.patientName.isNotBlank()) {
+                    Text(text = entry.patientName, style = MaterialTheme.typography.bodyMedium)
+                }
+                appointment.place?.let { place ->
+                    Text(text = place, style = MaterialTheme.typography.bodyMedium)
+                }
+                if (cancelled) {
+                    Text(
+                        text = stringResource(R.string.appointments_cancelled),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+            }
         }
     }
 }

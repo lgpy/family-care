@@ -9,70 +9,44 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCards
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import org.koin.compose.koinInject
-import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Today: the start destination, sorted by urgency rather than by module
- * (docs/ux/screens.md §1).
+ * (docs/ux/screens.md §1, docs/ux/mockups/scaling.html).
  *
- * The greeting, the circle and the role come from the core; every card below
- * comes from a feature module through the dashboard extension point
- * ([DashboardCards]). Today imports no module: it draws what was registered and
- * passes [onOpenRoute] so a card can open its own screens.
+ * The header is the title and the full date: the greeting, role and circle
+ * lines were removed in phase 2 because the date is the one thing the user
+ * needs at a glance. Every card below comes from a feature module through the
+ * dashboard extension point ([DashboardCards]); Today imports no module: it
+ * draws what was registered and passes [onOpenRoute] so a card can open its own
+ * screens.
  */
 @Composable
 fun TodayScreen(
     modifier: Modifier = Modifier,
     onOpenRoute: (String) -> Unit = {},
 ) {
-    val viewModel = koinViewModel<TodayViewModel>()
-    val uiState by viewModel.uiState.collectAsState()
     val dashboard = koinInject<DashboardCards>()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text(
-            text = uiState.displayName?.let { stringResource(R.string.today_greeting, it) }
-                ?: stringResource(R.string.today_title),
-            style = MaterialTheme.typography.headlineMedium,
-        )
-        uiState.circleName?.let { name ->
-            Text(
-                text = stringResource(R.string.today_circle, name),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
-        uiState.role?.let { role ->
-            Text(
-                text = stringResource(role.messageRes()),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        if (uiState.patientCount > 0) {
-            Text(
-                text = pluralStringResource(
-                    R.plurals.today_patients_count,
-                    uiState.patientCount,
-                    uiState.patientCount,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
+        TodayHeader()
 
         dashboard.ordered.forEach { card ->
             card.Content(onNavigate = onOpenRoute)
@@ -80,8 +54,31 @@ fun TodayScreen(
     }
 }
 
-private fun MemberRole.messageRes(): Int = when (this) {
-    MemberRole.OWNER -> R.string.today_role_owner
-    MemberRole.CAREGIVER -> R.string.today_role_caregiver
-    MemberRole.VIEWER -> R.string.today_role_viewer
+/** "Today" with the full, locale-aware date underneath ("quinta-feira, 19 de novembro"). */
+@Composable
+private fun TodayHeader() {
+    val locale = LocalConfiguration.current.locales[0]
+    // The skeleton asks the platform for this locale's own order and its
+    // connector words, so en gives "Thursday, 19 November" and pt-PT
+    // "quinta-feira, 19 de novembro" without a hard-coded pattern per language.
+    val pattern = remember(locale) {
+        android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM")
+    }
+    val today = LocalDate.now()
+    val date = remember(today, locale, pattern) {
+        today.format(DateTimeFormatter.ofPattern(pattern, locale))
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = stringResource(R.string.today_title),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = date,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }

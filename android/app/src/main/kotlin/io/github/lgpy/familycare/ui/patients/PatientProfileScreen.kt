@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -45,11 +46,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.CoreError
 import io.github.lgpy.familycare.core.domain.circle.PatientExportFormat
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.core.ui.patient.PatientHeaders
 import io.github.lgpy.familycare.core.ui.patient.PatientTabs
 import io.github.lgpy.familycare.core.ui.patient.TimelineEntry
@@ -136,8 +139,7 @@ fun PatientProfileScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        PatientProfileHeader(
-            displayName = uiState.displayName.takeIf { uiState.loaded && !uiState.notFound },
+        PatientProfileTopBar(
             canWrite = uiState.canWrite,
             canManage = uiState.canManage && !uiState.notFound,
             canExport = uiState.canExport,
@@ -153,13 +155,20 @@ fun PatientProfileScreen(
             },
         )
 
+        if (uiState.loaded && !uiState.notFound && uiState.displayName.isNotBlank()) {
+            PatientProfileHead(
+                patientId = patient,
+                displayName = uiState.displayName,
+            )
+        }
+
         if (uiState.isArchived) {
             Text(
                 text = stringResource(R.string.patient_archived_banner),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
 
@@ -168,7 +177,7 @@ fun PatientProfileScreen(
                 text = stringResource(error.messageRes()),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
 
@@ -179,7 +188,7 @@ fun PatientProfileScreen(
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
                     .clickable { viewModel.clearExportError() },
             )
         }
@@ -393,8 +402,7 @@ private fun CoreError.exportMessageRes(): Int = when (this) {
 }
 
 @Composable
-private fun PatientProfileHeader(
-    displayName: String?,
+private fun PatientProfileTopBar(
     canWrite: Boolean,
     canManage: Boolean,
     canExport: Boolean,
@@ -411,7 +419,7 @@ private fun PatientProfileHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 0.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
@@ -420,13 +428,7 @@ private fun PatientProfileHeader(
                 contentDescription = stringResource(R.string.back),
             )
         }
-        Text(
-            text = displayName ?: stringResource(R.string.patient_edit_title),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 8.dp),
-        )
+        Spacer(modifier = Modifier.weight(1f))
         if (canWrite || canManage || canExport) {
             Box {
                 IconButton(onClick = { menuOpen = true }) {
@@ -486,6 +488,37 @@ private fun PatientProfileHeader(
                 }
             }
         }
+    }
+}
+
+/**
+ * The profile head (docs/ux/mockups/scaling.html): the 56 dp identity avatar
+ * beside the patient's name. The age line is omitted: the domain patient has no
+ * date of birth, and inventing one would be clinical information.
+ */
+@Composable
+private fun PatientProfileHead(
+    patientId: PatientId,
+    displayName: String,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PatientAvatar(
+            patientId = patientId,
+            name = displayName,
+            size = 56.dp,
+        )
+        Text(
+            text = displayName,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

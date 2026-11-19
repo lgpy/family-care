@@ -76,6 +76,7 @@ val medicationsModule: Module = module {
             patientId = patientId,
             medicationRepository = get(),
             patientRepository = get(),
+            stockRepository = get(),
             careCircleRepository = get(),
         )
     }

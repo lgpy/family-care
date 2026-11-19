@@ -83,6 +83,10 @@ data class CardLine(
     val time: LocalTime,
     val title: String?,
     val kind: AppointmentKind,
+    /** Where it happens, when recorded ("Lab Joaquim Chaves"). */
+    val place: String? = null,
+    /** What the patient must do beforehand ("Fasting"), when recorded. */
+    val preparation: String? = null,
 ) {
     companion object {
         internal fun of(entry: AppointmentEntry): CardLine = CardLine(
@@ -92,6 +96,8 @@ data class CardLine(
             time = entry.appointment.localTime,
             title = entry.appointment.title,
             kind = entry.appointment.kind,
+            place = entry.appointment.place,
+            preparation = entry.appointment.preparation,
         )
     }
 }

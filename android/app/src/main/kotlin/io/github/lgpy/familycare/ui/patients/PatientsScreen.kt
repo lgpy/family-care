@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -155,6 +156,11 @@ private fun PatientListRow(
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        PatientAvatar(
+            patientId = row.patient.id,
+            name = row.patient.displayName,
+            modifier = Modifier.padding(end = 12.dp),
+        )
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),

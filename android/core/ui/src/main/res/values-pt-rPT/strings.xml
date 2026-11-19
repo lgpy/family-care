@@ -13,16 +13,6 @@
     <string name="nav_more">Mais</string>
 
     <string name="today_title">Hoje</string>
-    <string name="today_greeting">Olá, %1$s</string>
-    <string name="today_circle">Círculo familiar: %1$s</string>
-    <string name="today_role_owner">É o proprietário deste círculo.</string>
-    <string name="today_role_caregiver">É cuidador neste círculo.</string>
-    <string name="today_role_viewer">Pode consultar os dados deste círculo.</string>
-    <string name="today_placeholder">As pessoas, as tomas e as consultas chegam nos próximos passos.</string>
-    <plurals name="today_patients_count">
-        <item quantity="one">%1$d pessoa no seu círculo</item>
-        <item quantity="other">%1$d pessoas no seu círculo</item>
-    </plurals>
 
     <!-- M2: ecrã de configuração do círculo. -->
     <string name="circle_gate_loading_title">A carregar a sua família…</string>
@@ -250,6 +240,13 @@
         <item quantity="one">%1$d toma</item>
         <item quantity="other">%1$d tomas</item>
     </plurals>
+    <!-- Fase 2: a contagem decrescente do próximo grupo e a linha de uma toma confirmada. -->
+    <string name="meds_countdown_now">agora</string>
+    <string name="meds_countdown_minutes">daqui a %1$d min</string>
+    <string name="meds_countdown_hours">daqui a %1$d h %2$d min</string>
+    <string name="meds_slot_given_by_you">Dada por si às %1$s</string>
+    <string name="meds_slot_given_by_name">Dada por %1$s às %2$s</string>
+    <string name="meds_slot_given_by_someone">Dada por outra pessoa às %1$s</string>
     <string name="meds_status_upcoming">dentro do horário</string>
     <string name="meds_status_due">à hora</string>
     <string name="meds_status_overdue">atrasada</string>
@@ -257,16 +254,26 @@
     <string name="meds_status_taken">tomada</string>
     <string name="meds_status_skipped">não tomada</string>
     <string name="meds_status_partly">confirmada em parte</string>
-    <string name="meds_given_by_you">por si às %1$s</string>
-    <string name="meds_given_by_name">por %1$s às %2$s</string>
-    <string name="meds_given_by_someone">por outra pessoa às %1$s</string>
     <string name="meds_you">você</string>
     <string name="meds_someone_else">outra pessoa</string>
     <string name="meds_give">Dar ✓</string>
+    <plurals name="meds_give_all">
+        <item quantity="one">Dar %1$d</item>
+        <item quantity="other">Dar as %1$d</item>
+    </plurals>
+    <string name="meds_attention_group_title">Tomas de %1$s das %2$s por confirmar</string>
+    <string name="meds_attention_low_stock_title">%1$s está a acabar</string>
+    <plurals name="meds_attention_low_stock">
+        <item quantity="one">Resta %2$d dia a %1$s.</item>
+        <item quantity="other">Restam %2$d dias a %1$s.</item>
+    </plurals>
+    <plurals name="meds_attention_low_stock_prescription">
+        <item quantity="one">Resta %2$d dia a %1$s. É preciso receita primeiro.</item>
+        <item quantity="other">Restam %2$d dias a %1$s. É preciso receita primeiro.</item>
+    </plurals>
     <string name="meds_give_anyway">Dar mesmo assim</string>
     <string name="meds_already_given_title">Já foi dada</string>
     <string name="meds_already_given_body">Já foi dada por %1$s às %2$s. Deu outra?</string>
-    <string name="meds_open_slot">Abrir as tomas das %1$s</string>
     <string name="meds_error_invalid">Verifique os campos assinalados.</string>
     <string name="meds_step_busy">A guardar…</string>
 
@@ -440,9 +447,8 @@
     <string name="meds_stock_recount_action">Guardar contagem</string>
     <string name="meds_stock_discard_action">Deitar fora</string>
 
-    <!-- M5: o cartão "Stock baixo" de Hoje (D28). O título reutiliza
-         meds_stock_low_badge; uma linha é "doente · medicação — dias para acabar". -->
-    <string name="meds_low_stock_line">%1$s · %2$s — %3$s</string>
+    <!-- M5: o cartão "Stock baixo" de Hoje (D28). É um cartão de atenção cujos
+         itens indicam a medicação e a pessoa, mais um item "+N mais". -->
     <string name="meds_low_stock_more">+%1$d mais</string>
 
     <!-- M5: shopping list (D28). As duas secções, as respetivas linhas e diálogos. -->
@@ -626,6 +632,9 @@
     <string name="appointments_push_body">Uma consulta foi marcada ou alterada</string>
     <string name="appointments_card_title">Próximos 7 dias</string>
     <string name="appointments_card_more">+%1$d mais</string>
+    <!-- Fase 2: a linha de detalhe de uma consulta na lista "próximos". -->
+    <string name="appointments_card_line">%1$s às %2$s, %3$s</string>
+    <string name="appointments_card_line_no_place">%1$s às %2$s</string>
 
     <!-- M7/D30: exportação de dados da pessoa (JSON e o PDF para o médico). -->
     <string name="patient_export_action">Exportar dados…</string>

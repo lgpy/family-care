@@ -13,16 +13,6 @@
     <string name="nav_more">More</string>
 
     <string name="today_title">Today</string>
-    <string name="today_greeting">Hello, %1$s</string>
-    <string name="today_circle">Family circle: %1$s</string>
-    <string name="today_role_owner">You are the owner of this circle.</string>
-    <string name="today_role_caregiver">You are a caregiver in this circle.</string>
-    <string name="today_role_viewer">You can read this circle’s data.</string>
-    <string name="today_placeholder">Patients, doses and appointments arrive in the next steps.</string>
-    <plurals name="today_patients_count">
-        <item quantity="one">%1$d person in your circle</item>
-        <item quantity="other">%1$d people in your circle</item>
-    </plurals>
 
     <!-- M2: care circle setup gate. -->
     <string name="circle_gate_loading_title">Loading your family…</string>
@@ -250,6 +240,13 @@
         <item quantity="one">%1$d dose</item>
         <item quantity="other">%1$d doses</item>
     </plurals>
+    <!-- Phase 2: the time rail's next-group countdown and a confirmed slot's line. -->
+    <string name="meds_countdown_now">now</string>
+    <string name="meds_countdown_minutes">in %1$d min</string>
+    <string name="meds_countdown_hours">in %1$d h %2$d min</string>
+    <string name="meds_slot_given_by_you">Given by you at %1$s</string>
+    <string name="meds_slot_given_by_name">Given by %1$s at %2$s</string>
+    <string name="meds_slot_given_by_someone">Given by someone at %1$s</string>
     <string name="meds_status_upcoming">upcoming</string>
     <string name="meds_status_due">due</string>
     <string name="meds_status_overdue">overdue</string>
@@ -257,16 +254,26 @@
     <string name="meds_status_taken">taken</string>
     <string name="meds_status_skipped">skipped</string>
     <string name="meds_status_partly">partly confirmed</string>
-    <string name="meds_given_by_you">by you at %1$s</string>
-    <string name="meds_given_by_name">by %1$s at %2$s</string>
-    <string name="meds_given_by_someone">by someone else at %1$s</string>
     <string name="meds_you">you</string>
     <string name="meds_someone_else">someone else</string>
     <string name="meds_give">Give ✓</string>
+    <plurals name="meds_give_all">
+        <item quantity="one">Give %1$d</item>
+        <item quantity="other">Give all %1$d</item>
+    </plurals>
+    <string name="meds_attention_group_title">%1$s\'s %2$s medicines aren\'t confirmed</string>
+    <string name="meds_attention_low_stock_title">%1$s is running low</string>
+    <plurals name="meds_attention_low_stock">
+        <item quantity="one">%1$s has %2$d day left.</item>
+        <item quantity="other">%1$s has %2$d days left.</item>
+    </plurals>
+    <plurals name="meds_attention_low_stock_prescription">
+        <item quantity="one">%1$s has %2$d day left. Needs a prescription first.</item>
+        <item quantity="other">%1$s has %2$d days left. Needs a prescription first.</item>
+    </plurals>
     <string name="meds_give_anyway">Give anyway</string>
     <string name="meds_already_given_title">Already given</string>
     <string name="meds_already_given_body">Already given by %1$s at %2$s. Did you give another one?</string>
-    <string name="meds_open_slot">Open doses at %1$s</string>
     <string name="meds_error_invalid">Check the highlighted fields.</string>
     <string name="meds_step_busy">Saving…</string>
 
@@ -440,9 +447,8 @@
     <string name="meds_stock_recount_action">Save count</string>
     <string name="meds_stock_discard_action">Discard</string>
 
-    <!-- M5: the Today "Low stock" card (D28). The heading reuses
-         meds_stock_low_badge; a line is "patient · medication — days left". -->
-    <string name="meds_low_stock_line">%1$s · %2$s — %3$s</string>
+    <!-- M5: the Today "Low stock" card (D28). It is an attention card whose
+         items name the medication and its patient, plus a "+N more" item. -->
     <string name="meds_low_stock_more">+%1$d more</string>
 
     <!-- M5: shopping list (D28). The two groups, their lines and their dialogs. -->
@@ -627,6 +633,9 @@
     <string name="appointments_push_body">An appointment was added or changed</string>
     <string name="appointments_card_title">Next 7 days</string>
     <string name="appointments_card_more">+%1$d more</string>
+    <!-- Phase 2: one "upcoming" row's detail line. -->
+    <string name="appointments_card_line">%1$s at %2$s, %3$s</string>
+    <string name="appointments_card_line_no_place">%1$s at %2$s</string>
 
     <!-- M7/D30: patient export (JSON and the readable PDF). -->
     <string name="patient_export_action">Export data…</string>

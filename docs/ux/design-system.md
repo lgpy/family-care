@@ -71,9 +71,12 @@ Assignment: the default is **a stable hash of the patient id**, so the colour
 is the same on every phone and after every restart without any wiring.
 `orderedPatientColors(ids, palette)` / `rememberOrderedPatientColors(ids)`
 assign the palette in id order instead, which guarantees that up to eight
-patients in one circle never collide; the app shell does not provide it yet —
-phase 2 can wrap the shell's patient list in
-`CompositionLocalProvider(LocalPatientColors provides …)`.
+patients in one circle never collide. The app shell wires it for the whole app
+(`OrderedPatientColors` in the app module): it collects the circle's active
+**and archived** patients once and provides the resolver above every screen, so
+all tabs and feature modules agree and archiving someone never re-colours
+anybody else. The ordering key is the patient id — generated once on the phone
+— because the domain patient carries no creation timestamp.
 
 ## 2. Type
 

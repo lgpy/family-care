@@ -20,7 +20,11 @@ data class LowStockLine(
     val patientId: String,
     val patientName: String,
     val medicationName: String,
+    /** The box's strength ("850 mg"), shown after the name when known. */
+    val strength: String?,
     val daysRemaining: Int,
+    /** Whether a prescription must be sorted out before buying. */
+    val needsPrescription: Boolean,
 )
 
 /**
@@ -84,7 +88,9 @@ private fun toUiState(overviews: List<StockOverview>): LowStockUiState {
                 patientId = overview.medication.patientId.value,
                 patientName = overview.patientName,
                 medicationName = overview.medication.name,
+                strength = overview.medication.strength,
                 daysRemaining = days,
+                needsPrescription = overview.needsPrescription,
             )
         }
         .sortedWith(

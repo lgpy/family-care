@@ -5,6 +5,7 @@ import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.feature.medications.FakeCareCircleRepository
 import io.github.lgpy.familycare.feature.medications.FakeMedicationRepository
 import io.github.lgpy.familycare.feature.medications.FakePatientRepository
+import io.github.lgpy.familycare.feature.medications.FakeStockRepository
 import io.github.lgpy.familycare.feature.medications.awaitWhere
 import io.github.lgpy.familycare.feature.medications.domain.SkipReason
 import io.github.lgpy.familycare.feature.medications.medication
@@ -34,6 +35,7 @@ class PatientMedicationsViewModelTest {
     private lateinit var meds: FakeMedicationRepository
     private lateinit var patients: FakePatientRepository
     private lateinit var circles: FakeCareCircleRepository
+    private lateinit var stock: FakeStockRepository
 
     @Before
     fun setUp() {
@@ -41,6 +43,7 @@ class PatientMedicationsViewModelTest {
         meds = FakeMedicationRepository()
         patients = FakePatientRepository()
         circles = FakeCareCircleRepository()
+        stock = FakeStockRepository()
     }
 
     @After
@@ -52,6 +55,7 @@ class PatientMedicationsViewModelTest {
         patientId = testPatientId.value,
         medicationRepository = meds,
         patientRepository = patients,
+        stockRepository = stock,
         careCircleRepository = circles,
     )
 

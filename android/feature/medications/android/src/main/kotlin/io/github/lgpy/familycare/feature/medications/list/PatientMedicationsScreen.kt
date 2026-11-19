@@ -27,11 +27,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
-import io.github.lgpy.familycare.feature.medications.data.MedicationWithRegimens
+import io.github.lgpy.familycare.core.ui.components.StockMeter
+import io.github.lgpy.familycare.core.ui.components.stockMeterFraction
 import io.github.lgpy.familycare.feature.medications.ui.regimenSummary
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -209,7 +211,7 @@ private fun PatientMedicationsList(
 }
 
 @Composable
-private fun MedicationRow(item: MedicationWithRegimens, onClick: () -> Unit) {
+private fun MedicationRow(item: PatientMedicationUi, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -219,7 +221,7 @@ private fun MedicationRow(item: MedicationWithRegimens, onClick: () -> Unit) {
                 onClick = onClick,
             )
             .padding(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = item.medication.strength
@@ -227,9 +229,16 @@ private fun MedicationRow(item: MedicationWithRegimens, onClick: () -> Unit) {
                 ?: item.medication.name,
             style = MaterialTheme.typography.bodyLarge,
         )
-        val regimen = item.currentRegimen
+        val regimen = item.item.currentRegimen
         if (regimen != null) {
             Text(text = regimenSummary(regimen), style = MaterialTheme.typography.bodyMedium)
+        }
+        item.daysRemaining?.let { days ->
+            StockMeter(
+                daysLeft = pluralStringResource(R.plurals.meds_stock_days_left, days, days),
+                fraction = stockMeterFraction(days),
+                low = item.low,
+            )
         }
     }
 }

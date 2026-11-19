@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.core.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,6 +59,8 @@ enum class DoseSlotState { DONE, NEXT, UPCOMING }
  * @param givenText For [DoseSlotState.DONE]: "Given by Mom at 08:04".
  * @param actionLabel The button label ("Give"), null for no action.
  * @param onAction What the button does; required when [actionLabel] is set.
+ * @param onClick What tapping the slot itself does (opens the dose-slot
+ *   screen), null when the slot is not a link.
  */
 @Immutable
 data class DoseSlotUi(
@@ -68,6 +71,7 @@ data class DoseSlotUi(
     val givenText: String? = null,
     val actionLabel: String? = null,
     val onAction: (() -> Unit)? = null,
+    val onClick: (() -> Unit)? = null,
 )
 
 /**
@@ -112,6 +116,13 @@ fun DoseSlot(
                 .then(
                     if (done) {
                         Modifier.dashedOutline(scheme.outlineVariant, FamilyCareDimens.CardRadius)
+                    } else {
+                        Modifier
+                    },
+                )
+                .then(
+                    if (slot.onClick != null) {
+                        Modifier.clickable(onClick = slot.onClick)
                     } else {
                         Modifier
                     },

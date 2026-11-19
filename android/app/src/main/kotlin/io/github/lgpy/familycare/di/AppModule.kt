@@ -71,7 +71,6 @@ import io.github.lgpy.familycare.feature.patientinfo.profile.AllergiesPatientHea
 import io.github.lgpy.familycare.feature.patientinfo.profile.InfoPatientTab
 import io.github.lgpy.familycare.ui.MoreViewModel
 import io.github.lgpy.familycare.ui.SignInViewModel
-import io.github.lgpy.familycare.ui.TodayViewModel
 import io.github.lgpy.familycare.ui.activity.ActivityViewModel
 import io.github.lgpy.familycare.ui.circle.CircleGateViewModel
 import io.github.lgpy.familycare.ui.circle.FamilyCircleViewModel
@@ -374,7 +373,6 @@ val appModule: Module = module {
             syncState = get<SyncService>().state,
         )
     }
-    viewModel { TodayViewModel(get(), get(), get()) }
     viewModel { PatientsViewModel(patientRepository = get(), careCircleRepository = get()) }
     viewModel { (patientId: String) ->
         PatientFormViewModel(

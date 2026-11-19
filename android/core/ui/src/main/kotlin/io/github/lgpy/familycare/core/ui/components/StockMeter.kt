@@ -127,6 +127,19 @@ fun StockMeter(
     }
 }
 
+/**
+ * The meter's filled share for [daysRemaining].
+ *
+ * The bar is a visual cue, not a clinical value: 30 days is a full bar and
+ * anything beyond it stays full. Only `low` means "running low"; a caller must
+ * never infer it from the length of the bar.
+ */
+fun stockMeterFraction(daysRemaining: Int): Float =
+    (daysRemaining / FAMILY_CARE_STOCK_METER_FULL_DAYS).coerceIn(0f, 1f)
+
+/** A full bar means this many days of stock or more. */
+private const val FAMILY_CARE_STOCK_METER_FULL_DAYS = 30f
+
 @ScalePreviews
 @Composable
 private fun StockMeterPreview() {

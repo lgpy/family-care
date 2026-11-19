@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.core.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,12 +39,15 @@ import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
  * @param supportingText Optional second line ("4 medicines. Mom was reminded at
  *   08:00, then you at 08:30.").
  * @param action Optional button under this item, full width.
+ * @param onClick What tapping the item does (opens the dose slot or the shopping
+ *   list), null when the item is not a link.
  */
 data class AttentionItem(
     val icon: ImageVector,
     val title: String,
     val supportingText: String? = null,
     val action: AttentionAction? = null,
+    val onClick: (() -> Unit)? = null,
 )
 
 /**
@@ -98,7 +102,18 @@ fun AttentionCard(
 @Composable
 private fun AttentionItemContent(item: AttentionItem) {
     val colors = FamilyCareTheme.colors
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (item.onClick != null) {
+                    Modifier.clickable(onClick = item.onClick)
+                } else {
+                    Modifier
+                },
+            ),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(
                 imageVector = item.icon,
