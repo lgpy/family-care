@@ -318,19 +318,12 @@
     <string name="meds_regimen_quantity_unit">%1$s</string>
 
     <!-- M3: adicionar / editar medicação. -->
-    <string name="meds_add_title">Adicionar medicação</string>
     <string name="meds_edit_title">Editar medicação</string>
-    <string name="meds_step_of">Passo %1$d de %2$d</string>
-    <string name="meds_step_what">O que é</string>
-    <string name="meds_step_when">Quando e quanto</string>
     <string name="meds_step_stock">Stock</string>
-    <string name="meds_step_who">Quem é lembrado</string>
-    <string name="meds_next">Seguinte</string>
-    <string name="meds_previous">Voltar</string>
     <string name="meds_name_label">Nome</string>
     <string name="meds_catalog_otc">Sem receita</string>
     <string name="meds_catalog_footnote">Das listas públicas do INFARMED. Alguns medicamentos de marca não constam — escreva-os à mão.</string>
-    <string name="meds_stock_pack_chip">1 embalagem = %1$d</string>
+    <string name="meds_stock_pack_chip">1 embalagem (%1$d)</string>
     <string name="meds_ingredient_label">Substância ativa (opcional)</string>
     <string name="meds_strength_label">Dosagem (opcional)</string>
     <string name="meds_strength_helper">Como está na caixa, por exemplo 500 mg.</string>
@@ -375,7 +368,7 @@
     <string name="meds_reminders_same">Igual à pessoa (%1$s)</string>
     <string name="meds_reminders_same_unknown">Igual à pessoa</string>
     <string name="meds_reminders_override">Diferente para esta medicação</string>
-    <string name="meds_reminders_hint">Por omissão, quem é lembrado vem da pessoa. Os lembretes chegam num passo seguinte; isto só registra a escolha.</string>
+    <string name="meds_reminders_hint">Por omissão, quem é lembrado vem da pessoa; isto só registra a escolha para esta medicação.</string>
 
     <string name="meds_error_name">Indique um nome com até 200 caracteres.</string>
     <string name="meds_error_ingredient">Mantenha a substância ativa com 200 caracteres ou menos.</string>
@@ -396,6 +389,50 @@
     <string name="meds_error_stock_quantity">Indique uma quantidade entre 0 e 100000, com até três casas decimais.</string>
     <string name="meds_error_stock_quantity_positive">Indique uma quantidade superior a 0, com até três casas decimais.</string>
     <string name="meds_error_stock_reason">Indique porque está a deitar fora o stock.</string>
+    <string name="meds_error_prescription_date">Indique uma data válida (AAAA-MM-DD).</string>
+
+    <!-- M9: o formulário de uma página e a folha do aspeto do comprimido. -->
+    <string name="meds_new_title">Nova medicação para %1$s</string>
+    <string name="meds_new_title_unknown">Nova medicação</string>
+    <string name="meds_medicine_section">Medicamento</string>
+    <string name="meds_looks_section">Aspeto</string>
+    <string name="meds_look_not_set">Por definir — toque para igualar ao comprimido da caixa</string>
+    <string name="meds_look_hint">Toque para igualar ao comprimido da caixa</string>
+    <string name="meds_look_change">Alterar</string>
+    <string name="meds_look_sheet_title">Qual é o aspeto do comprimido?</string>
+    <string name="meds_look_shape_label">Forma</string>
+    <string name="meds_look_colour_label">Cor</string>
+    <string name="meds_look_two_colours">Duas cores</string>
+    <string name="meds_look_score">Ranhura</string>
+    <string name="meds_look_size_label">Tamanho</string>
+    <string name="meds_look_done">Concluir</string>
+    <string name="meds_look_size_small">Pequeno</string>
+    <string name="meds_look_size_medium">Médio</string>
+    <string name="meds_look_size_large">Grande</string>
+    <string name="meds_when_section">Quando</string>
+    <string name="meds_preset_morning">Manhã %1$s</string>
+    <string name="meds_preset_lunch">Almoço %1$s</string>
+    <string name="meds_preset_dinner">Jantar %1$s</string>
+    <string name="meds_preset_bedtime">Deitar %1$s</string>
+    <string name="meds_time_other">Outra hora</string>
+    <string name="meds_remove_custom_time">Remover %1$s</string>
+    <string name="meds_each_time">Em cada toma</string>
+    <string name="meds_how_many">Quantos tem?</string>
+    <string name="meds_optional">opcional</string>
+    <string name="meds_more_options">Mais opções</string>
+    <string name="meds_more_summary">%1$s · %2$s · limite de stock: %3$d</string>
+    <string name="meds_more_summary_edit">%1$s · limite de stock: %2$d</string>
+    <string name="meds_summary_daily">Todos os dias desde %1$s</string>
+    <string name="meds_summary_weekdays">Dias escolhidos desde %1$s</string>
+    <string name="meds_summary_every_n" tools:ignore="PluralsCandidate">A cada %1$d dias desde %2$s</string>
+    <string name="meds_summary_reminders_from">lembretes de %1$s</string>
+    <string name="meds_summary_reminders_inherit">lembretes da pessoa</string>
+    <string name="meds_summary_reminders_override">lembretes: %1$s</string>
+    <string name="meds_different_amounts">Quantidade diferente em cada toma</string>
+    <string name="meds_decrease">Diminuir</string>
+    <string name="meds_increase">Aumentar</string>
+    <string name="meds_add_action">Adicionar %1$s</string>
+    <string name="meds_add_action_empty">Adicionar medicação</string>
 
     <!-- M3: detalhe da medicação. -->
     <string name="meds_detail_title">Medicação</string>

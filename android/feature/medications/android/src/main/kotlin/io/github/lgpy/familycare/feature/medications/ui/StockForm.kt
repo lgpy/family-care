@@ -9,8 +9,8 @@ import java.math.BigDecimal
 import java.time.Instant
 
 /**
- * The stock ledger's inputs, shared by the form's stock step and the detail
- * screen's dialogs (D28).
+ * The stock ledger's inputs, shared by the add form's opening count and the
+ * detail screen's dialogs (D28).
  *
  * A quantity is kept as text while it is typed and parsed once, so a half-typed
  * `0.` is never silently turned into 0. The rules themselves are the domain's

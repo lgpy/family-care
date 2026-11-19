@@ -46,9 +46,8 @@ fun steppedQuantity(current: BigDecimal, steps: Int): BigDecimal {
 }
 
 /**
- * The state of the schedule editor shared by the add-medication flow's second
- * step and the "change dose or schedule" screen, plus its parsing and
- * validation.
+ * The state of the schedule editor shared by the add form's "More options" and
+ * the "change dose or schedule" screen, plus its parsing and validation.
  *
  * Times and dates stay text while they are being typed (a half-typed `1` is not
  * silently turned into 10:00); [parse] is what turns the whole editor into a

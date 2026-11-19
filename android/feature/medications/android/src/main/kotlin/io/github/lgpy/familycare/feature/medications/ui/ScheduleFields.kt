@@ -32,9 +32,12 @@ import io.github.lgpy.familycare.feature.medications.domain.ScheduleType
 import java.time.DayOfWeek
 
 /**
- * The schedule editor shared by step 2 of the add flow and the "change dose or
- * schedule" screen: type, weekdays or interval, the times with a quantity each,
- * and the start/end dates.
+ * The schedule editor shared by the add form's "More options" and the "change
+ * dose or schedule" screen: type, weekdays or interval, the times with a
+ * quantity each, and the start/end dates.
+ *
+ * The add form picks its times with chips, so it passes [showTimes] = false and
+ * keeps only the type and the dates here; the change screen owns its time rows.
  *
  * Every field is text where the user types, with the domain's [MedicationField]s
  * deciding which lines turn red — the same rules that reject the save.
@@ -54,6 +57,7 @@ fun ScheduleFields(
     onStartDateChanged: (String) -> Unit,
     onEndDateChanged: (String) -> Unit,
     showDates: Boolean = true,
+    showTimes: Boolean = true,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -138,70 +142,72 @@ fun ScheduleFields(
             ScheduleType.DAILY -> Unit
         }
 
-        Text(
-            text = stringResource(R.string.meds_times_label),
-            style = MaterialTheme.typography.titleSmall,
-        )
-        // A duplicate time is its own mistake (the domain rejects it because the
-        // second quantity would be ambiguous), so it gets its own line instead
-        // of the "add at least one time" one.
-        val parsedTimes = state.times.mapNotNull { parseTime(it.time) }
-        val timesHaveDuplicates = parsedTimes.size != parsedTimes.toSet().size
-        val timesHaveUnparsable = parsedTimes.size != state.times.size
-        state.times.forEachIndexed { index, entry ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                OutlinedTextField(
-                    value = entry.time,
-                    onValueChange = { onTimeChanged(index, it) },
-                    label = { Text(text = stringResource(R.string.meds_time_label)) },
-                    enabled = enabled,
-                    singleLine = true,
-                    isError = MedicationField.REGIMEN_TIMES in errors,
-                    modifier = Modifier.weight(1.4f),
-                )
-                TextButton(
-                    onClick = { onQuantityStep(index, -1) },
-                    enabled = enabled,
-                ) { Text(text = "−") }
-                Text(
-                    text = formatQuantity(entry.quantity),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                TextButton(
-                    onClick = { onQuantityStep(index, 1) },
-                    enabled = enabled,
-                ) { Text(text = "+") }
-                IconButton(
-                    onClick = { onRemoveTime(index) },
-                    enabled = enabled && state.times.size > 1,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = stringResource(R.string.meds_remove_time),
-                    )
-                }
-            }
+        if (showTimes) {
             Text(
-                text = stringResource(R.string.meds_quantity_label) + ": " +
-                    formatQuantity(entry.quantity),
-                style = MaterialTheme.typography.bodySmall,
+                text = stringResource(R.string.meds_times_label),
+                style = MaterialTheme.typography.titleSmall,
             )
-        }
-        FieldError(
-            visible = MedicationField.REGIMEN_TIMES in errors && timesHaveDuplicates,
-            message = R.string.meds_error_times_duplicate,
-        )
-        FieldError(
-            visible = MedicationField.REGIMEN_TIMES in errors &&
-                (!timesHaveDuplicates || timesHaveUnparsable),
-            message = R.string.meds_error_times,
-        )
-        TextButton(onClick = onAddTime, enabled = enabled) {
-            Text(text = stringResource(R.string.meds_add_time))
+            // A duplicate time is its own mistake (the domain rejects it because the
+            // second quantity would be ambiguous), so it gets its own line instead
+            // of the "add at least one time" one.
+            val parsedTimes = state.times.mapNotNull { parseTime(it.time) }
+            val timesHaveDuplicates = parsedTimes.size != parsedTimes.toSet().size
+            val timesHaveUnparsable = parsedTimes.size != state.times.size
+            state.times.forEachIndexed { index, entry ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    OutlinedTextField(
+                        value = entry.time,
+                        onValueChange = { onTimeChanged(index, it) },
+                        label = { Text(text = stringResource(R.string.meds_time_label)) },
+                        enabled = enabled,
+                        singleLine = true,
+                        isError = MedicationField.REGIMEN_TIMES in errors,
+                        modifier = Modifier.weight(1.4f),
+                    )
+                    TextButton(
+                        onClick = { onQuantityStep(index, -1) },
+                        enabled = enabled,
+                    ) { Text(text = "−") }
+                    Text(
+                        text = formatQuantity(entry.quantity),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    TextButton(
+                        onClick = { onQuantityStep(index, 1) },
+                        enabled = enabled,
+                    ) { Text(text = "+") }
+                    IconButton(
+                        onClick = { onRemoveTime(index) },
+                        enabled = enabled && state.times.size > 1,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.meds_remove_time),
+                        )
+                    }
+                }
+                Text(
+                    text = stringResource(R.string.meds_quantity_label) + ": " +
+                        formatQuantity(entry.quantity),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            FieldError(
+                visible = MedicationField.REGIMEN_TIMES in errors && timesHaveDuplicates,
+                message = R.string.meds_error_times_duplicate,
+            )
+            FieldError(
+                visible = MedicationField.REGIMEN_TIMES in errors &&
+                    (!timesHaveDuplicates || timesHaveUnparsable),
+                message = R.string.meds_error_times,
+            )
+            TextButton(onClick = onAddTime, enabled = enabled) {
+                Text(text = stringResource(R.string.meds_add_time))
+            }
         }
 
         if (showDates) {

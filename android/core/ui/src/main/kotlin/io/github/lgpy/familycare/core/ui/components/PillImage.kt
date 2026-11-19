@@ -69,6 +69,15 @@ private val PillPalette: Map<PillColor, Color> = mapOf(
     PillColor.GREY to Color(0xFFB9BCC2),
 )
 
+/**
+ * The fixed colour of a palette token, for a pill-look customizer's swatches.
+ *
+ * The map itself stays private so the palette cannot be extended from outside
+ * `core/ui`; a screen that needs to draw a swatch reads the value through here
+ * (D33).
+ */
+fun pillColorSwatch(color: PillColor): Color = PillPalette.getValue(color)
+
 /** The mockup's outline: black at 28%, so it reads on every palette colour. */
 private val PillOutline = Color.Black.copy(alpha = 0.28f)
 
@@ -190,12 +199,12 @@ fun pillDescription(look: PillLook?): String {
 
     val feminine = look.shape == PillShape.CAPSULE
     val secondColour = look.color2
-    val firstColour = pillColourName(look.color ?: PillColor.WHITE, feminine)
+    val firstColour = pillColorName(look.color ?: PillColor.WHITE, feminine)
     val colourPhrase = if (feminine && secondColour != null) {
         stringResource(
             R.string.pill_desc_two_colours,
             firstColour,
-            pillColourName(secondColour, feminine = true),
+            pillColorName(secondColour, feminine = true),
         )
     } else {
         firstColour
@@ -236,9 +245,14 @@ private fun pillShapeName(shape: PillShape): Int = when (shape) {
     PillShape.DROPS -> R.string.pill_shape_drops
 }
 
-/** The colour word; [feminine] picks the form that agrees with "cápsula". */
+/**
+ * The colour word; [feminine] picks the form that agrees with "cápsula".
+ *
+ * Exposed as well as used by [pillDescription], because a customizer's swatches
+ * need the same localised colour name for their content description.
+ */
 @Composable
-private fun pillColourName(colour: PillColor, feminine: Boolean): String = stringResource(
+fun pillColorName(colour: PillColor, feminine: Boolean = false): String = stringResource(
     when (colour) {
         PillColor.WHITE -> if (feminine) R.string.pill_color_white_fem else R.string.pill_color_white
         PillColor.CREAM -> if (feminine) R.string.pill_color_cream_fem else R.string.pill_color_cream

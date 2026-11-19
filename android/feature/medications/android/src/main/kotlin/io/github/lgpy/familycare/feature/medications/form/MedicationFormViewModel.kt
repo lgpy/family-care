@@ -8,11 +8,14 @@ import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.domain.circle.canWrite
+import io.github.lgpy.familycare.core.domain.medication.PillColor
+import io.github.lgpy.familycare.core.domain.medication.PillLook
+import io.github.lgpy.familycare.core.domain.medication.PillLookRules
+import io.github.lgpy.familycare.core.domain.medication.PillShape
 import io.github.lgpy.familycare.feature.medications.data.MedsError
 import io.github.lgpy.familycare.feature.medications.data.MedsResult
 import io.github.lgpy.familycare.feature.medications.data.MedicationCatalogRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
-import io.github.lgpy.familycare.feature.medications.data.MedicationWithRegimens
 import io.github.lgpy.familycare.feature.medications.data.StockRepository
 import io.github.lgpy.familycare.feature.medications.domain.Medication
 import io.github.lgpy.familycare.feature.medications.domain.MedicationCatalog
@@ -28,9 +31,9 @@ import io.github.lgpy.familycare.feature.medications.ui.DoseTimeEntry
 import io.github.lgpy.familycare.feature.medications.ui.MedsUiError
 import io.github.lgpy.familycare.feature.medications.ui.MemberOrder
 import io.github.lgpy.familycare.feature.medications.ui.ScheduleFormState
+import io.github.lgpy.familycare.feature.medications.ui.formatTime
 import io.github.lgpy.familycare.feature.medications.ui.parseStockQuantity
 import io.github.lgpy.familycare.feature.medications.ui.parseThresholdDays
-import io.github.lgpy.familycare.feature.medications.ui.parseTime
 import io.github.lgpy.familycare.feature.medications.ui.steppedQuantity
 import io.github.lgpy.familycare.feature.medications.ui.stockErrors
 import io.github.lgpy.familycare.feature.medications.ui.uiError
@@ -49,32 +52,35 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * The add-medication flow (docs/ux/screens.md §4, four steps in M5: what, when,
- * stock, who) and, in edit mode, the "Edit details" screen.
+ * The one-screen add-medication form and, in edit mode, the "Edit details"
+ * screen (docs/ux/mockups/screens-v2.html, "Add medicine (one screen)").
  *
- * **Step 1 — What:** name, active ingredient, strength, form, stock unit,
- * prescription, instructions. The stock unit starts from a sensible default per
- * form ([defaultStockUnit]) and is only overwritten while the user has not typed
- * their own.
+ * **Medicine:** name, active ingredient, strength, form, stock unit,
+ * prescription and instructions. The bundled catalogue supplies suggestions
+ * while the name is typed (D31); picking one fills what it knows. The stock unit
+ * starts from a sensible default per form ([defaultStockUnit]) and is only
+ * overwritten while the user has not typed their own.
  *
- * **Step 2 — When and how much:** schedule type, times with a quantity each
- * (0.25 steps), start and end date. Times and dates stay text until [save] so a
- * half-typed value is never silently reinterpreted; the domain rules
- * ([Medication.validate], [Regimen.validate]) own the final word and their
- * [MedicationField]s mark the inputs inline.
+ * **Looks like:** the drawn pill look (D33). A form implies a starting look
+ * ([defaultPillLook]) until the caregiver picks one in the sheet.
  *
- * **Step 3 — Stock:** how many there are now (the opening count, written with
- * the medication in one transaction by [MedicationRepository.create]) and the
- * low-stock threshold in days. The quantity is validated by
- * [io.github.lgpy.familycare.feature.medications.domain.StockRules.validate], the
- * same rule the ledger applies (D28).
+ * **When and how much:** a set of daily presets plus any custom times, each with
+ * a quantity. One stepper ("Each time") changes every selected time; the "More
+ * options" expander can give individual times their own amount. Times are
+ * [LocalTime]s in the state, so no half-typed text is ever reinterpreted.
  *
- * **Step 4 — Who is reminded:** inherit the patient (both overrides null) or
- * override the policy and primary caregiver. Reminders are M4; the screen says
- * so, and nothing is scheduled here.
+ * **Stock:** an optional opening count ([MedicationRepository.create] writes it
+ * with the medication in one transaction, D28) and the low-stock threshold in
+ * days.
  *
- * The time zone is the device's ([ZoneId.systemDefault()]), fixed when the
- * regimen is created, as docs/domain/medications.md requires.
+ * **More options:** schedule type, start and end date, the per-time overrides,
+ * the threshold, the prescription flag/date and the reminder override. The
+ * domain rules ([Medication.validate], [Regimen.validate]) own the final word and
+ * their [MedicationField]s mark the inputs inline.
+ *
+ * [save] validates the whole screen at once; there are no steps. The time zone is
+ * the device's ([ZoneId.systemDefault()]), fixed when the regimen is created, as
+ * docs/domain/medications.md requires.
  */
 class MedicationFormViewModel(
     private val patientId: String,
@@ -116,7 +122,7 @@ class MedicationFormViewModel(
         _uiState.update { current ->
             if (medicationId != null && medication == null) {
                 current.copy(loaded = true, notFound = true, canWrite = role.canWrite, members = members)
-            } else if (medication != null && loaded != null) {
+            } else if (medication != null) {
                 current.copy(
                     loaded = true,
                     notFound = false,
@@ -129,6 +135,8 @@ class MedicationFormViewModel(
                     form = medication.form,
                     stockUnit = medication.stockUnit,
                     stockUnitEdited = true,
+                    pillLook = medication.pillLook ?: defaultPillLook(medication.form),
+                    pillLookChosen = medication.pillLook != null,
                     requiresPrescription = medication.requiresPrescription,
                     prescriptionValidUntil = medication.prescriptionValidUntil?.toString().orEmpty(),
                     instructions = medication.instructions.orEmpty(),
@@ -148,6 +156,7 @@ class MedicationFormViewModel(
                     canWrite = role.canWrite,
                     members = members,
                     patientName = patient?.displayName,
+                    pillLook = defaultPillLook(current.form),
                     reminderPolicy = patient?.reminderPolicy
                         ?: ReminderPolicy.PRIMARY_WITH_ESCALATION,
                     primaryCaregiverId = patient?.primaryCaregiverId,
@@ -156,7 +165,7 @@ class MedicationFormViewModel(
         }
     }
 
-    // --- Step 1 --------------------------------------------------------------
+    // --- Medicine -----------------------------------------------------------
 
     /**
      * Typing the name searches the bundled catalogue (D31). The filled fields
@@ -177,6 +186,7 @@ class MedicationFormViewModel(
                 strength = suggestion.strength.ifBlank { state.strength },
                 form = suggestion.form,
                 stockUnit = if (state.stockUnitEdited) state.stockUnit else defaultStockUnit(suggestion.form),
+                pillLook = if (state.pillLookChosen) state.pillLook else defaultPillLook(suggestion.form),
                 requiresPrescription = !suggestion.otc,
                 packUnits = suggestion.packOptions.firstOrNull(),
                 packOptions = suggestion.packOptions,
@@ -191,11 +201,12 @@ class MedicationFormViewModel(
 
     fun onStrengthChanged(value: String) = updateDetails { it.copy(strength = value) }
 
-    /** Changing the form updates the stock unit only while it is still a default. */
+    /** Changing the form updates the stock unit and the starting look while they are still defaults. */
     fun onFormChanged(form: MedicationForm) = updateDetails { state ->
         state.copy(
             form = form,
             stockUnit = if (state.stockUnitEdited) state.stockUnit else defaultStockUnit(form),
+            pillLook = if (state.pillLookChosen) state.pillLook else defaultPillLook(form),
         )
     }
 
@@ -210,7 +221,17 @@ class MedicationFormViewModel(
 
     fun onInstructionsChanged(value: String) = updateDetails { it.copy(instructions = value) }
 
-    // --- Step 2 --------------------------------------------------------------
+    /** The pill-look sheet's "Done": stores the chosen look, normalised to the domain rules. */
+    fun onPillLookChanged(look: PillLook) =
+        _uiState.update {
+            it.copy(
+                pillLook = PillLookRules.normalize(look),
+                pillLookChosen = true,
+                errors = it.errors - MedicationField.MEDICATION_PILL_LOOK,
+            )
+        }
+
+    // --- When and how much --------------------------------------------------
 
     fun onScheduleTypeChanged(type: io.github.lgpy.familycare.feature.medications.domain.ScheduleType) =
         updateSchedule { it.copy(scheduleType = type) }
@@ -223,49 +244,98 @@ class MedicationFormViewModel(
 
     fun onIntervalDaysChanged(value: String) = updateSchedule { it.copy(intervalDays = value) }
 
-    fun onTimeChanged(index: Int, value: String) = updateSchedule { state ->
-        state.copy(times = state.times.mapIndexed { i, entry ->
-            if (i == index) entry.copy(time = value) else entry
-        })
-    }
-
-    fun onQuantityStep(index: Int, steps: Int) = updateSchedule { state ->
-        state.copy(times = state.times.mapIndexed { i, entry ->
-            if (i == index) entry.copy(quantity = steppedQuantity(entry.quantity, steps)) else entry
-        })
-    }
-
-    fun onAddTime() = updateSchedule { state ->
-        val last = parseTime(state.times.lastOrNull()?.time ?: "08:00")
-            ?: LocalTime.of(8, 0)
-        val taken = state.times.mapNotNull { parseTime(it.time) }.toSet()
-        val next = nextFreeTime(last, taken)
+    /** Adds or removes one of the fixed daily presets. */
+    fun onPresetTimeToggled(time: LocalTime) = _uiState.update { state ->
+        val presets = if (time in state.presetTimes) {
+            state.presetTimes - time
+        } else {
+            state.presetTimes + time
+        }
         state.copy(
-            times = state.times + DoseTimeEntry(
-                time = next.hour.toString().padStart(2, '0') +
-                    ":" +
-                    next.minute.toString().padStart(2, '0'),
-                quantity = BigDecimal.ONE,
-            ),
+            presetTimes = presets,
+            errors = state.errors - MedicationField.REGIMEN_TIMES,
         )
     }
 
-    fun onRemoveTime(index: Int) = updateSchedule { state ->
-        if (state.times.size <= 1) state else state.copy(times = state.times.filterIndexed { i, _ -> i != index })
+    /** "Other time": adds a custom time chip, unless it is already selected. */
+    fun onCustomTimeAdded(hour: Int, minute: Int) {
+        val time = LocalTime.of(hour, minute)
+        _uiState.update { state ->
+            when {
+                // Picking a preset's own time selects that chip instead of
+                // showing the same hour twice.
+                time in PresetTimes -> state.copy(
+                    presetTimes = state.presetTimes + time,
+                    errors = state.errors - MedicationField.REGIMEN_TIMES,
+                )
+
+                time in state.selectedTimes -> state
+                else -> state.copy(
+                    customTimes = state.customTimes + time,
+                    timeQuantities = state.timeQuantities + (time to state.eachTimeQuantity),
+                    errors = state.errors - MedicationField.REGIMEN_TIMES,
+                )
+            }
+        }
+    }
+
+    /** Removes a custom time chip. A preset time stays a preset. */
+    fun onCustomTimeRemoved(time: LocalTime) = _uiState.update { state ->
+        state.copy(
+            customTimes = state.customTimes - time,
+            timeQuantities = state.timeQuantities - time,
+        )
+    }
+
+    /** The "Each time" stepper: applies its amount to every selected time, clearing overrides. */
+    fun onTimeQuantityStep(steps: Int) = _uiState.update { state ->
+        state.copy(
+            eachTimeQuantity = steppedQuantity(state.eachTimeQuantity, steps),
+            timeQuantities = emptyMap(),
+        )
+    }
+
+    /** One time's own amount while "Different amount per time" is on. */
+    fun onTimeQuantityStep(time: LocalTime, steps: Int) = _uiState.update { state ->
+        val current = state.timeQuantities[time] ?: state.eachTimeQuantity
+        state.copy(
+            differentAmountsPerTime = true,
+            timeQuantities = state.timeQuantities + (time to steppedQuantity(current, steps)),
+        )
+    }
+
+    fun onDifferentAmountsPerTimeChanged(enabled: Boolean) = _uiState.update { state ->
+        state.copy(
+            differentAmountsPerTime = enabled,
+            timeQuantities = if (enabled) {
+                state.selectedTimes.associateWith { state.timeQuantities[it] ?: state.eachTimeQuantity }
+            } else {
+                emptyMap()
+            },
+        )
     }
 
     fun onStartDateChanged(value: String) = updateSchedule { it.copy(startDate = value) }
 
     fun onEndDateChanged(value: String) = updateSchedule { it.copy(endDate = value) }
 
-    // --- Step 3: stock -------------------------------------------------------
+    // --- Stock --------------------------------------------------------------
 
-    /** "How many <stock unit> are there now?" — the opening count. */
-    fun onStockQuantityChanged(value: String) =
-        _uiState.update { it.copy(stockQuantity = value, errors = it.errors - MedicationField.STOCK_QUANTITY) }
+    /** The opening-count stepper ("How many do you have?"). */
+    fun onStockQuantityStep(steps: Int) = _uiState.update { state ->
+        val current = parseStockQuantity(state.stockQuantity) ?: BigDecimal.ZERO
+        val next = current
+            .add(BigDecimal(steps))
+            .coerceAtLeast(BigDecimal.ZERO)
+            .coerceAtMost(MAX_STOCK_STEP)
+        state.copy(
+            stockQuantity = next.stripTrailingZeros().toPlainString(),
+            errors = state.errors - MedicationField.STOCK_QUANTITY,
+        )
+    }
 
     /**
-     * The one-tap "1 pack = N" chip of the stock step (D31): fills the opening
+     * The one-tap "1 pack = N" chip of the catalogue (D31): fills the opening
      * count with the pack's unit count when the box says how many it holds.
      */
     fun onUsePackQuantity(units: Int) =
@@ -285,7 +355,7 @@ class MedicationFormViewModel(
     fun onRecountQuantityChanged(value: String) =
         _uiState.update { it.copy(recountQuantity = value, errors = it.errors - MedicationField.STOCK_QUANTITY) }
 
-    // --- Step 4 --------------------------------------------------------------
+    // --- Reminders ----------------------------------------------------------
 
     fun onInheritRemindersChanged(inherit: Boolean) =
         _uiState.update { it.copy(inheritReminders = inherit, errors = it.errors - MedicationField.MEDICATION_REMINDER_POLICY) }
@@ -305,31 +375,11 @@ class MedicationFormViewModel(
 
     fun clearError() = _uiState.update { it.copy(error = null) }
 
-    /** Step 1 → 2 → 3 → 4, validating the step being left. */
-    fun next() {
-        val state = _uiState.value
-        if (state.isEdit) return
-        val fields = when (state.step) {
-            0 -> detailsValidation(state) - STOCK_STEP_FIELDS
-            1 -> state.schedule.parse(RegimenId(newId()), MedicationId(newId())).fields
-            else -> stockStepValidation(state)
-        }
-        if (fields.isNotEmpty()) {
-            _uiState.update { it.copy(errors = fields) }
-            return
-        }
-        _uiState.update { it.copy(errors = emptySet(), step = (it.step + 1).coerceAtMost(LAST_STEP)) }
-    }
-
-    fun previous() = _uiState.update {
-        it.copy(step = (it.step - 1).coerceAtLeast(0), errors = emptySet())
-    }
-
     /**
      * Validates everything and writes. Add: [MedicationRepository.create] with
-     * the first regimen and the opening count in one transaction (D28); edit:
-     * [MedicationRepository.update], which never touches the regimen, followed by
-     * a count when the form's optional recount is filled.
+     * the first regimen and the optional opening count in one transaction
+     * (D28); edit: [MedicationRepository.update], which never touches the
+     * regimen, followed by a count when the form's optional recount is filled.
      */
     fun save() {
         val state = _uiState.value
@@ -341,14 +391,18 @@ class MedicationFormViewModel(
         fields += thresholdValidation(state.lowStockThresholdDays)
 
         if (!state.isEdit) {
-            val parsed = state.schedule.parse(
+            val parsed = state.scheduleForRegimen().parse(
                 id = RegimenId(newId()),
                 medicationId = id,
                 timeZone = timeZone,
             )
             fields += parsed.fields
-            val quantity = parseStockQuantity(state.stockQuantity)
-            fields += stockErrors(quantity, StockMovementKind.COUNT)
+            // The opening count is optional: a blank field writes no count row.
+            val quantityText = state.stockQuantity.trim()
+            val quantity = quantityText.takeIf { it.isNotEmpty() }?.let(::parseStockQuantity)
+            if (quantityText.isNotEmpty()) {
+                fields += stockErrors(quantity, StockMovementKind.COUNT)
+            }
             val regimen = parsed.regimen
             val medication = draft.first
             if (fields.isNotEmpty() || regimen == null || medication == null) {
@@ -432,11 +486,6 @@ class MedicationFormViewModel(
     private fun updateSchedule(block: (ScheduleFormState) -> ScheduleFormState) =
         _uiState.update { it.copy(schedule = block(it.schedule), errors = emptySet()) }
 
-    /** The stock step's own inputs: the opening count and the threshold. */
-    private fun stockStepValidation(state: MedicationFormUiState): Set<MedicationField> =
-        stockErrors(parseStockQuantity(state.stockQuantity), StockMovementKind.COUNT) +
-            thresholdValidation(state.lowStockThresholdDays)
-
     /** The threshold days must be a whole number within the medication's range. */
     private fun thresholdValidation(text: String): Set<MedicationField> {
         val days = parseThresholdDays(text)
@@ -444,62 +493,38 @@ class MedicationFormViewModel(
             days in MedicationRules.MIN_LOW_STOCK_THRESHOLD_DAYS..MedicationRules.MAX_LOW_STOCK_THRESHOLD_DAYS
         return if (inRange) emptySet() else setOf(MedicationField.MEDICATION_LOW_STOCK_THRESHOLD)
     }
-
-    /** The "What" step's fields, without the stock step's own inputs. */
-    private fun detailsValidation(state: MedicationFormUiState): Set<MedicationField> {
-        val (_, fields) = state.toMedication(
-            MedicationId(existing?.id?.value ?: "draft"),
-            PatientId(patientId),
-            existing,
-        )
-        return fields
-    }
 }
 
-/** The fields the stock step owns, so the "What" step does not flag them. */
-private val STOCK_STEP_FIELDS: Set<MedicationField> = setOf(
-    MedicationField.STOCK_QUANTITY,
-    MedicationField.MEDICATION_LOW_STOCK_THRESHOLD,
-)
+/** The times the "When" chips offer, in the order the mockup shows them. */
+val MorningTime: LocalTime = LocalTime.of(8, 0)
+val LunchTime: LocalTime = LocalTime.of(13, 0)
+val DinnerTime: LocalTime = LocalTime.of(20, 0)
+val BedtimeTime: LocalTime = LocalTime.of(22, 0)
 
-/**
- * The time a new row starts at: eight hours after [last], moved on one hour at
- * a time while [taken] already has it.
- *
- * "Add time" must never fill in a duplicate: rows at 08:00, 16:00 and 00:00
- * would otherwise offer 08:00 again, and the duplicate blocked Next with a
- * message the user had no reason to connect to the row they had just added.
- */
-private fun nextFreeTime(last: LocalTime, taken: Set<LocalTime>): LocalTime {
-    var candidate = last.plusHours(NEW_DOSE_GAP_HOURS)
-    repeat(HOURS_PER_DAY) {
-        if (candidate !in taken) return candidate
-        candidate = candidate.plusHours(1)
-    }
-    return candidate
-}
-
-/** The gap between the times "Add time" offers. */
-private const val NEW_DOSE_GAP_HOURS: Long = 8
-
-private const val HOURS_PER_DAY: Int = 24
+/** The four fixed preset times, so a custom time can select its chip instead. */
+val PresetTimes: Set<LocalTime> = setOf(MorningTime, LunchTime, DinnerTime, BedtimeTime)
 
 /** How many catalogue suggestions the name field shows at once. */
 private const val SUGGESTION_LIMIT = 12
 
-/** What the four steps hold, what is wrong, and whether it is saving. */
+/** The upper bound the opening-count stepper can reach (the domain's stock maximum). */
+private val MAX_STOCK_STEP: BigDecimal = BigDecimal("100000")
+
+/**
+ * The one screen's state: what the medicine is, how it looks, when it is taken,
+ * how much is in the box, what is wrong and whether it is saving.
+ */
 data class MedicationFormUiState(
     val loaded: Boolean = false,
     val isEdit: Boolean = false,
     val notFound: Boolean = false,
     val canWrite: Boolean = false,
-    val step: Int = 0,
     val patientName: String? = null,
     val members: List<CircleMember> = emptyList(),
     val name: String = "",
     /** Catalogue suggestions for the name field (D31); empty below two characters. */
     val suggestions: List<MedicationSuggestion> = emptyList(),
-    /** The pack sizes of the picked suggestion, for the stock step's chips. */
+    /** The pack sizes of the picked suggestion, for the stock chips. */
     val packOptions: List<Int> = emptyList(),
     /** The pack size the form offers first ("1 pack = N"), when known. */
     val packUnits: Int? = null,
@@ -508,7 +533,11 @@ data class MedicationFormUiState(
     val form: MedicationForm = MedicationForm.TABLET,
     val stockUnit: String = defaultStockUnit(MedicationForm.TABLET),
     val stockUnitEdited: Boolean = false,
-    /** The opening count, as typed: "how many <stock unit> are there now?". */
+    /** The drawn pill look (D33); a form supplies a starting look. */
+    val pillLook: PillLook? = defaultPillLook(MedicationForm.TABLET),
+    /** Whether the caregiver picked the look, so a form change must not replace it. */
+    val pillLookChosen: Boolean = false,
+    /** The opening count, as typed: "how many <stock unit> are there now?". Blank means none. */
     val stockQuantity: String = "",
     /** The days of stock that count as low, as typed. */
     val lowStockThresholdDays: String = MedicationRules.DEFAULT_LOW_STOCK_THRESHOLD_DAYS.toString(),
@@ -518,6 +547,16 @@ data class MedicationFormUiState(
     val prescriptionValidUntil: String = "",
     val instructions: String = "",
     val schedule: ScheduleFormState = ScheduleFormState(),
+    /** The fixed daily presets currently selected. */
+    val presetTimes: Set<LocalTime> = setOf(MorningTime),
+    /** The extra times added through "Other time". */
+    val customTimes: List<LocalTime> = emptyList(),
+    /** The amount the "Each time" stepper applies to every selected time. */
+    val eachTimeQuantity: BigDecimal = BigDecimal.ONE,
+    /** Whether "More options" gives individual times their own amount. */
+    val differentAmountsPerTime: Boolean = false,
+    /** The per-time overrides, used only while [differentAmountsPerTime] is on. */
+    val timeQuantities: Map<LocalTime, BigDecimal> = emptyMap(),
     val inheritReminders: Boolean = true,
     val reminderPolicy: ReminderPolicy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
     val primaryCaregiverId: String? = null,
@@ -526,22 +565,45 @@ data class MedicationFormUiState(
     val saved: Boolean = false,
     val error: MedsUiError? = null,
 ) {
-    /** Step titles for the progress line, 1-based. */
-    val stepNumber: Int get() = step + 1
 
-    companion object {
-        const val STEP_COUNT: Int = 4
-    }
+    /** Presets plus custom times, in clock order, as the regimen will store them. */
+    val selectedTimes: List<LocalTime>
+        get() = (presetTimes + customTimes).sorted()
+
+    /** The amount [time] gets: its override, or the shared "Each time" value. */
+    fun quantityFor(time: LocalTime): BigDecimal =
+        if (differentAmountsPerTime) timeQuantities[time] ?: eachTimeQuantity else eachTimeQuantity
+
+    /** The schedule editor with the chip-selected times, ready for [ScheduleFormState.parse]. */
+    fun scheduleForRegimen(): ScheduleFormState = schedule.copy(
+        times = selectedTimes.map { time ->
+            DoseTimeEntry(time = formatTime(time), quantity = quantityFor(time))
+        },
+    )
 }
 
-private const val LAST_STEP = MedicationFormUiState.STEP_COUNT - 1
+/**
+ * The look a form starts from (docs/ux/mockups/screens-v2.html): a tablet is a
+ * white round tablet, a capsule a white two-tone capsule, drops a bottle; every
+ * other form has no drawn pill until the caregiver picks one.
+ */
+internal fun defaultPillLook(form: MedicationForm): PillLook? = when (form) {
+    MedicationForm.TABLET -> PillLook(shape = PillShape.ROUND, color = PillColor.WHITE)
+    MedicationForm.CAPSULE -> PillLook(
+        shape = PillShape.CAPSULE,
+        color = PillColor.WHITE,
+        color2 = PillColor.WHITE,
+    )
+
+    MedicationForm.DROPS -> PillLook(shape = PillShape.DROPS, color = PillColor.WHITE)
+    else -> null
+}
 
 /**
  * The medication this form describes, and the fields the domain rejected.
  *
  * [existing] keeps the columns the form does not edit: id, patient, the stopped
- * timestamp, the drawn pill look and (when the threshold text does not parse)
- * the stored threshold.
+ * timestamp and (when the threshold text does not parse) the stored threshold.
  */
 private fun MedicationFormUiState.toMedication(
     id: MedicationId,
@@ -568,8 +630,7 @@ private fun MedicationFormUiState.toMedication(
         instructions = instructions,
         requiresPrescription = requiresPrescription,
         prescriptionValidUntil = validUntil,
-        // The look is edited elsewhere; an edit here must never wipe it.
-        pillLook = existing?.pillLook,
+        pillLook = pillLook,
         lowStockThresholdDays = parseThresholdDays(lowStockThresholdDays)
             ?: existing?.lowStockThresholdDays
             ?: MedicationRules.DEFAULT_LOW_STOCK_THRESHOLD_DAYS,

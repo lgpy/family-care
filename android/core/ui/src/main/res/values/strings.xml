@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Family Care</string>
     <string name="loading">Loading…</string>
     <string name="back">Back</string>
@@ -315,19 +315,12 @@
     <string name="meds_regimen_quantity_unit">%1$s</string>
 
     <!-- M3: add / edit medication. -->
-    <string name="meds_add_title">Add medication</string>
     <string name="meds_edit_title">Edit medication</string>
-    <string name="meds_step_of">Step %1$d of %2$d</string>
-    <string name="meds_step_what">What</string>
-    <string name="meds_step_when">When and how much</string>
     <string name="meds_step_stock">Stock</string>
-    <string name="meds_step_who">Who is reminded</string>
-    <string name="meds_next">Next</string>
-    <string name="meds_previous">Back</string>
     <string name="meds_name_label">Name</string>
     <string name="meds_catalog_otc">OTC</string>
     <string name="meds_catalog_footnote">From INFARMED\'s public lists. Some brand-only medicines are missing — type them by hand.</string>
-    <string name="meds_stock_pack_chip">1 pack = %1$d</string>
+    <string name="meds_stock_pack_chip">1 pack (%1$d)</string>
     <string name="meds_ingredient_label">Active ingredient (optional)</string>
     <string name="meds_strength_label">Strength (optional)</string>
     <string name="meds_strength_helper">As printed on the box, for example 500 mg.</string>
@@ -372,7 +365,7 @@
     <string name="meds_reminders_same">Same as the patient (%1$s)</string>
     <string name="meds_reminders_same_unknown">Same as the patient</string>
     <string name="meds_reminders_override">Different for this medication</string>
-    <string name="meds_reminders_hint">Who is reminded comes from the patient by default. Reminders themselves arrive in a later step; this only records the choice.</string>
+    <string name="meds_reminders_hint">Who is reminded comes from the patient by default; this only records the choice for this medication.</string>
 
     <string name="meds_error_name">Enter a name of up to 200 characters.</string>
     <string name="meds_error_ingredient">Keep the active ingredient to 200 characters or fewer.</string>
@@ -393,6 +386,50 @@
     <string name="meds_error_stock_quantity">Enter a quantity between 0 and 100000, with up to three decimals.</string>
     <string name="meds_error_stock_quantity_positive">Enter a quantity greater than 0, with up to three decimals.</string>
     <string name="meds_error_stock_reason">Say why the stock is being discarded.</string>
+    <string name="meds_error_prescription_date">Enter a valid date (YYYY-MM-DD).</string>
+
+    <!-- M9: the one-screen add / edit form and the pill-look sheet. -->
+    <string name="meds_new_title">New medicine for %1$s</string>
+    <string name="meds_new_title_unknown">New medicine</string>
+    <string name="meds_medicine_section">Medicine</string>
+    <string name="meds_looks_section">Looks like</string>
+    <string name="meds_look_not_set">Not set — tap to match the pill in the box</string>
+    <string name="meds_look_hint">Tap to match the pill in the box</string>
+    <string name="meds_look_change">Change</string>
+    <string name="meds_look_sheet_title">What does the pill look like?</string>
+    <string name="meds_look_shape_label">Shape</string>
+    <string name="meds_look_colour_label">Colour</string>
+    <string name="meds_look_two_colours">Two colours</string>
+    <string name="meds_look_score">Score line</string>
+    <string name="meds_look_size_label">Size</string>
+    <string name="meds_look_done">Done</string>
+    <string name="meds_look_size_small">Small</string>
+    <string name="meds_look_size_medium">Medium</string>
+    <string name="meds_look_size_large">Large</string>
+    <string name="meds_when_section">When</string>
+    <string name="meds_preset_morning">Morning %1$s</string>
+    <string name="meds_preset_lunch">Lunch %1$s</string>
+    <string name="meds_preset_dinner">Dinner %1$s</string>
+    <string name="meds_preset_bedtime">Bedtime %1$s</string>
+    <string name="meds_time_other">Other time</string>
+    <string name="meds_remove_custom_time">Remove %1$s</string>
+    <string name="meds_each_time">Each time</string>
+    <string name="meds_how_many">How many do you have?</string>
+    <string name="meds_optional">optional</string>
+    <string name="meds_more_options">More options</string>
+    <string name="meds_more_summary">%1$s · %2$s · low-stock threshold: %3$d</string>
+    <string name="meds_more_summary_edit">%1$s · low-stock threshold: %2$d</string>
+    <string name="meds_summary_daily">Every day from %1$s</string>
+    <string name="meds_summary_weekdays">Chosen weekdays from %1$s</string>
+    <string name="meds_summary_every_n" tools:ignore="PluralsCandidate">Every %1$d days from %2$s</string>
+    <string name="meds_summary_reminders_from">reminders from %1$s</string>
+    <string name="meds_summary_reminders_inherit">reminders from the patient</string>
+    <string name="meds_summary_reminders_override">reminders: %1$s</string>
+    <string name="meds_different_amounts">Different amount per time</string>
+    <string name="meds_decrease">Decrease</string>
+    <string name="meds_increase">Increase</string>
+    <string name="meds_add_action">Add %1$s</string>
+    <string name="meds_add_action_empty">Add medicine</string>
 
     <!-- M3: medication detail. -->
     <string name="meds_detail_title">Medication</string>

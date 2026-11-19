@@ -86,6 +86,14 @@ fun stockLeftText(quantity: BigDecimal, stockUnit: String): String {
     )
 }
 
+/**
+ * The singular name of a stock unit in the user's language ("tablet" /
+ * "comprimido"), or the typed token unchanged. The form's steppers use it next
+ * to the amount.
+ */
+@Composable
+fun stockUnitName(unit: String): String = stockUnitLabel(unit, count = 1)
+
 /** The plural form of a default stock unit, or the typed token unchanged. */
 @Composable
 private fun stockUnitLabel(unit: String, count: Int): String {
