@@ -650,6 +650,7 @@
     <!-- M6 appointments (docs/domain/appointments.md, D29). -->
     <string name="nav_agenda">Agenda</string>
     <string name="appointments_agenda_title">Agenda</string>
+    <string name="appointments_agenda_new">New</string>
     <string name="appointments_tab_title">Appointments</string>
     <string name="appointments_new">New appointment</string>
     <string name="appointments_empty">No appointments yet.</string>
@@ -659,20 +660,33 @@
     <string name="appointments_past">Past</string>
     <string name="appointments_today">Today</string>
     <string name="appointments_tomorrow">Tomorrow</string>
-    <string name="appointments_all_patients">All patients</string>
     <string name="appointments_cancelled">Cancelled</string>
     <string name="appointments_kind_consultation">Consultation</string>
     <string name="appointments_kind_blood_test">Blood test</string>
     <string name="appointments_kind_exam">Exam</string>
     <string name="appointments_kind_checkup">Check-up</string>
     <string name="appointments_kind_other">Other</string>
+    <string name="appointments_everyone">Everyone</string>
     <string name="appointments_form_new_title">New appointment</string>
     <string name="appointments_form_edit_title">Edit appointment</string>
     <string name="appointments_form_follow_up_title">Schedule follow-up</string>
-    <string name="appointments_field_patient">Patient</string>
-    <string name="appointments_field_kind">Type</string>
+    <!-- The one-screen form's sections (docs/ux/mockups/screens-v2.html `const addAppt`). -->
+    <string name="appointments_section_what">What</string>
+    <string name="appointments_section_who">Who</string>
+    <string name="appointments_section_when">When</string>
+    <string name="appointments_section_where">Where (optional)</string>
+    <string name="appointments_section_before">Before going (optional)</string>
+    <string name="appointments_more_options">More options</string>
+    <string name="appointments_more_options_hint">Doctor, duration, notes, companion</string>
+    <string name="appointments_summary_notes">Notes</string>
+    <string name="appointments_preparation_other">Anything else to bring</string>
+    <string name="appointments_save_action">Save appointment</string>
+    <!-- The "Before going" chips; their text is what the preparation stores. -->
+    <string name="appointments_prep_fasting">Fasting</string>
+    <string name="appointments_prep_results">Bring results</string>
+    <string name="appointments_prep_sns">SNS card</string>
+    <string name="appointments_prep_medicines">Bring medicines</string>
     <string name="appointments_field_title">Title (optional)</string>
-    <string name="appointments_field_date">Date</string>
     <string name="appointments_field_time">Time</string>
     <string name="appointments_field_duration">Duration in minutes (optional)</string>
     <string name="appointments_field_place">Place</string>
@@ -726,8 +740,6 @@
     <string name="appointments_card_more">+%1$d more</string>
     <!-- The section header's trailing link to the Agenda tab. -->
     <string name="appointments_card_agenda">Agenda</string>
-    <!-- The tag of a row whose preparation mentions fasting. -->
-    <string name="appointments_card_fasting">Fasting</string>
     <!-- A row's meta: the patient, then the time. -->
     <string name="appointments_card_when">%1$s, %2$s</string>
 

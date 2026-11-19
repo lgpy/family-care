@@ -2,40 +2,45 @@ package io.github.lgpy.familycare.feature.appointments.agenda
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.core.ui.components.ScreenHeader
+import io.github.lgpy.familycare.core.ui.components.SectionHeader
+import io.github.lgpy.familycare.feature.appointments.ui.AppointmentDayHeader
 import io.github.lgpy.familycare.feature.appointments.ui.AppointmentLine
-import io.github.lgpy.familycare.feature.appointments.ui.dayLabel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The Agenda tab (docs/domain/appointments.md "Screens"): every patient's
- * appointments grouped by day, filter chips per patient, a "Show past" toggle
- * and — for owners and caregivers — a floating "New appointment" button.
+ * The Agenda tab (docs/domain/appointments.md "Screens"; docs/ux/mockups/
+ * screens-v2.html `const agenda`): every patient's appointments grouped by day,
+ * a filter chip per patient, a History button that shows or hides the past, and
+ * — for owners and caregivers — an extended "New" button.
  *
  * The day headers come from the appointments' own local dates, so an
  * appointment abroad is grouped by the day it happens there.
@@ -56,12 +61,17 @@ fun AgendaScreen(
         modifier = modifier.fillMaxSize(),
         floatingActionButton = {
             if (uiState.canWrite) {
-                FloatingActionButton(onClick = onNewAppointment) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.appointments_new),
-                    )
-                }
+                ExtendedFloatingActionButton(
+                    onClick = onNewAppointment,
+                    icon = {
+                        Icon(
+                            imageVector = FcIcons.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    },
+                    text = { Text(text = stringResource(R.string.appointments_agenda_new)) },
+                )
             }
         },
     ) { padding ->
@@ -73,20 +83,46 @@ fun AgendaScreen(
             // chip scrolls to the edge instead of being clipped inside the
             // padding. Every other item pads itself by 16 dp.
             contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             item {
-                ScreenHeader(
-                    title = stringResource(R.string.appointments_agenda_title),
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ScreenHeader(
+                        title = stringResource(R.string.appointments_agenda_title),
+                        modifier = Modifier.weight(1f),
+                    )
+                    // The same "Show past" toggle as before, now the History
+                    // button of the mockup's top bar; the label stays its
+                    // description, so nothing is icon-only (design system §6).
+                    IconButton(onClick = viewModel::togglePast) {
+                        Icon(
+                            imageVector = FcIcons.History,
+                            contentDescription = stringResource(
+                                if (uiState.showPast) {
+                                    R.string.appointments_hide_past
+                                } else {
+                                    R.string.appointments_show_past
+                                },
+                            ),
+                            tint = if (uiState.showPast) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                }
             }
 
             if (uiState.patients.size > 1) {
                 item {
                     LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -94,7 +130,14 @@ fun AgendaScreen(
                             FilterChip(
                                 selected = uiState.selectedPatientId == null,
                                 onClick = { viewModel.selectPatient(null) },
-                                label = { Text(stringResource(R.string.appointments_all_patients)) },
+                                label = { Text(stringResource(R.string.appointments_everyone)) },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = FcIcons.Groups,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                },
                             )
                         }
                         items(uiState.patients, key = { it.id }) { patient ->
@@ -102,28 +145,16 @@ fun AgendaScreen(
                                 selected = uiState.selectedPatientId == patient.id,
                                 onClick = { viewModel.selectPatient(patient.id) },
                                 label = { Text(patient.name) },
+                                leadingIcon = {
+                                    PatientAvatar(
+                                        patientId = PatientId(patient.id),
+                                        name = patient.name,
+                                        size = 22.dp,
+                                    )
+                                },
                             )
                         }
                     }
-                }
-            }
-
-            item {
-                TextButton(
-                    onClick = viewModel::togglePast,
-                    // The button's own 12 dp padding plus 4 dp starts its label
-                    // on the same 16 dp line as everything else.
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                ) {
-                    Text(
-                        text = stringResource(
-                            if (uiState.showPast) {
-                                R.string.appointments_hide_past
-                            } else {
-                                R.string.appointments_show_past
-                            },
-                        ),
-                    )
                 }
             }
 
@@ -150,10 +181,13 @@ fun AgendaScreen(
 
                 if (uiState.pastDays.isNotEmpty()) {
                     item {
-                        Text(
-                            text = stringResource(R.string.appointments_past),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                        SectionHeader(
+                            title = stringResource(R.string.appointments_past),
+                            icon = FcIcons.ManageHistory,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 16.dp, bottom = 4.dp),
                         )
                     }
                     dayGroups(
@@ -167,7 +201,7 @@ fun AgendaScreen(
     }
 }
 
-/** Appends one header per day and its rows to the enclosing LazyColumn. */
+/** Appends one day label per day and its rows to the enclosing LazyColumn. */
 private fun androidx.compose.foundation.lazy.LazyListScope.dayGroups(
     days: List<AgendaDay>,
     today: java.time.LocalDate,
@@ -175,13 +209,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dayGroups(
 ) {
     days.forEach { day ->
         item(key = "day-${day.date}") {
-            Text(
-                text = dayLabel(day.date, today),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 12.dp, bottom = 4.dp),
+            AppointmentDayHeader(
+                date = day.date,
+                today = today,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
         items(day.entries, key = { "appointment-${it.appointment.id.value}" }) { entry ->
@@ -191,7 +222,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dayGroups(
                 onClick = { onOpenAppointment(entry.appointment.id.value) },
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         }
     }
 }

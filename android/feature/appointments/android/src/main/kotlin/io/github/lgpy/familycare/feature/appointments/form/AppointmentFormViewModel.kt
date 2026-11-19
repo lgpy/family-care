@@ -8,6 +8,7 @@ import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.canWrite
+import io.github.lgpy.familycare.feature.appointments.data.AppointmentEntry
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentRepository
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentsError
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentsResult
@@ -16,6 +17,9 @@ import io.github.lgpy.familycare.feature.appointments.domain.AppointmentField
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentId
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentKind
 import io.github.lgpy.familycare.feature.appointments.ui.AppointmentsUiError
+import io.github.lgpy.familycare.feature.appointments.ui.PreparationTag
+import io.github.lgpy.familycare.feature.appointments.ui.composePreparation
+import io.github.lgpy.familycare.feature.appointments.ui.parsePreparation
 import io.github.lgpy.familycare.feature.appointments.ui.toUiError
 import java.time.Instant
 import java.time.LocalDate
@@ -62,9 +66,18 @@ class AppointmentFormViewModel(
         ),
     )
 
+    /** The circle's appointments, read only to offer recently used places. */
+    private var agendaEntries: List<AppointmentEntry> = emptyList()
+
     val uiState: StateFlow<AppointmentFormUiState> = state
 
     init {
+        viewModelScope.launch {
+            appointmentRepository.observeAgenda(includeCancelled = true).collect { entries ->
+                agendaEntries = entries
+                refreshRecentPlaces()
+            }
+        }
         viewModelScope.launch {
             patientRepository.patients.collect { patients ->
                 state.update { current ->
@@ -135,13 +148,18 @@ class AppointmentFormViewModel(
                                 )
                             }
                         }
+                        refreshRecentPlaces()
                     }
                 }
             }
         }
     }
 
-    fun onPatient(patientId: String) = state.update { it.copy(patientId = patientId) }
+    fun onPatient(patientId: String) {
+        state.update { it.copy(patientId = patientId) }
+        refreshRecentPlaces()
+    }
+
     fun onKind(kind: AppointmentKind) = state.update { it.copy(kind = kind) }
     fun onTitle(value: String) = state.update { it.copy(title = value) }
     fun onDate(value: LocalDate) = state.update { it.copy(date = value) }
@@ -149,7 +167,26 @@ class AppointmentFormViewModel(
     fun onDuration(value: String) = state.update { it.copy(durationMinutes = value) }
     fun onPlace(value: String) = state.update { it.copy(place = value) }
     fun onDoctor(value: String) = state.update { it.copy(doctor = value) }
-    fun onPreparation(value: String) = state.update { it.copy(preparation = value) }
+
+    /**
+     * Adds or removes one "Before going" chip.
+     *
+     * [phrase] is the chip's label in the phone's language, so the stored
+     * preparation keeps writing the words the person actually sees; the phrase
+     * is matched back on edit in either language.
+     */
+    fun onPreparationTagToggled(tag: PreparationTag, phrase: String) = state.update { current ->
+        val tags = if (tag in current.preparationTags) {
+            current.preparationTags - tag
+        } else {
+            current.preparationTags + (tag to phrase)
+        }
+        current.copy(preparationTags = tags)
+    }
+
+    /** The free text that goes into the same preparation as the chips. */
+    fun onPreparationText(value: String) = state.update { it.copy(preparationFreeText = value) }
+
     fun onNotes(value: String) = state.update { it.copy(notes = value) }
     fun onCompanion(userId: String?) = state.update { it.copy(companionUserId = userId) }
 
@@ -180,7 +217,7 @@ class AppointmentFormViewModel(
             durationMinutes = duration,
             place = current.place.trim().takeIf { it.isNotEmpty() },
             doctor = current.doctor.trim().takeIf { it.isNotEmpty() },
-            preparation = current.preparation.trim().takeIf { it.isNotEmpty() },
+            preparation = composePreparation(current.preparationTags, current.preparationFreeText),
             notes = current.notes.trim().takeIf { it.isNotEmpty() },
             companionUserId = current.companionUserId,
             followUpOf = current.followUpOf?.let { AppointmentId(it) },
@@ -215,10 +252,35 @@ class AppointmentFormViewModel(
         }
     }
 
+    /**
+     * Refreshes the recently used places: the latest past appointments of the
+     * chosen patient (or of the whole circle while no patient is chosen).
+     *
+     * It is derived from what the form already observes — the agenda — so no
+     * extra storage or query is needed.
+     */
+    private fun refreshRecentPlaces() {
+        state.update { current -> current.copy(recentPlaces = recentPlaces(current.patientId)) }
+    }
+
+    private fun recentPlaces(patientId: String?): List<String> {
+        val instant = now()
+        return agendaEntries
+            .filter { patientId == null || it.appointment.patientId.value == patientId }
+            .filter { it.appointment.startInstant().isBefore(instant) }
+            .sortedByDescending { it.appointment.startInstant() }
+            .mapNotNull { it.appointment.place?.trim()?.takeIf(String::isNotEmpty) }
+            .distinct()
+            .take(RECENT_PLACE_COUNT)
+    }
+
     /** The order every member picker uses: me first, then by name. */
     private companion object {
         val MemberOrder: Comparator<CircleMember> =
             compareBy({ it.isMe.not() }, { it.displayName?.lowercase() ?: "" })
+
+        /** How many recently used places the "Where" section offers. */
+        const val RECENT_PLACE_COUNT = 3
     }
 }
 
@@ -242,10 +304,15 @@ data class AppointmentFormUiState(
     val durationMinutes: String = "",
     val place: String = "",
     val doctor: String = "",
-    val preparation: String = "",
+    /** The "Before going" chips, each with the phrase as it will be stored. */
+    val preparationTags: Map<PreparationTag, String> = emptyMap(),
+    /** Preparation text that is not one of the chips. */
+    val preparationFreeText: String = "",
     val notes: String = "",
     val companionUserId: String? = null,
     val followUpOf: String? = null,
+    /** Up to three places from this patient's (or the circle's) past appointments. */
+    val recentPlaces: List<String> = emptyList(),
     val patients: List<PatientOption> = emptyList(),
     val members: List<CircleMember> = emptyList(),
     val canWrite: Boolean = false,
@@ -260,18 +327,22 @@ data class AppointmentFormUiState(
 }
 
 /** Fills the form from a stored appointment (edit). */
-private fun AppointmentFormUiState.from(appointment: Appointment): AppointmentFormUiState = copy(
-    patientId = appointment.patientId.value,
-    kind = appointment.kind,
-    title = appointment.title.orEmpty(),
-    date = appointment.localDate,
-    time = appointment.localTime,
-    timeZone = appointment.timeZone.id,
-    durationMinutes = appointment.durationMinutes?.toString().orEmpty(),
-    place = appointment.place.orEmpty(),
-    doctor = appointment.doctor.orEmpty(),
-    preparation = appointment.preparation.orEmpty(),
-    notes = appointment.notes.orEmpty(),
-    companionUserId = appointment.companionUserId,
-    followUpOf = appointment.followUpOf?.value,
-)
+private fun AppointmentFormUiState.from(appointment: Appointment): AppointmentFormUiState {
+    val preparation = parsePreparation(appointment.preparation)
+    return copy(
+        patientId = appointment.patientId.value,
+        kind = appointment.kind,
+        title = appointment.title.orEmpty(),
+        date = appointment.localDate,
+        time = appointment.localTime,
+        timeZone = appointment.timeZone.id,
+        durationMinutes = appointment.durationMinutes?.toString().orEmpty(),
+        place = appointment.place.orEmpty(),
+        doctor = appointment.doctor.orEmpty(),
+        preparationTags = preparation.tags,
+        preparationFreeText = preparation.freeText,
+        notes = appointment.notes.orEmpty(),
+        companionUserId = appointment.companionUserId,
+        followUpOf = appointment.followUpOf?.value,
+    )
+}

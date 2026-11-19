@@ -652,6 +652,7 @@
     <!-- M6 consultas (docs/domain/appointments.md, D29). -->
     <string name="nav_agenda">Agenda</string>
     <string name="appointments_agenda_title">Agenda</string>
+    <string name="appointments_agenda_new">Nova</string>
     <string name="appointments_tab_title">Consultas</string>
     <string name="appointments_new">Nova consulta</string>
     <string name="appointments_empty">Ainda não há consultas.</string>
@@ -661,20 +662,33 @@
     <string name="appointments_past">Anteriores</string>
     <string name="appointments_today">Hoje</string>
     <string name="appointments_tomorrow">Amanhã</string>
-    <string name="appointments_all_patients">Todos os doentes</string>
     <string name="appointments_cancelled">Cancelada</string>
     <string name="appointments_kind_consultation">Consulta</string>
     <string name="appointments_kind_blood_test">Análises</string>
     <string name="appointments_kind_exam">Exame</string>
     <string name="appointments_kind_checkup">Check-up</string>
     <string name="appointments_kind_other">Outra</string>
+    <string name="appointments_everyone">Todos</string>
     <string name="appointments_form_new_title">Nova consulta</string>
     <string name="appointments_form_edit_title">Editar consulta</string>
     <string name="appointments_form_follow_up_title">Agendar seguimento</string>
-    <string name="appointments_field_patient">Doente</string>
-    <string name="appointments_field_kind">Tipo</string>
+    <!-- O formulário de um ecrã (docs/ux/mockups/screens-v2.html `const addAppt`). -->
+    <string name="appointments_section_what">O quê</string>
+    <string name="appointments_section_who">Quem</string>
+    <string name="appointments_section_when">Quando</string>
+    <string name="appointments_section_where">Onde (opcional)</string>
+    <string name="appointments_section_before">Antes de ir (opcional)</string>
+    <string name="appointments_more_options">Mais opções</string>
+    <string name="appointments_more_options_hint">Médico, duração, notas, acompanhante</string>
+    <string name="appointments_summary_notes">Notas</string>
+    <string name="appointments_preparation_other">Mais alguma coisa a levar</string>
+    <string name="appointments_save_action">Guardar consulta</string>
+    <!-- Os chips de "Antes de ir"; o texto é o que a preparação guarda. -->
+    <string name="appointments_prep_fasting">Jejum</string>
+    <string name="appointments_prep_results">Trazer resultados</string>
+    <string name="appointments_prep_sns">Cartão SNS</string>
+    <string name="appointments_prep_medicines">Trazer medicamentos</string>
     <string name="appointments_field_title">Título (opcional)</string>
-    <string name="appointments_field_date">Data</string>
     <string name="appointments_field_time">Hora</string>
     <string name="appointments_field_duration">Duração em minutos (opcional)</string>
     <string name="appointments_field_place">Local</string>
@@ -729,7 +743,6 @@
     <!-- A ligação do cabeçalho da secção para a Agenda. -->
     <string name="appointments_card_agenda">Agenda</string>
     <!-- A etiqueta de uma linha cuja preparação menciona jejum. -->
-    <string name="appointments_card_fasting">Jejum</string>
     <!-- Os detalhes de uma linha: a pessoa e a hora. -->
     <string name="appointments_card_when">%1$s, %2$s</string>
 

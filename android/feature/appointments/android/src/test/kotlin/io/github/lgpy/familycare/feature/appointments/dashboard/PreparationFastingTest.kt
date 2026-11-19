@@ -1,5 +1,6 @@
 package io.github.lgpy.familycare.feature.appointments.dashboard
 
+import io.github.lgpy.familycare.feature.appointments.ui.preparationMentionsFasting
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

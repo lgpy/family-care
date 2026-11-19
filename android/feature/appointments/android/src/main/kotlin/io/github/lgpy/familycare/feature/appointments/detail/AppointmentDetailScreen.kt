@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -30,11 +31,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.feature.appointments.domain.Appointment
 import io.github.lgpy.familycare.feature.appointments.ui.formatAppointmentTime
+import io.github.lgpy.familycare.feature.appointments.ui.icon
 import io.github.lgpy.familycare.feature.appointments.ui.labelRes
 import io.github.lgpy.familycare.feature.appointments.ui.localizedAppointmentDate
 import io.github.lgpy.familycare.feature.appointments.ui.messageRes
@@ -186,43 +190,43 @@ private fun AppointmentDetails(
     companionName: String?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
+        DetailRow(
+            icon = appointment.kind.icon(),
             text = stringResource(appointment.kind.labelRes()),
-            style = MaterialTheme.typography.bodyMedium,
         )
-        Text(
+        DetailRow(
+            icon = FcIcons.CalendarToday,
             text = localizedAppointmentDate(appointment.localDate) +
                 " · " + formatAppointmentTime(appointment.localTime),
-            style = MaterialTheme.typography.bodyLarge,
         )
         appointment.durationMinutes?.let { minutes ->
-            Text(
+            DetailRow(
+                icon = FcIcons.Schedule,
                 text = stringResource(R.string.appointments_detail_duration, minutes),
-                style = MaterialTheme.typography.bodyMedium,
             )
         }
         if (patientName != null) {
-            Text(
+            DetailRow(
+                icon = FcIcons.Person,
                 text = stringResource(R.string.appointments_detail_patient, patientName),
-                style = MaterialTheme.typography.bodyMedium,
             )
         }
         appointment.place?.let { place ->
-            Text(
+            DetailRow(
+                icon = FcIcons.LocationOn,
                 text = stringResource(R.string.appointments_detail_place, place),
-                style = MaterialTheme.typography.bodyMedium,
             )
         }
         appointment.doctor?.let { doctor ->
-            Text(
+            DetailRow(
+                icon = FcIcons.Stethoscope,
                 text = stringResource(R.string.appointments_detail_doctor, doctor),
-                style = MaterialTheme.typography.bodyMedium,
             )
         }
         if (companionName != null) {
-            Text(
+            DetailRow(
+                icon = FcIcons.Group,
                 text = stringResource(R.string.appointments_field_companion) + ": " + companionName,
-                style = MaterialTheme.typography.bodyMedium,
             )
         }
 
@@ -239,7 +243,8 @@ private fun AppointmentDetails(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text(
+                    DetailRow(
+                        icon = FcIcons.Checklist,
                         text = stringResource(R.string.appointments_field_preparation),
                         style = MaterialTheme.typography.titleSmall,
                     )
@@ -249,10 +254,10 @@ private fun AppointmentDetails(
         }
 
         appointment.notes?.let { notes ->
-            Text(
+            DetailRow(
+                icon = FcIcons.StickyNote2,
                 text = stringResource(R.string.appointments_field_notes),
                 style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 8.dp),
             )
             Text(text = notes, style = MaterialTheme.typography.bodyMedium)
         }
@@ -264,6 +269,32 @@ private fun AppointmentDetails(
                 color = MaterialTheme.colorScheme.error,
             )
         }
+    }
+}
+
+/**
+ * One line of the detail facts: its icon beside the text (design system §6,
+ * icons never replace a label).
+ */
+@Composable
+private fun DetailRow(
+    icon: ImageVector,
+    text: String,
+    modifier: Modifier = Modifier,
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyMedium,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(text = text, style = style)
     }
 }
 

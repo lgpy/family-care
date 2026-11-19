@@ -1,9 +1,7 @@
 package io.github.lgpy.familycare.feature.appointments.dashboard
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -25,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -40,9 +37,11 @@ import io.github.lgpy.familycare.core.ui.components.SectionHeader
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.feature.appointments.AppointmentsRoutes
-import io.github.lgpy.familycare.feature.appointments.domain.AppointmentKind
+import io.github.lgpy.familycare.feature.appointments.ui.AppointmentKindTile
+import io.github.lgpy.familycare.feature.appointments.ui.PreparationTagChip
 import io.github.lgpy.familycare.feature.appointments.ui.formatAppointmentTime
 import io.github.lgpy.familycare.feature.appointments.ui.labelRes
+import io.github.lgpy.familycare.feature.appointments.ui.preparationChips
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -146,7 +145,7 @@ private fun UpcomingRow(
                     verticalAlignment = Alignment.Top,
                 ) {
                     DayBlock(line.date)
-                    KindTile(line.kind)
+                    AppointmentKindTile(kind = line.kind)
                     Column(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -160,7 +159,11 @@ private fun UpcomingRow(
                     }
                 }
             },
-            action = { PreparationTag(line.preparation) },
+            action = {
+                preparationChips(line.preparation).firstOrNull()?.let { chip ->
+                    PreparationTagChip(chip)
+                }
+            },
         )
     }
 }
@@ -189,42 +192,6 @@ private fun DayBlock(date: LocalDate) {
             textAlign = TextAlign.Center,
         )
     }
-}
-
-/** The 40 dp rounded tile with the appointment type's icon. */
-@Composable
-private fun KindTile(kind: AppointmentKind) {
-    val scheme = MaterialTheme.colorScheme
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(scheme.primaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = kind.icon(),
-            contentDescription = null,
-            tint = scheme.onPrimaryContainer,
-            modifier = Modifier.size(24.dp),
-        )
-    }
-}
-
-/**
- * The icon of an appointment type.
- *
- * [FcIcons.Cardiology] is the icon for a cardiology appointment, but this
- * version's [AppointmentKind] records no specialty: a cardiology visit arrives
- * as a consultation whose title says so, so no kind maps to it yet.
- */
-@Composable
-private fun AppointmentKind.icon(): ImageVector = when (this) {
-    AppointmentKind.BLOOD_TEST -> FcIcons.Bloodtype
-    AppointmentKind.CONSULTATION -> FcIcons.Stethoscope
-    AppointmentKind.EXAM -> FcIcons.Radiology
-    AppointmentKind.CHECKUP -> FcIcons.Stethoscope
-    AppointmentKind.OTHER -> FcIcons.Event
 }
 
 /** The patient's avatar and the time, then the place with its location icon. */
@@ -275,60 +242,3 @@ private fun MetaLine(line: CardLine) {
         }
     }
 }
-
-/**
- * The preparation tag: amber with a "no food" icon when the preparation
- * mentions fasting, a neutral tag with the preparation's own words otherwise.
- *
- * The fasting tag is short on purpose ("Fasting" / "Jejum"): the full note is on
- * the appointment's detail screen, and a chip is not the place for a sentence.
- */
-@Composable
-private fun PreparationTag(preparation: String?) {
-    val note = preparation?.takeIf { it.isNotBlank() } ?: return
-    val fasting = preparationMentionsFasting(note)
-    val colors = FamilyCareTheme.colors
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (fasting) {
-            colors.attentionContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        },
-        contentColor = if (fasting) colors.onAttentionContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            if (fasting) {
-                Icon(
-                    imageVector = FcIcons.NoFood,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
-            }
-            Text(
-                text = if (fasting) stringResource(R.string.appointments_card_fasting) else note,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-/**
- * Whether a free-text preparation mentions fasting.
- *
- * The field is free text, not a flag, so the tag matches the words the app
- * itself offers in either language ("Fasting", "Jejum") anywhere in the note.
- * Lowercased with [Locale.ROOT] so a Turkish phone's dotted/dotless i cannot
- * change the match.
- */
-internal fun preparationMentionsFasting(preparation: String): Boolean {
-    val normalised = preparation.lowercase(Locale.ROOT)
-    return FastingKeywords.any { keyword -> keyword in normalised }
-}
-
-private val FastingKeywords = listOf("fasting", "jejum")

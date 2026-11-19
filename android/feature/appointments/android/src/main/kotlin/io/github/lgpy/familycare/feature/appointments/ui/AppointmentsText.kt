@@ -1,12 +1,16 @@
 package io.github.lgpy.familycare.feature.appointments.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,9 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.feature.appointments.data.AppointmentEntry
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentField
@@ -29,7 +35,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 /*
- * How the appointments screens write a kind, a date, a time and an error.
+ * How the appointments screens write a kind, a day, a preparation, a date, a
+ * time and an error.
  *
  * Everything user-facing comes from `core:ui`'s string resources (en and
  * pt-PT), so no screen hard-codes text.
@@ -43,6 +50,15 @@ fun AppointmentKind.labelRes(): Int = when (this) {
     AppointmentKind.EXAM -> R.string.appointments_kind_exam
     AppointmentKind.CHECKUP -> R.string.appointments_kind_checkup
     AppointmentKind.OTHER -> R.string.appointments_kind_other
+}
+
+/** The localized label of a "Before going" chip. */
+@StringRes
+fun PreparationTag.labelRes(): Int = when (this) {
+    PreparationTag.FASTING -> R.string.appointments_prep_fasting
+    PreparationTag.RESULTS -> R.string.appointments_prep_results
+    PreparationTag.SNS_CARD -> R.string.appointments_prep_sns
+    PreparationTag.MEDICINES -> R.string.appointments_prep_medicines
 }
 
 /** The inline message of a rejected field, or null when the field has no rule. */
@@ -102,9 +118,46 @@ fun dayLabel(date: LocalDate, today: LocalDate): String = when (date) {
 }
 
 /**
- * One appointment line: time, kind or title, patient (in the Agenda) and place.
- * A cancelled appointment is struck through and labelled.
+ * A day of the agenda as a small group label: the calendar icon and the day,
+ * `onSurfaceVariant` above the day's rows (docs/ux/mockups/screens-v2.html
+ * `const agenda`).
+ *
+ * It is deliberately lighter than [io.github.lgpy.familycare.core.ui.components.SectionHeader]:
+ * a day groups rows, it is not a section of the screen.
  */
+@Composable
+fun AppointmentDayHeader(date: LocalDate, today: LocalDate, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = FcIcons.CalendarToday,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = dayLabel(date, today),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * One appointment row: a 40 dp kind tile, the bold title, the time with its
+ * schedule icon and — where the list spans patients — the patient's avatar and
+ * short name, the place, then the preparation tags.
+ *
+ * A cancelled appointment is struck through and labelled. Nothing truncates:
+ * the title, name, place and tags wrap and the row grows.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AppointmentLine(
     entry: AppointmentEntry,
@@ -114,49 +167,97 @@ fun AppointmentLine(
 ) {
     val appointment = entry.appointment
     val cancelled = appointment.isCancelled
-    Column(
+    val patientName = entry.patientName.takeIf { showPatient && it.isNotBlank() }
+
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .selectable(selected = false, role = Role.Button, onClick = onClick)
-            .padding(vertical = 12.dp),
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top,
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Top,
+        AppointmentKindTile(kind = appointment.kind)
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            // A patient is identified by their avatar wherever a list spans
-            // patients (D32); inside one patient's tab there is nothing to tell apart.
-            if (showPatient && entry.patientName.isNotBlank()) {
-                PatientAvatar(
-                    patientId = appointment.patientId,
-                    name = entry.patientName,
-                )
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+            Text(
+                text = appointment.title ?: stringResource(appointment.kind.labelRes()),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                textDecoration = if (cancelled) TextDecoration.LineThrough else null,
+            )
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                val kindLabel = stringResource(appointment.kind.labelRes())
-                val headline = formatAppointmentTime(appointment.localTime) +
-                    " · " +
-                    (appointment.title ?: kindLabel)
-                Text(
-                    text = headline,
-                    style = MaterialTheme.typography.bodyLarge,
-                    textDecoration = if (cancelled) TextDecoration.LineThrough else null,
-                )
-                if (showPatient && entry.patientName.isNotBlank()) {
-                    Text(text = entry.patientName, style = MaterialTheme.typography.bodyMedium)
-                }
-                appointment.place?.let { place ->
-                    Text(text = place, style = MaterialTheme.typography.bodyMedium)
-                }
-                if (cancelled) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Icon(
+                        imageVector = FcIcons.Schedule,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
                     Text(
-                        text = stringResource(R.string.appointments_cancelled),
-                        style = MaterialTheme.typography.labelMedium,
+                        text = formatAppointmentTime(appointment.localTime),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                if (patientName != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        PatientAvatar(
+                            patientId = appointment.patientId,
+                            name = patientName,
+                            size = 18.dp,
+                        )
+                        Text(
+                            text = patientName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            appointment.place?.takeIf { it.isNotBlank() }?.let { place ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Icon(
+                        imageVector = FcIcons.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = place,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            PreparationTags(
+                preparation = appointment.preparation,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+
+            if (cancelled) {
+                Text(
+                    text = stringResource(R.string.appointments_cancelled),
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
         }
     }

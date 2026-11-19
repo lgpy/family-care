@@ -9,11 +9,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,11 +22,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.patient.PatientTab
 import io.github.lgpy.familycare.feature.appointments.AppointmentsRoutes
 import io.github.lgpy.familycare.feature.appointments.agenda.AgendaDay
+import io.github.lgpy.familycare.feature.appointments.ui.AppointmentDayHeader
 import io.github.lgpy.familycare.feature.appointments.ui.AppointmentLine
-import io.github.lgpy.familycare.feature.appointments.ui.dayLabel
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -38,8 +36,10 @@ import org.koin.core.parameter.parametersOf
  *
  * The module contributes it to the profile's extension point, so the app shell
  * opens this tab without importing the appointments screens (D5). The content is
- * that patient's upcoming appointments, then the past ones; "New appointment"
- * appears for owners and caregivers, the same rule the repository enforces.
+ * that patient's upcoming appointments, then the past ones, drawn as the
+ * Agenda's rows without the patient line (this tab has only one patient); "New
+ * appointment" appears for owners and caregivers, the same rule the repository
+ * enforces.
  */
 class AppointmentsPatientTab : PatientTab {
 
@@ -69,8 +69,9 @@ class AppointmentsPatientTab : PatientTab {
 }
 
 /**
- * The tab's content: upcoming days first, then past ones, cancelled appointments
- * marked. It has no Scaffold of its own — the profile owns the screen.
+ * The tab's content: the tonal "New appointment" action, then upcoming days and
+ * past ones, cancelled appointments marked. It has no Scaffold of its own — the
+ * profile owns the screen.
  */
 @Composable
 fun PatientAppointmentsSection(
@@ -86,8 +87,8 @@ fun PatientAppointmentsSection(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(24.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         if (uiState.canWrite && !uiState.patientMissing) {
             item {
@@ -95,7 +96,7 @@ fun PatientAppointmentsSection(
                     onClick = onAdd,
                     modifier = Modifier.heightIn(min = 48.dp),
                 ) {
-                    Icon(imageVector = Icons.Filled.Add, contentDescription = null)
+                    Icon(imageVector = FcIcons.Add, contentDescription = null)
                     Text(
                         text = stringResource(R.string.appointments_new),
                         modifier = Modifier.padding(start = 8.dp),
@@ -145,11 +146,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.patientDayGroups(
 ) {
     days.forEach { day ->
         item(key = "day-${day.date}") {
-            Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp)) {
-                Text(
-                    text = dayLabel(day.date, today),
-                    style = MaterialTheme.typography.titleSmall,
-                )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                AppointmentDayHeader(date = day.date, today = today)
             }
         }
         items(day.entries, key = { "appointment-${it.appointment.id.value}" }) { entry ->
@@ -158,7 +156,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.patientDayGroups(
                 showPatient = false,
                 onClick = { onOpenAppointment(entry.appointment.id.value) },
             )
-            HorizontalDivider()
         }
     }
 }
