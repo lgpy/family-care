@@ -158,6 +158,11 @@ Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
 - **Trade-off accepted:** export requires a connection (to log it); backups keep erased data until they expire (at most a year).
 - Details: `docs/domain/patient-lifecycle.md`.
 
+### D31 — Medication search from INFARMED's public lists, bundled in the app
+- **Decision:** the medication form suggests products while typing, from a catalogue **bundled in the APK** and built from INFARMED's public Excel exports on app10.infarmed.pt: the reference-price list (`tabela=spr`, ~5.1k rows: name, form, DCI, strength, pack, holder, registration number), the available-generics list (`tabela=disp`, adds products such as apixabano generics) and the MNSRM list (~2.5k rows; membership = no prescription needed). `ops/meds-catalog/build.py` downloads, joins by registration number, and writes the asset; it is re-run before releases. Picking a suggestion fills name, active substance, strength, form and the prescription flag, and offers the pack size as the opening stock. Free text always remains possible.
+- **Why:** search must never leave the phone (which medicines a family takes is health data, D4/D10), so the list is local. The official complete database (CITS) costs €150 + VAT/year; the public lists are free and cover generics and OTC medicines.
+- **Trade-off accepted:** brand-only medicines without generics (e.g. Eliquis, Ozempic, insulins) are absent and are typed by hand; no GTIN, so no box scanning; no licence is stated on the exports, so the data stays inside this private app and repository and is not redistributed.
+
 ---
 
 
