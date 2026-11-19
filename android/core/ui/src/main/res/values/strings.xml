@@ -733,4 +733,53 @@
     <string name="activity_erased_patient">%1$s erased a patient</string>
     <string name="activity_exported_patient_data">%1$s exported %2$s\'s data</string>
     <string name="activity_changed">%1$s changed %2$s</string>
+
+    <!-- D33: the pill picture's accessibility description (docs/ux/design-system.md §5).
+         There are no plurals: one pill is always described in the singular. The
+         "fem" colour forms exist for Portuguese, where "cápsula" is feminine;
+         English reuses the same word. "[pill_desc_core]" and "[pill_desc_sized]"
+         order their arguments per language: English puts the colour (and the
+         size) first, Portuguese puts the noun first. -->
+    <string name="pill_shape_round">round tablet</string>
+    <string name="pill_shape_oval">oval tablet</string>
+    <string name="pill_shape_oblong">long tablet</string>
+    <string name="pill_shape_capsule">capsule</string>
+    <string name="pill_shape_diamond">diamond tablet</string>
+    <string name="pill_shape_triangle">triangular tablet</string>
+    <string name="pill_shape_drops">Drops</string>
+
+    <string name="pill_color_white">white</string>
+    <string name="pill_color_white_fem">white</string>
+    <string name="pill_color_cream">cream</string>
+    <string name="pill_color_cream_fem">cream</string>
+    <string name="pill_color_yellow">yellow</string>
+    <string name="pill_color_yellow_fem">yellow</string>
+    <string name="pill_color_orange">orange</string>
+    <string name="pill_color_orange_fem">orange</string>
+    <string name="pill_color_pink">pink</string>
+    <string name="pill_color_pink_fem">pink</string>
+    <string name="pill_color_red">red</string>
+    <string name="pill_color_red_fem">red</string>
+    <string name="pill_color_blue">blue</string>
+    <string name="pill_color_blue_fem">blue</string>
+    <string name="pill_color_navy">navy</string>
+    <string name="pill_color_navy_fem">navy</string>
+    <string name="pill_color_green">green</string>
+    <string name="pill_color_green_fem">green</string>
+    <string name="pill_color_brown">brown</string>
+    <string name="pill_color_brown_fem">brown</string>
+    <string name="pill_color_purple">purple</string>
+    <string name="pill_color_purple_fem">purple</string>
+    <string name="pill_color_grey">grey</string>
+    <string name="pill_color_grey_fem">grey</string>
+
+    <string name="pill_size_small">small</string>
+    <string name="pill_size_small_fem">small</string>
+    <string name="pill_size_large">large</string>
+    <string name="pill_size_large_fem">large</string>
+
+    <string name="pill_desc_core">%1$s %2$s</string>
+    <string name="pill_desc_two_colours">%1$s and %2$s</string>
+    <string name="pill_desc_scored">%1$s with a score line</string>
+    <string name="pill_desc_sized">%1$s %2$s</string>
 </resources>

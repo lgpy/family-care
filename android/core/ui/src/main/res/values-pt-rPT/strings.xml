@@ -735,4 +735,51 @@
     <string name="activity_erased_patient">%1$s apagou uma pessoa</string>
     <string name="activity_exported_patient_data">%1$s exportou os dados de %2$s</string>
     <string name="activity_changed">%1$s alterou %2$s</string>
+
+    <!-- D33: descrição do comprimido (docs/ux/design-system.md §5). A ordem dos
+         adjetivos é a do português: nome, forma, cor e, por fim, o tamanho. As
+         formas "fem" concordam com "cápsula"; os modelos [pill_desc_core] e
+         [pill_desc_sized] trocam a ordem dos argumentos em relação ao inglês. -->
+    <string name="pill_shape_round">comprimido redondo</string>
+    <string name="pill_shape_oval">comprimido oval</string>
+    <string name="pill_shape_oblong">comprimido comprido</string>
+    <string name="pill_shape_capsule">cápsula</string>
+    <string name="pill_shape_diamond">comprimido losangular</string>
+    <string name="pill_shape_triangle">comprimido triangular</string>
+    <string name="pill_shape_drops">Gotas</string>
+
+    <string name="pill_color_white">branco</string>
+    <string name="pill_color_white_fem">branca</string>
+    <string name="pill_color_cream">creme</string>
+    <string name="pill_color_cream_fem">creme</string>
+    <string name="pill_color_yellow">amarelo</string>
+    <string name="pill_color_yellow_fem">amarela</string>
+    <string name="pill_color_orange">laranja</string>
+    <string name="pill_color_orange_fem">laranja</string>
+    <string name="pill_color_pink">rosa</string>
+    <string name="pill_color_pink_fem">rosa</string>
+    <string name="pill_color_red">vermelho</string>
+    <string name="pill_color_red_fem">vermelha</string>
+    <string name="pill_color_blue">azul</string>
+    <string name="pill_color_blue_fem">azul</string>
+    <string name="pill_color_navy">azul-escuro</string>
+    <string name="pill_color_navy_fem">azul-escura</string>
+    <string name="pill_color_green">verde</string>
+    <string name="pill_color_green_fem">verde</string>
+    <string name="pill_color_brown">castanho</string>
+    <string name="pill_color_brown_fem">castanha</string>
+    <string name="pill_color_purple">roxo</string>
+    <string name="pill_color_purple_fem">roxa</string>
+    <string name="pill_color_grey">cinzento</string>
+    <string name="pill_color_grey_fem">cinzenta</string>
+
+    <string name="pill_size_small">pequeno</string>
+    <string name="pill_size_small_fem">pequena</string>
+    <string name="pill_size_large">grande</string>
+    <string name="pill_size_large_fem">grande</string>
+
+    <string name="pill_desc_core">%2$s %1$s</string>
+    <string name="pill_desc_two_colours">%1$s e %2$s</string>
+    <string name="pill_desc_scored">%1$s com ranhura</string>
+    <string name="pill_desc_sized">%2$s %1$s</string>
 </resources>
