@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- D30: the only files the app ever shares, and only from cache/exports. -->
+<paths>
+    <cache-path
+        name="exports"
+        path="exports/" />
+</paths>

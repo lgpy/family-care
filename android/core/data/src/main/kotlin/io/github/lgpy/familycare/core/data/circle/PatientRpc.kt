@@ -17,6 +17,9 @@ internal interface PatientRpc {
 
     /** `core.erase_patient(p_patient_id)`: deletes the patient and everything of theirs. */
     suspend fun erasePatient(patientId: String)
+
+    /** `core.log_patient_export(p_patient_id, p_format)`: the audit row before a file is written. */
+    suspend fun logPatientExport(patientId: String, format: String)
 }
 
 /** [PatientRpc] over PostgREST with supabase-kt, schema `core`. */
@@ -33,7 +36,22 @@ internal class SupabasePatientRpc(
         }
     }
 
+    override suspend fun logPatientExport(patientId: String, format: String) {
+        postgrest.rpc(
+            LOG_PATIENT_EXPORT,
+            JsonObject(
+                mapOf(
+                    "p_patient_id" to JsonPrimitive(patientId),
+                    "p_format" to JsonPrimitive(format),
+                ),
+            ),
+        ) {
+            schema = CORE_SCHEMA
+        }
+    }
+
     private companion object {
         const val ERASE_PATIENT = "erase_patient"
+        const val LOG_PATIENT_EXPORT = "log_patient_export"
     }
 }

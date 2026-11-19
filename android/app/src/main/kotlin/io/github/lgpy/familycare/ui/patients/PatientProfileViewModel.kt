@@ -6,9 +6,12 @@ import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.CoreError
 import io.github.lgpy.familycare.core.domain.circle.CoreResult
 import io.github.lgpy.familycare.core.domain.circle.PatientId
+import io.github.lgpy.familycare.core.domain.circle.PatientExportFormat
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.canManage
 import io.github.lgpy.familycare.core.domain.circle.canWrite
+import io.github.lgpy.familycare.core.ui.export.PatientExportOutcome
+import io.github.lgpy.familycare.core.ui.export.PatientExporter
 import io.github.lgpy.familycare.core.ui.patient.TimelineEntry
 import io.github.lgpy.familycare.core.ui.patient.TimelineSources
 import java.time.YearMonth
@@ -25,6 +28,12 @@ import kotlinx.coroutines.launch
 data class HistoryGroup(
     val month: YearMonth,
     val entries: List<TimelineEntry>,
+)
+
+/** A generated export waiting for the share sheet. */
+data class ExportShare(
+    val file: java.io.File,
+    val format: PatientExportFormat,
 )
 
 /**
@@ -50,6 +59,14 @@ data class PatientProfileUiState(
     val erasing: Boolean = false,
     /** The patient was erased: the screen navigates back to the list. */
     val erased: Boolean = false,
+    /** Owners and caregivers may export; viewers never (D30). */
+    val canExport: Boolean = false,
+    /** An export is being generated (the dialog/screen shows progress). */
+    val exporting: Boolean = false,
+    /** The last export failure (offline, not allowed, generation failed). */
+    val exportError: CoreError? = null,
+    /** The generated file to hand to the share sheet, or null. */
+    val exportShare: ExportShare? = null,
     val history: List<HistoryGroup> = emptyList(),
 )
 
@@ -72,6 +89,7 @@ class PatientProfileViewModel(
     private val patientRepository: PatientRepository,
     careCircleRepository: CareCircleRepository,
     timelineSources: TimelineSources,
+    private val exporter: PatientExporter,
     zone: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel() {
 
@@ -81,6 +99,9 @@ class PatientProfileViewModel(
         val error: CoreError? = null,
         val erasing: Boolean = false,
         val erased: Boolean = false,
+        val exporting: Boolean = false,
+        val exportError: CoreError? = null,
+        val exportShare: ExportShare? = null,
     )
 
     private val action = MutableStateFlow(ActionState())
@@ -98,9 +119,13 @@ class PatientProfileViewModel(
             canWrite = patient != null && role.canWrite(patient),
             canManage = role.canManage,
             isArchived = patient?.isArchived == true,
+            canExport = patient != null && role?.canWrite == true,
             actionError = actionState.error,
             erasing = actionState.erasing,
             erased = actionState.erased,
+            exporting = actionState.exporting,
+            exportError = actionState.exportError,
+            exportShare = actionState.exportShare,
             history = groupByMonth(entries, zone),
         )
     }.stateIn(
@@ -135,6 +160,42 @@ class PatientProfileViewModel(
     /** Dismisses the error line after the user has seen it. */
     fun clearActionError() {
         action.update { it.copy(error = null) }
+    }
+
+    /**
+     * Generates [format] of the patient and leaves the file for the screen to
+     * share (D30). The audit call happens inside [PatientExporter] **before**
+     * the file, so an offline or refused export writes nothing.
+     */
+    fun export(format: PatientExportFormat) {
+        if (action.value.exporting) return
+        action.update { it.copy(exporting = true, exportError = null, exportShare = null) }
+        viewModelScope.launch {
+            when (val outcome = exporter.export(id, format)) {
+                is PatientExportOutcome.Success ->
+                    action.update {
+                        it.copy(
+                            exporting = false,
+                            exportShare = ExportShare(outcome.file, outcome.format),
+                        )
+                    }
+
+                is PatientExportOutcome.Failure ->
+                    action.update {
+                        it.copy(exporting = false, exportError = outcome.error)
+                    }
+            }
+        }
+    }
+
+    /** The share sheet was opened (or the file is gone); it is not offered again. */
+    fun onExportShared() {
+        action.update { it.copy(exportShare = null) }
+    }
+
+    /** Dismisses the export error after the user has seen it. */
+    fun clearExportError() {
+        action.update { it.copy(exportError = null) }
     }
 
     private fun runAction(block: suspend () -> CoreResult<PatientId>) {

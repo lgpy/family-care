@@ -182,6 +182,17 @@ class FakePatientRepository : PatientRepository {
         erased += patientId
         return eraseResult ?: CoreResult.Success(patientId)
     }
+
+    val exports = mutableListOf<Pair<PatientId, io.github.lgpy.familycare.core.domain.circle.PatientExportFormat>>()
+    var exportResult: CoreResult<Unit> = CoreResult.Success(Unit)
+
+    override suspend fun logExport(
+        patientId: PatientId,
+        format: io.github.lgpy.familycare.core.domain.circle.PatientExportFormat,
+    ): CoreResult<Unit> {
+        exports += patientId to format
+        return exportResult
+    }
 }
 
 class FakeProfileRepository : ProfileRepository {

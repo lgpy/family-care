@@ -624,4 +624,40 @@
     <string name="appointments_push_body">An appointment was added or changed</string>
     <string name="appointments_card_title">Next 7 days</string>
     <string name="appointments_card_more">+%1$d more</string>
+
+    <!-- M7/D30: patient export (JSON and the readable PDF). -->
+    <string name="patient_export_action">Export data…</string>
+    <string name="export_dialog_title">Export %1$s</string>
+    <string name="export_dialog_body">Choose the format. The export contains all of this person\'s data and is recorded in the security log.</string>
+    <string name="export_format_json">JSON (data file)</string>
+    <string name="export_format_pdf">PDF (for a doctor)</string>
+    <string name="export_generating">Generating the export…</string>
+    <string name="export_share_title">Share the export</string>
+    <string name="export_error_offline">You are offline. Exporting needs a connection, so no file was created.</string>
+    <string name="export_error_not_allowed">Your role cannot export this person\'s data.</string>
+    <string name="export_error_failed">The export could not be generated.</string>
+    <string name="export_patient_info">Patient information</string>
+    <string name="export_name">Name</string>
+    <string name="export_allergies">Allergies</string>
+    <string name="export_conditions">Conditions</string>
+    <string name="export_sns">SNS number</string>
+    <string name="export_family_doctor">Family doctor</string>
+    <string name="export_health_centre">Health centre</string>
+    <string name="export_health_centre_phone">Health centre phone</string>
+    <string name="export_emergency_contact">Emergency contact</string>
+    <string name="export_none">None recorded</string>
+    <string name="export_active_medications">Active medications</string>
+    <string name="export_stopped_medications">Stopped medications</string>
+    <string name="export_stopped_on">stopped on %1$s</string>
+    <string name="export_stock">Stock: %1$s %2$s</string>
+    <string name="export_schedule_daily">daily</string>
+    <string name="export_schedule_weekdays">selected days</string>
+    <string name="export_schedule_every_n">every %1$d days</string>
+    <string name="export_schedule_none">no schedule</string>
+    <string name="export_dose_log">Dose log (last 90 days)</string>
+    <string name="export_dose_taken">taken</string>
+    <string name="export_dose_skipped">skipped</string>
+    <string name="export_appointments_upcoming">Upcoming appointments</string>
+    <string name="export_appointments_past">Appointments (last 12 months)</string>
+    <string name="export_cancelled">cancelled</string>
 </resources>

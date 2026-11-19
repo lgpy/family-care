@@ -26,6 +26,9 @@ internal enum class RpcCall {
 
     /** `core.erase_patient` (D30): owner only, and gone is gone. */
     ERASE_PATIENT,
+
+    /** `core.log_patient_export` (D30): owners and caregivers, before a file. */
+    LOG_PATIENT_EXPORT,
 }
 
 /**

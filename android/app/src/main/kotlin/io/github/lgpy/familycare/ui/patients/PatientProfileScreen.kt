@@ -1,6 +1,8 @@
 package io.github.lgpy.familycare.ui.patients
 
 import androidx.compose.foundation.clickable
+import android.content.Intent
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,9 +43,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.CoreError
+import io.github.lgpy.familycare.core.domain.circle.PatientExportFormat
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.patient.PatientHeaders
@@ -102,6 +106,29 @@ fun PatientProfileScreen(
     var confirmingUnarchive by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var typedName by remember { mutableStateOf("") }
+    var choosingExport by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val shareTitle = stringResource(R.string.export_share_title)
+
+    // D30: the generated file is handed to the share sheet once, through the
+    // FileProvider that exposes only cache/exports.
+    LaunchedEffect(uiState.exportShare) {
+        val share = uiState.exportShare ?: return@LaunchedEffect
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            share.file,
+        )
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = share.format.mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(
+            Intent.createChooser(send, shareTitle),
+        )
+        viewModel.onExportShared()
+    }
 
     // D30: the server deleted the patient; the list is where the user goes next.
     LaunchedEffect(uiState.erased) {
@@ -113,11 +140,13 @@ fun PatientProfileScreen(
             displayName = uiState.displayName.takeIf { uiState.loaded && !uiState.notFound },
             canWrite = uiState.canWrite,
             canManage = uiState.canManage && !uiState.notFound,
+            canExport = uiState.canExport,
             isArchived = uiState.isArchived,
             onBack = onBack,
             onEdit = { onEdit(patientId) },
             onArchive = { confirmingArchive = true },
             onUnarchive = { confirmingUnarchive = true },
+            onExport = { choosingExport = true },
             onDelete = {
                 typedName = ""
                 deleting = true
@@ -140,6 +169,18 @@ fun PatientProfileScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            )
+        }
+
+        uiState.exportError?.let { error ->
+            Text(
+                text = stringResource(error.exportMessageRes()),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .clickable { viewModel.clearExportError() },
             )
         }
 
@@ -189,6 +230,46 @@ fun PatientProfileScreen(
                 }
             }
         }
+    }
+
+    if (choosingExport) {
+        AlertDialog(
+            onDismissRequest = { if (!uiState.exporting) choosingExport = false },
+            title = {
+                Text(text = stringResource(R.string.export_dialog_title, uiState.displayName))
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = stringResource(R.string.export_dialog_body))
+                    TextButton(
+                        enabled = !uiState.exporting,
+                        onClick = {
+                            choosingExport = false
+                            viewModel.export(PatientExportFormat.JSON)
+                        },
+                    ) {
+                        Text(text = stringResource(R.string.export_format_json))
+                    }
+                    TextButton(
+                        enabled = !uiState.exporting,
+                        onClick = {
+                            choosingExport = false
+                            viewModel.export(PatientExportFormat.PDF)
+                        },
+                    ) {
+                        Text(text = stringResource(R.string.export_format_pdf))
+                    }
+                    if (uiState.exporting) {
+                        Text(text = stringResource(R.string.export_generating))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { choosingExport = false }) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 
     if (confirmingArchive) {
@@ -304,17 +385,26 @@ private fun CoreError.messageRes(): Int = when (this) {
     else -> R.string.patient_action_failed
 }
 
+/** The export's own wording: offline is the expected failure, not a generic one. */
+private fun CoreError.exportMessageRes(): Int = when (this) {
+    CoreError.Offline -> R.string.export_error_offline
+    CoreError.NotAllowed -> R.string.export_error_not_allowed
+    else -> R.string.export_error_failed
+}
+
 @Composable
 private fun PatientProfileHeader(
     displayName: String?,
     canWrite: Boolean,
     canManage: Boolean,
+    canExport: Boolean,
     isArchived: Boolean,
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onArchive: () -> Unit,
     onUnarchive: () -> Unit,
     onDelete: () -> Unit,
+    onExport: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
 
@@ -337,7 +427,7 @@ private fun PatientProfileHeader(
                 .weight(1f)
                 .padding(start = 8.dp),
         )
-        if (canWrite || canManage) {
+        if (canWrite || canManage || canExport) {
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
@@ -381,6 +471,15 @@ private fun PatientProfileHeader(
                             onClick = {
                                 menuOpen = false
                                 onDelete()
+                            },
+                        )
+                    }
+                    if (canExport) {
+                        DropdownMenuItem(
+                            text = { Text(text = stringResource(R.string.patient_export_action)) },
+                            onClick = {
+                                menuOpen = false
+                                onExport()
                             },
                         )
                     }

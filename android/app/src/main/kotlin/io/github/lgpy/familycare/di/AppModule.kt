@@ -22,6 +22,10 @@ import io.github.lgpy.familycare.core.notifications.PushTokenRegistrar
 import io.github.lgpy.familycare.core.notifications.SharedPreferencesPushRegistrationStore
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCards
+import io.github.lgpy.familycare.core.ui.export.PatientExportFiles
+import io.github.lgpy.familycare.core.ui.export.PatientExportSource
+import io.github.lgpy.familycare.core.ui.export.PatientExportSources
+import io.github.lgpy.familycare.core.ui.export.PatientExporter
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
@@ -72,6 +76,10 @@ import io.github.lgpy.familycare.ui.circle.FamilyCircleViewModel
 import io.github.lgpy.familycare.ui.patients.PatientFormViewModel
 import io.github.lgpy.familycare.ui.patients.PatientProfileViewModel
 import io.github.lgpy.familycare.ui.patients.PatientsViewModel
+import io.github.lgpy.familycare.ui.patients.export.AppointmentsExportSource
+import io.github.lgpy.familycare.ui.patients.export.DoseLogExportSource
+import io.github.lgpy.familycare.ui.patients.export.MedicationsExportSource
+import io.github.lgpy.familycare.ui.patients.export.PatientInfoExportSource
 import io.github.lgpy.familycare.ui.profile.YourNameViewModel
 import io.github.lgpy.familycare.ui.sync.UploadRejectionViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -204,6 +212,48 @@ val appModule: Module = module {
     single { PatientTabs(getAll<PatientTab>()) }
     single { TimelineSources(getAll<TimelineSource>()) }
 
+    // The export extension point (D30, docs/domain/patient-lifecycle.md
+    // "Export"). Each source is built from a module's public data API; the
+    // registry assembles the JSON document and the PDF's sections, and the
+    // exporter writes to cache/exports and logs the export before any file.
+    single<PatientExportSource> {
+        PatientInfoExportSource(
+            patientInfoRepository = get(),
+            resources = androidContext().resources,
+        )
+    }
+    single<PatientExportSource> {
+        AppointmentsExportSource(
+            appointmentRepository = get(),
+            resources = androidContext().resources,
+        )
+    }
+    single<PatientExportSource> {
+        MedicationsExportSource(
+            medicationRepository = get(),
+            stockRepository = get(),
+            resources = androidContext().resources,
+        )
+    }
+    single<PatientExportSource> {
+        DoseLogExportSource(
+            medicationRepository = get(),
+            doseLogRepository = get(),
+            resources = androidContext().resources,
+        )
+    }
+    single { PatientExportSources(getAll<PatientExportSource>()) }
+    single {
+        PatientExporter(
+            patientRepository = get(),
+            sources = get(),
+            directory = java.io.File(
+                androidContext().cacheDir,
+                PatientExportFiles.DIRECTORY,
+            ),
+        )
+    }
+
     // The push extension point (D29): a feature claims the message `type`s it
     // owns, and the core's single FCM service routes each payload by `type`. The
     // registry rejects a type claimed twice when it is built (at start-up).
@@ -334,6 +384,7 @@ val appModule: Module = module {
             patientRepository = get(),
             careCircleRepository = get(),
             timelineSources = get(),
+            exporter = get(),
         )
     }
     viewModel { FamilyCircleViewModel(careCircleRepository = get()) }

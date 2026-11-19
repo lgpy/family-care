@@ -109,4 +109,22 @@ interface PatientRepository {
      *   [CoreError.Rejected] when the server refused the call.
      */
     suspend fun erase(patientId: PatientId): CoreResult<PatientId>
+
+    /**
+     * Records the export **before** any file is written, through
+     * `core.log_patient_export(p_patient_id, p_format)` (D30,
+     * docs/domain/patient-lifecycle.md "Export").
+     *
+     * Owners and caregivers may export; a viewer is refused locally and by the
+     * server. The call is the only online part of an export, so it needs a
+     * connection: [CoreError.Offline] means the caller must not generate a file.
+     *
+     * @return [CoreError.NotAllowed] for a viewer, [CoreError.Offline] with no
+     *   connection, [CoreError.NotFound] when the patient is not local,
+     *   [CoreError.Rejected] when the server refused the call.
+     */
+    suspend fun logExport(
+        patientId: PatientId,
+        format: PatientExportFormat,
+    ): CoreUnitResult
 }

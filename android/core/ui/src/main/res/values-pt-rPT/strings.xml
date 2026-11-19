@@ -623,4 +623,40 @@
     <string name="appointments_push_body">Uma consulta foi marcada ou alterada</string>
     <string name="appointments_card_title">Próximos 7 dias</string>
     <string name="appointments_card_more">+%1$d mais</string>
+
+    <!-- M7/D30: exportação de dados da pessoa (JSON e o PDF para o médico). -->
+    <string name="patient_export_action">Exportar dados…</string>
+    <string name="export_dialog_title">Exportar %1$s</string>
+    <string name="export_dialog_body">Escolha o formato. A exportação contém todos os dados desta pessoa e fica registada no registo de segurança.</string>
+    <string name="export_format_json">JSON (ficheiro de dados)</string>
+    <string name="export_format_pdf">PDF (para o médico)</string>
+    <string name="export_generating">A gerar a exportação…</string>
+    <string name="export_share_title">Partilhar a exportação</string>
+    <string name="export_error_offline">Está sem ligação. Exportar precisa de ligação à internet, por isso não foi criado nenhum ficheiro.</string>
+    <string name="export_error_not_allowed">O seu perfil não pode exportar os dados desta pessoa.</string>
+    <string name="export_error_failed">Não foi possível gerar a exportação.</string>
+    <string name="export_patient_info">Informação da pessoa</string>
+    <string name="export_name">Nome</string>
+    <string name="export_allergies">Alergias</string>
+    <string name="export_conditions">Doenças</string>
+    <string name="export_sns">Número de utente (SNS)</string>
+    <string name="export_family_doctor">Médico de família</string>
+    <string name="export_health_centre">Centro de saúde</string>
+    <string name="export_health_centre_phone">Telefone do centro de saúde</string>
+    <string name="export_emergency_contact">Contacto de emergência</string>
+    <string name="export_none">Nada registado</string>
+    <string name="export_active_medications">Medicação ativa</string>
+    <string name="export_stopped_medications">Medicação suspensa</string>
+    <string name="export_stopped_on">suspensa em %1$s</string>
+    <string name="export_stock">Stock: %1$s %2$s</string>
+    <string name="export_schedule_daily">diariamente</string>
+    <string name="export_schedule_weekdays">dias escolhidos</string>
+    <string name="export_schedule_every_n">a cada %1$d dias</string>
+    <string name="export_schedule_none">sem horário</string>
+    <string name="export_dose_log">Registo de doses (últimos 90 dias)</string>
+    <string name="export_dose_taken">tomada</string>
+    <string name="export_dose_skipped">não tomada</string>
+    <string name="export_appointments_upcoming">Próximas consultas</string>
+    <string name="export_appointments_past">Consultas (últimos 12 meses)</string>
+    <string name="export_cancelled">cancelada</string>
 </resources>

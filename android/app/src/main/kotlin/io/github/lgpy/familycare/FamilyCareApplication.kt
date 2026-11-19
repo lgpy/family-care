@@ -4,6 +4,7 @@ import android.app.Application
 import io.github.lgpy.familycare.core.data.sync.SyncService
 import io.github.lgpy.familycare.core.notifications.PushHandlers
 import io.github.lgpy.familycare.core.notifications.PushSession
+import io.github.lgpy.familycare.core.ui.export.PatientExporter
 import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.di.appModule
 import io.github.lgpy.familycare.feature.appointments.push.AppointmentPush
@@ -47,6 +48,11 @@ class FamilyCareApplication : Application() {
         koin.get<AppointmentReminderScheduler>().ensureChannel()
         koin.get<AppointmentReminderCoordinator>().start()
         AppointmentPush.ensureChannel(this)
+
+        // M7/D30: an export file is a copy of health data, so leftovers from the
+        // previous run are deleted at every app start. A new export clears the
+        // directory again before it writes.
+        koin.get<PatientExporter>().clear()
 
         // M4 push (D4/D27, D29): the escalation channel Android's settings show,
         // plus token registration. Registration follows the session, so a start

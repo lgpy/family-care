@@ -542,4 +542,9 @@ class FakePatientRepository : PatientRepository {
 
     override suspend fun erase(patientId: PatientId): CoreResult<PatientId> =
         CoreResult.Success(patientId)
+
+    override suspend fun logExport(
+        patientId: PatientId,
+        format: io.github.lgpy.familycare.core.domain.circle.PatientExportFormat,
+    ): CoreResult<Unit> = CoreResult.Success(Unit)
 }

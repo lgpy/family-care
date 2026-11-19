@@ -7,8 +7,10 @@ import io.github.lgpy.familycare.core.domain.auth.AuthState
 import io.github.lgpy.familycare.core.domain.circle.CareCircleId
 import io.github.lgpy.familycare.core.domain.circle.CoreError
 import io.github.lgpy.familycare.core.domain.circle.CoreResult
+import io.github.lgpy.familycare.core.domain.circle.CoreUnitResult
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.core.domain.circle.Patient
+import io.github.lgpy.familycare.core.domain.circle.PatientExportFormat
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRules
@@ -261,6 +263,42 @@ internal class PowerSyncPatientRepository(
         } catch (error: Exception) {
             CoreResult.Failure(
                 careCircleErrorOf(UploadFailure.of(error), error.message, RpcCall.ERASE_PATIENT),
+            )
+        }
+    }
+
+    override suspend fun logExport(
+        patientId: PatientId,
+        format: PatientExportFormat,
+    ): CoreUnitResult {
+        val userId = signedInUserId.first()
+            ?: return CoreResult.Failure(CoreError.NotAllowed)
+
+        // D30: owners and caregivers export; viewers never do. The server checks
+        // `core.can(patient, 'read')` and the role again, and is the authority.
+        val role = database.getOptional(SELECT_MY_ROLE, listOf(userId)) { cursor ->
+            cursor.toRoleRow()
+        }?.toRole() ?: return CoreResult.Failure(CoreError.NotAllowed)
+        if (!role.canWrite) {
+            return CoreResult.Failure(CoreError.NotAllowed)
+        }
+
+        val present = database.getOptional(
+            SELECT_PATIENT,
+            listOf(patientId.value, userId),
+        ) { cursor -> cursor.getString("id") } != null
+        if (!present) {
+            return CoreResult.Failure(CoreError.NotFound)
+        }
+
+        return try {
+            rpc.logPatientExport(patientId.value, format.serverValue)
+            CoreResult.Success(Unit)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            CoreResult.Failure(
+                careCircleErrorOf(UploadFailure.of(error), error.message, RpcCall.LOG_PATIENT_EXPORT),
             )
         }
     }
