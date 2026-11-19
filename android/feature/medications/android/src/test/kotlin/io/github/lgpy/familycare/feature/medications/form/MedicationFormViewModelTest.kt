@@ -3,6 +3,7 @@ package io.github.lgpy.familycare.feature.medications.form
 import app.cash.turbine.test
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.feature.medications.FakeCareCircleRepository
+import io.github.lgpy.familycare.feature.medications.FakeMedicationCatalogRepository
 import io.github.lgpy.familycare.feature.medications.FakeMedicationRepository
 import io.github.lgpy.familycare.feature.medications.FakePatientRepository
 import io.github.lgpy.familycare.feature.medications.FakeStockRepository
@@ -10,6 +11,7 @@ import io.github.lgpy.familycare.feature.medications.awaitWhere
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
 import io.github.lgpy.familycare.feature.medications.domain.MedicationId
+import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestion
 import io.github.lgpy.familycare.feature.medications.domain.SkipReason
 import io.github.lgpy.familycare.feature.medications.medication
 import io.github.lgpy.familycare.feature.medications.regimen
@@ -44,6 +46,7 @@ class MedicationFormViewModelTest {
     private lateinit var stock: FakeStockRepository
     private lateinit var patients: FakePatientRepository
     private lateinit var circles: FakeCareCircleRepository
+    private lateinit var catalog: FakeMedicationCatalogRepository
 
     private val lisbon = ZoneId.of("Europe/Lisbon")
 
@@ -54,6 +57,7 @@ class MedicationFormViewModelTest {
         stock = FakeStockRepository()
         patients = FakePatientRepository()
         circles = FakeCareCircleRepository()
+        catalog = FakeMedicationCatalogRepository()
     }
 
     @After
@@ -68,6 +72,7 @@ class MedicationFormViewModelTest {
         stockRepository = stock,
         patientRepository = patients,
         careCircleRepository = circles,
+        catalogRepository = catalog,
         newId = { "generated-id" },
         timeZone = lisbon,
     )
@@ -384,5 +389,140 @@ class MedicationFormViewModelTest {
                     listOf(regimen(id = "reg-1", medicationId = "med-1", startDate = LocalDate.of(2026, 1, 1))),
                 ),
             )
+    }
+
+    // --- D31: name suggestions from the bundled catalogue ---------------------
+
+    private fun suggestion(
+        name: String = "Paracetamol Sandoz",
+        dci: String = "Paracetamol",
+        strength: String = "500 mg",
+        form: MedicationForm = MedicationForm.TABLET,
+        otc: Boolean = false,
+        packs: List<Int> = listOf(20, 60),
+    ) = MedicationSuggestion(
+        name = name,
+        dci = dci,
+        strength = strength,
+        form = form,
+        formText = "Comp. revest. p/ película",
+        packOptions = packs,
+        otc = otc,
+    )
+
+    @Test
+    fun `suggestions appear from two characters`() = runTest {
+        catalog.results = listOf(suggestion())
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            viewModel.onNameChanged("p")
+            assertTrue("one letter is not a search", catalog.queries.isEmpty())
+
+            viewModel.onNameChanged("par")
+            val state = awaitWhere { it.suggestions.isNotEmpty() }
+            assertEquals(listOf("par"), catalog.queries)
+            assertEquals("Paracetamol Sandoz", state.suggestions.first().name)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `picking a suggestion fills the step and keeps the fields on edit`() = runTest {
+        catalog.results = listOf(suggestion())
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.onNameChanged("par")
+            awaitWhere { it.suggestions.isNotEmpty() }
+
+            viewModel.onSuggestionPicked(viewModel.uiState.value.suggestions.first())
+            var state = viewModel.uiState.value
+            assertEquals("Paracetamol Sandoz", state.name)
+            assertEquals("Paracetamol", state.activeIngredient)
+            assertEquals("500 mg", state.strength)
+            assertEquals(MedicationForm.TABLET, state.form)
+            assertTrue(state.requiresPrescription)
+            assertTrue(state.suggestions.isEmpty())
+            assertEquals(listOf(20, 60), state.packOptions)
+            assertEquals(20, state.packUnits)
+
+            // Typing the name by hand afterwards keeps what the pick filled.
+            viewModel.onNameChanged("Paracetamol Sandoz (caixa antiga)")
+            state = viewModel.uiState.value
+            assertEquals("Paracetamol", state.activeIngredient)
+            assertEquals("500 mg", state.strength)
+            assertEquals(MedicationForm.TABLET, state.form)
+            // Suggestions may reappear for the new text; that is fine.
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `an OTC suggestion means no prescription`() = runTest {
+        catalog.results = listOf(suggestion(otc = true, packs = emptyList()))
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.onRequiresPrescriptionChanged(true)
+
+            viewModel.onNameChanged("para")
+            awaitWhere { it.suggestions.isNotEmpty() }
+            viewModel.onSuggestionPicked(viewModel.uiState.value.suggestions.first())
+
+            assertFalse(viewModel.uiState.value.requiresPrescription)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the pack chip fills an empty quantity`() = runTest {
+        catalog.results = listOf(suggestion())
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.onNameChanged("para")
+            awaitWhere { it.suggestions.isNotEmpty() }
+            viewModel.onSuggestionPicked(viewModel.uiState.value.suggestions.first())
+
+            viewModel.onUsePackQuantity(viewModel.uiState.value.packUnits!!)
+            assertEquals("20", viewModel.uiState.value.stockQuantity)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the circle's own medications come first`() = runTest {
+        meds.activeFlow.value = listOf(
+            withRegimens(medication(id = "med-1", name = "Paracetamol Ben-u-ron", strength = "500 mg")),
+        )
+        catalog.results = listOf(suggestion())
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            viewModel.onNameChanged("paracetamol")
+            val state = awaitWhere { it.suggestions.size > 1 }
+            assertTrue(state.suggestions.first().fromCircle)
+            assertEquals("Paracetamol Ben-u-ron", state.suggestions.first().name)
+            assertEquals("Paracetamol Sandoz", state.suggestions.last().name)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a failing catalogue leaves free text alone`() = runTest {
+        catalog.failure = IllegalStateException("no asset")
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            viewModel.onNameChanged("para")
+            viewModel.onNameChanged("parac")
+            assertTrue(viewModel.uiState.value.suggestions.isEmpty())
+            assertEquals("parac", viewModel.uiState.value.name)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 }

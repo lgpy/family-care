@@ -317,6 +317,9 @@
     <string name="meds_next">Seguinte</string>
     <string name="meds_previous">Voltar</string>
     <string name="meds_name_label">Nome</string>
+    <string name="meds_catalog_otc">Sem receita</string>
+    <string name="meds_catalog_footnote">Das listas públicas do INFARMED. Alguns medicamentos de marca não constam — escreva-os à mão.</string>
+    <string name="meds_stock_pack_chip">1 embalagem = %1$d</string>
     <string name="meds_ingredient_label">Substância ativa (opcional)</string>
     <string name="meds_strength_label">Dosagem (opcional)</string>
     <string name="meds_strength_helper">Como está na caixa, por exemplo 500 mg.</string>

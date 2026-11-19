@@ -4,6 +4,9 @@ import io.github.lgpy.familycare.feature.medications.dashboard.DosesTodayViewMod
 import io.github.lgpy.familycare.feature.medications.dashboard.LowStockViewModel
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionViewModel
 import io.github.lgpy.familycare.feature.medications.dashboard.ReminderHealthViewModel
+import io.github.lgpy.familycare.feature.medications.data.AssetMedicationCatalogRepository
+import io.github.lgpy.familycare.feature.medications.data.CatalogTsv
+import io.github.lgpy.familycare.feature.medications.data.MedicationCatalogRepository
 import io.github.lgpy.familycare.feature.medications.detail.MedicationDetailViewModel
 import io.github.lgpy.familycare.feature.medications.doses.DoseSlotViewModel
 import io.github.lgpy.familycare.feature.medications.form.MedicationFormViewModel
@@ -11,6 +14,7 @@ import io.github.lgpy.familycare.feature.medications.list.PatientMedicationsView
 import io.github.lgpy.familycare.feature.medications.regimen.ChangeRegimenViewModel
 import io.github.lgpy.familycare.feature.medications.shopping.ShoppingViewModel
 import java.time.LocalDateTime
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -25,6 +29,15 @@ import org.koin.dsl.module
  * registers from [io.github.lgpy.familycare.feature.medications.data.MedicationsData].
  */
 val medicationsModule: Module = module {
+
+    // D31: the medication-name catalogue, read once from the APK's assets and
+    // kept in memory. Registered here rather than in the app so the feature
+    // owns everything its screens need.
+    single<MedicationCatalogRepository> {
+        AssetMedicationCatalogRepository(
+            openAsset = { androidContext().assets.open(CatalogTsv.ASSET_NAME) },
+        )
+    }
 
     viewModel {
         DosesTodayViewModel(
@@ -75,6 +88,7 @@ val medicationsModule: Module = module {
             stockRepository = get(),
             patientRepository = get(),
             careCircleRepository = get(),
+            catalogRepository = get(),
         )
     }
 
