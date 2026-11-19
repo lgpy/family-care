@@ -125,7 +125,7 @@ Recommendation, not a requirement: simply tell each grandparent that their medic
 |---|---|
 | Access / portability | **Export per patient**: machine-readable (JSON) + human-readable (PDF) |
 | Rectification | Normal editing (history kept in the audit log) |
-| Erasure | **Delete patient**: hard-deletes all their data; the audit log keeps only a minimal record that a deletion happened. Backups expire it naturally within their retention period (documented) |
+| Erasure | **Delete patient**: the owner erases through one RPC (`core.erase_patient()`), which hard-deletes all their data and their prior audit rows, and keeps only a minimal record that a deletion happened (no clinical data). Backups expire it naturally within their retention period (30 daily / 12 monthly, at most a year) |
 | Restriction | **Archive patient**: read-only, no reminders, hidden from Today |
 
 ### Data minimisation

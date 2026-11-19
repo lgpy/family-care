@@ -186,7 +186,7 @@ Deno.serve(async (request) => {
     const { data: patientRows, error: patientError } = await supabase
       .schema('core')
       .from('patients')
-      .select('id, circle_id')
+      .select('id, circle_id, archived_at')
       .in('id', patientIds);
     if (patientError) throw patientError;
 
@@ -197,12 +197,19 @@ Deno.serve(async (request) => {
       ]),
     );
 
+    const archivedPatients = new Set(
+      (patientRows ?? [])
+        .filter((row: { archived_at: string | null }) => row.archived_at !== null)
+        .map((row: { id: string }) => row.id),
+    );
+
     const medications: ActiveStockMedication[] = medicationData
       .filter((row) => circleByPatient.has(row.patient_id))
       .map((row) => ({
         id: row.id,
         patient_id: row.patient_id,
         circle_id: circleByPatient.get(row.patient_id) as string,
+        patient_archived: archivedPatients.has(row.patient_id),
         low_stock_threshold_days: row.low_stock_threshold_days,
         requires_prescription: row.requires_prescription,
         prescription_valid_until: row.prescription_valid_until,
