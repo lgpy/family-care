@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.feature.appointments
 
 import io.github.lgpy.familycare.feature.appointments.agenda.AgendaViewModel
+import io.github.lgpy.familycare.feature.appointments.dashboard.NextSevenDaysViewModel
 import io.github.lgpy.familycare.feature.appointments.detail.AppointmentDetailViewModel
 import io.github.lgpy.familycare.feature.appointments.form.AppointmentFormViewModel
 import io.github.lgpy.familycare.feature.appointments.profile.PatientAppointmentsViewModel
@@ -18,6 +19,10 @@ import org.koin.dsl.module
  * [io.github.lgpy.familycare.feature.appointments.data.AppointmentsData].
  */
 val appointmentsModule: Module = module {
+
+    // Today's "Next 7 days" card (dashboard order 200). Missing in 0.3.0/0.4.0,
+    // which made Today crash on open; KoinViewModelRegistrationTest now guards it.
+    viewModel { NextSevenDaysViewModel(appointmentRepository = get()) }
 
     viewModel {
         AgendaViewModel(
