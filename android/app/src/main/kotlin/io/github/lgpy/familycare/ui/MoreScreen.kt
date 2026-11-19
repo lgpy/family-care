@@ -66,7 +66,9 @@ fun MoreScreen(
     val authRepository = koinInject<AuthRepository>()
     val authState by authRepository.state.collectAsState()
     var confirmingSignOut by remember { mutableStateOf(false) }
+    var confirmingSignOutAll by remember { mutableStateOf(false) }
     var signOutFailed by remember { mutableStateOf(false) }
+    var signOutAllFailed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -122,6 +124,22 @@ fun MoreScreen(
                     },
                 ) {
                     Text(text = stringResource(R.string.settings_sign_out))
+                }
+                // D30: revokes every refresh token, so the other phones go too.
+                TextButton(
+                    onClick = {
+                        signOutAllFailed = false
+                        confirmingSignOutAll = true
+                    },
+                ) {
+                    Text(text = stringResource(R.string.settings_sign_out_all))
+                }
+                if (signOutAllFailed) {
+                    Text(
+                        text = stringResource(R.string.settings_sign_out_all_failed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
                 if (signOutFailed) {
                     Text(
@@ -218,6 +236,30 @@ fun MoreScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmingSignOut = false }) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+    if (confirmingSignOutAll) {
+        AlertDialog(
+            onDismissRequest = { confirmingSignOutAll = false },
+            title = { Text(text = stringResource(R.string.sign_out_all_confirm_title)) },
+            text = { Text(text = stringResource(R.string.sign_out_all_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmingSignOutAll = false
+                        scope.launch {
+                            signOutAllFailed = authRepository.signOutEverywhere().isFailure
+                        }
+                    },
+                ) {
+                    Text(text = stringResource(R.string.sign_out_all_confirm_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingSignOutAll = false }) {
                     Text(text = stringResource(R.string.cancel))
                 }
             },

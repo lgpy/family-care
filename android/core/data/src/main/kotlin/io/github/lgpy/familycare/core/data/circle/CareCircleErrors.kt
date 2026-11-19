@@ -23,6 +23,12 @@ internal enum class RpcCall {
     LIST_INVITATIONS,
     REVOKE_INVITATION,
     REMOVE_MEMBER,
+
+    /** `core.erase_patient` (D30): owner only, and gone is gone. */
+    ERASE_PATIENT,
+
+    /** `core.log_patient_export` (D30): owners and caregivers, before a file. */
+    LOG_PATIENT_EXPORT,
 }
 
 /**

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientId
+import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.canWrite
 import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoRepository
 import io.github.lgpy.familycare.feature.patientinfo.domain.PatientInfo
@@ -24,16 +25,19 @@ import kotlinx.coroutines.flow.stateIn
 class PatientInfoViewModel(
     patientId: String,
     patientInfoRepository: PatientInfoRepository,
+    patientRepository: PatientRepository,
     careCircleRepository: CareCircleRepository,
 ) : ViewModel() {
 
     val uiState: StateFlow<PatientInfoUiState> = combine(
         patientInfoRepository.observe(PatientId(patientId)),
+        patientRepository.observe(PatientId(patientId)),
         careCircleRepository.myRole,
-    ) { info, role ->
+    ) { info, patient, role ->
         PatientInfoUiState(
             loaded = true,
-            canWrite = role.canWrite,
+            // An archived patient is read-only for everyone (D30).
+            canWrite = patient != null && role.canWrite(patient),
             info = info,
         )
     }.stateIn(

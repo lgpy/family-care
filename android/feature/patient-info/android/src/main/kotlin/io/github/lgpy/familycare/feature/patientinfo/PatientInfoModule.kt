@@ -21,6 +21,7 @@ val patientInfoModule: Module = module {
         PatientInfoViewModel(
             patientId = patientId,
             patientInfoRepository = get(),
+            patientRepository = get(),
             careCircleRepository = get(),
         )
     }

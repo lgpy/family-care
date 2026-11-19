@@ -120,6 +120,9 @@ dependencies {
     // the PowerSync schema, and its repositories are exposed to the screens (D5:
     // the app wires modules; the core never names one).
     implementation(project(":feature:medications:data"))
+    // The module's domain types, used by the export source this app assembles
+    // from the module's public data API (D30/D5).
+    implementation(project(":feature:medications:domain"))
 
     // The medications module's screens, view models and dashboard card (M3). The
     // app wires the module; no feature depends on another (D5).
@@ -129,10 +132,12 @@ dependencies {
     // the synced schema and its repository is exposed to Koin) and its screens
     // (M6/D29: the profile's allergies banner, Info tab and edit form).
     implementation(project(":feature:patient-info:data"))
+    implementation(project(":feature:patient-info:domain"))
     implementation(project(":feature:patient-info:android"))
     // M6 appointments (D29): its synced table joins the PowerSync schema and its
     // screens are wired into the shell's navigation.
     implementation(project(":feature:appointments:data"))
+    implementation(project(":feature:appointments:domain"))
     implementation(project(":feature:appointments:android"))
 
     implementation(platform(libs.androidx.compose.bom))
@@ -146,6 +151,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.fragment)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    // The export's JSON document (D30) is built with kotlinx.serialization.
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)

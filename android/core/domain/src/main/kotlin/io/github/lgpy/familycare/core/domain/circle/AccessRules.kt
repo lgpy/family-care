@@ -31,6 +31,16 @@ fun MemberRole?.can(action: CircleAction): Boolean = when (action) {
     CircleAction.MANAGE -> this == MemberRole.OWNER
 }
 
+/**
+ * Whether [this] role may write [patient]'s data.
+ *
+ * An archived patient is read-only for everyone (D30): the database refuses
+ * writes to their rows with `42501 patient is archived`, so a screen must not
+ * offer one either. Only the owner clearing the flag ([Patient.isArchived])
+ * changes an archived patient, which the archive/unarchive actions do.
+ */
+fun MemberRole?.canWrite(patient: Patient): Boolean = canWrite && !patient.isArchived
+
 /** Any member may read the circle's data. */
 val MemberRole?.canRead: Boolean get() = can(CircleAction.READ)
 

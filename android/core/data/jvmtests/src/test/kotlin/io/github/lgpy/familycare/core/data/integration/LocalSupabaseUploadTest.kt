@@ -209,6 +209,7 @@ class LocalSupabaseUploadTest {
         PowerSyncPatientRepository(
             database = local.database,
             authState = MutableStateFlow<AuthState>(AuthState.SignedIn(user.userId, user.email)),
+            rpc = UnusedPatientRpc,
             newId = ::newPatientId,
         )
 

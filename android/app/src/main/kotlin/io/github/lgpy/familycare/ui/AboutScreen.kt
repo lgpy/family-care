@@ -1,5 +1,6 @@
 package io.github.lgpy.familycare.ui
 
+import io.github.lgpy.familycare.BuildConfig
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,6 +32,14 @@ fun AboutScreen(
         Text(
             text = stringResource(R.string.about_body),
             style = MaterialTheme.typography.bodyLarge,
+        )
+        Text(
+            text = stringResource(
+                R.string.about_version,
+                BuildConfig.VERSION_NAME,
+                BuildConfig.VERSION_CODE,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
         )
         TextButton(onClick = onBack) {
             Text(text = stringResource(R.string.back))

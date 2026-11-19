@@ -158,6 +158,41 @@ class FakePatientRepository : PatientRepository {
         saved += patient
         return saveResult ?: CoreResult.Success(patient.id)
     }
+
+    val archivedFlow = MutableStateFlow<List<Patient>>(emptyList())
+    override val archivedPatients: Flow<List<Patient>> = archivedFlow
+
+    var archiveResult: CoreResult<PatientId>? = null
+    var eraseResult: CoreResult<PatientId>? = null
+    val archived = mutableListOf<PatientId>()
+    val unarchived = mutableListOf<PatientId>()
+    val erased = mutableListOf<PatientId>()
+
+    override suspend fun archive(patientId: PatientId): CoreResult<PatientId> {
+        archived += patientId
+        return archiveResult ?: CoreResult.Success(patientId)
+    }
+
+    override suspend fun unarchive(patientId: PatientId): CoreResult<PatientId> {
+        unarchived += patientId
+        return archiveResult ?: CoreResult.Success(patientId)
+    }
+
+    override suspend fun erase(patientId: PatientId): CoreResult<PatientId> {
+        erased += patientId
+        return eraseResult ?: CoreResult.Success(patientId)
+    }
+
+    val exports = mutableListOf<Pair<PatientId, io.github.lgpy.familycare.core.domain.circle.PatientExportFormat>>()
+    var exportResult: CoreResult<Unit> = CoreResult.Success(Unit)
+
+    override suspend fun logExport(
+        patientId: PatientId,
+        format: io.github.lgpy.familycare.core.domain.circle.PatientExportFormat,
+    ): CoreResult<Unit> {
+        exports += patientId to format
+        return exportResult
+    }
 }
 
 class FakeProfileRepository : ProfileRepository {

@@ -2,12 +2,15 @@ package io.github.lgpy.familycare.core.data.circle
 
 import com.powersync.PowerSyncDatabase
 import com.powersync.db.getString
+import io.github.lgpy.familycare.core.data.sync.UploadFailure
 import io.github.lgpy.familycare.core.domain.auth.AuthState
 import io.github.lgpy.familycare.core.domain.circle.CareCircleId
 import io.github.lgpy.familycare.core.domain.circle.CoreError
 import io.github.lgpy.familycare.core.domain.circle.CoreResult
+import io.github.lgpy.familycare.core.domain.circle.CoreUnitResult
 import io.github.lgpy.familycare.core.domain.circle.MemberRole
 import io.github.lgpy.familycare.core.domain.circle.Patient
+import io.github.lgpy.familycare.core.domain.circle.PatientExportFormat
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRules
@@ -23,6 +26,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * [PatientRepository] over the local, encrypted PowerSync database.
@@ -40,7 +45,9 @@ import kotlinx.coroutines.flow.map
 internal class PowerSyncPatientRepository(
     private val database: PowerSyncDatabase,
     private val authState: StateFlow<AuthState>,
+    private val rpc: PatientRpc,
     private val newId: () -> String = { UUID.randomUUID().toString() },
+    private val now: () -> Instant = { Clock.System.now() },
 ) : PatientRepository {
 
     private val signedInUserId: Flow<String?> = authState
@@ -55,6 +62,17 @@ internal class PowerSyncPatientRepository(
                 .map { rows -> rows.mapNotNull { it.toPatient() } }
         }
     }
+
+    override val archivedPatients: Flow<List<Patient>> =
+        signedInUserId.flatMapLatest { userId ->
+            if (userId == null) {
+                flowOf(emptyList())
+            } else {
+                database.watch(SELECT_ARCHIVED_PATIENTS, listOf(userId)) { cursor ->
+                    cursor.toPatientRow()
+                }.map { rows -> rows.mapNotNull { it.toPatient() } }
+            }
+        }
 
     override fun observe(patientId: PatientId): Flow<Patient?> =
         signedInUserId.flatMapLatest { userId ->
@@ -159,6 +177,129 @@ internal class PowerSyncPatientRepository(
             throw cancellation
         } catch (_: Exception) {
             CoreResult.Failure(CoreError.Unknown)
+        }
+    }
+
+    override suspend fun archive(patientId: PatientId): CoreResult<PatientId> =
+        setArchived(patientId, archivedAt = now().toString())
+
+    override suspend fun unarchive(patientId: PatientId): CoreResult<PatientId> =
+        setArchived(patientId, archivedAt = null)
+
+    /**
+     * Sets or clears `archived_at` locally: one UPDATE of one column, which
+     * PowerSync uploads as a PATCH. The rest of the row is untouched, so
+     * archiving never revalidates (or rewrites) a patient's form values, and an
+     * offline archive syncs when the network returns.
+     */
+    private suspend fun setArchived(
+        patientId: PatientId,
+        archivedAt: String?,
+    ): CoreResult<PatientId> {
+        val userId = signedInUserId.first()
+            ?: return CoreResult.Failure(CoreError.NotAllowed)
+
+        val role = database.getOptional(SELECT_MY_ROLE, listOf(userId)) { cursor ->
+            cursor.toRoleRow()
+        }?.toRole() ?: return CoreResult.Failure(CoreError.NotAllowed)
+
+        // D30: owners only, the same rule as `core.can(patient, 'manage')`.
+        if (role != MemberRole.OWNER) {
+            return CoreResult.Failure(CoreError.NotAllowed)
+        }
+
+        val present = database.getOptional(
+            SELECT_PATIENT,
+            listOf(patientId.value, userId),
+        ) { cursor -> cursor.getString("id") } != null
+        if (!present) {
+            return CoreResult.Failure(CoreError.NotFound)
+        }
+
+        return try {
+            database.writeTransaction { tx ->
+                tx.execute(
+                    sql = UPDATE_PATIENT_ARCHIVED_AT,
+                    parameters = listOf(archivedAt, patientId.value),
+                )
+            }
+            CoreResult.Success(patientId)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            CoreResult.Failure(CoreError.Unknown)
+        }
+    }
+
+    override suspend fun erase(patientId: PatientId): CoreResult<PatientId> {
+        val userId = signedInUserId.first()
+            ?: return CoreResult.Failure(CoreError.NotAllowed)
+
+        // Owners only; the server checks it too, and it is the authority. A
+        // local check keeps a caregiver from starting a call that can only fail.
+        val role = database.getOptional(SELECT_MY_ROLE, listOf(userId)) { cursor ->
+            cursor.toRoleRow()
+        }?.toRole() ?: return CoreResult.Failure(CoreError.NotAllowed)
+        if (role != MemberRole.OWNER) {
+            return CoreResult.Failure(CoreError.NotAllowed)
+        }
+
+        val present = database.getOptional(
+            SELECT_PATIENT,
+            listOf(patientId.value, userId),
+        ) { cursor -> cursor.getString("id") } != null
+        if (!present) {
+            return CoreResult.Failure(CoreError.NotFound)
+        }
+
+        return try {
+            rpc.erasePatient(patientId.value)
+            // The local row goes away when the sync brings the delete. A local
+            // DELETE would be queued and uploaded as a direct `core.patients`
+            // delete, which the server refuses from M7 on.
+            CoreResult.Success(patientId)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            CoreResult.Failure(
+                careCircleErrorOf(UploadFailure.of(error), error.message, RpcCall.ERASE_PATIENT),
+            )
+        }
+    }
+
+    override suspend fun logExport(
+        patientId: PatientId,
+        format: PatientExportFormat,
+    ): CoreUnitResult {
+        val userId = signedInUserId.first()
+            ?: return CoreResult.Failure(CoreError.NotAllowed)
+
+        // D30: owners and caregivers export; viewers never do. The server checks
+        // `core.can(patient, 'read')` and the role again, and is the authority.
+        val role = database.getOptional(SELECT_MY_ROLE, listOf(userId)) { cursor ->
+            cursor.toRoleRow()
+        }?.toRole() ?: return CoreResult.Failure(CoreError.NotAllowed)
+        if (!role.canWrite) {
+            return CoreResult.Failure(CoreError.NotAllowed)
+        }
+
+        val present = database.getOptional(
+            SELECT_PATIENT,
+            listOf(patientId.value, userId),
+        ) { cursor -> cursor.getString("id") } != null
+        if (!present) {
+            return CoreResult.Failure(CoreError.NotFound)
+        }
+
+        return try {
+            rpc.logPatientExport(patientId.value, format.serverValue)
+            CoreResult.Success(Unit)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            CoreResult.Failure(
+                careCircleErrorOf(UploadFailure.of(error), error.message, RpcCall.LOG_PATIENT_EXPORT),
+            )
         }
     }
 }

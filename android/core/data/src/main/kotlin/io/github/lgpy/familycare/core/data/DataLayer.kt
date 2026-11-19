@@ -13,6 +13,7 @@ import io.github.lgpy.familycare.core.data.circle.PowerSyncCareCircleRepository
 import io.github.lgpy.familycare.core.data.circle.PowerSyncPatientRepository
 import io.github.lgpy.familycare.core.data.circle.PowerSyncProfileRepository
 import io.github.lgpy.familycare.core.data.circle.SupabaseCareCircleRpc
+import io.github.lgpy.familycare.core.data.circle.SupabasePatientRpc
 import io.github.lgpy.familycare.core.data.push.SupabasePushDeviceRepository
 import io.github.lgpy.familycare.core.data.sync.AndroidKeystoreCipher
 import io.github.lgpy.familycare.core.data.sync.CoreSyncedTables
@@ -161,6 +162,7 @@ class DataLayer internal constructor(
                 patientRepository = PowerSyncPatientRepository(
                     database = database,
                     authState = authRepository.state,
+                    rpc = SupabasePatientRpc(supabase.postgrest),
                 ),
                 profileRepository = PowerSyncProfileRepository(
                     database = database,

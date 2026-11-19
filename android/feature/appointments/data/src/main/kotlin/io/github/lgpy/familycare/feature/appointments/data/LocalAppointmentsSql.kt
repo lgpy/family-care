@@ -54,9 +54,12 @@ internal const val SELECT_PATIENT_APPOINTMENTS = APPOINTMENT_SELECT + """
     ORDER BY a.starts_local, a.id
 """
 
-/** Every appointment of the circles the signed-in user belongs to. */
+/** Every appointment of the circles the signed-in user belongs to, except those
+ * of archived patients (D30: archived patients are hidden from the Agenda, the
+ * Next 7 days card and the appointment reminders). */
 internal const val SELECT_CIRCLE_APPOINTMENTS = APPOINTMENT_SELECT + """
     WHERE p.circle_id IN (SELECT circle_id FROM memberships WHERE user_id = ?)
+      AND p.archived_at IS NULL
     ORDER BY a.starts_local, a.id
 """
 

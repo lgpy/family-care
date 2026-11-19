@@ -55,6 +55,7 @@ class LocalPatientRepositoryTest {
         repository = PowerSyncPatientRepository(
             database = local.database,
             authState = authState,
+            rpc = UnusedPatientRpc,
             newId = { PATIENT_ID },
         )
     }
@@ -185,7 +186,12 @@ class LocalPatientRepositoryTest {
         viewer.seedMembership(userId = viewer.userId, role = LocalDatabase.VIEWER)
         viewer.database.drainUploadQueue()
         val viewerState = MutableStateFlow<AuthState>(AuthState.SignedIn(viewer.userId, "viewer@example.test"))
-        val viewerRepository = PowerSyncPatientRepository(viewer.database, viewerState) { PATIENT_ID }
+        val viewerRepository = PowerSyncPatientRepository(
+            viewer.database,
+            viewerState,
+            UnusedPatientRpc,
+            newId = { PATIENT_ID },
+        )
 
         val patient = viewerRepository.newPatient(CareCircleId(viewer.circleId), "Grandma")
 

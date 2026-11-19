@@ -42,6 +42,14 @@ class PatientProfileViewModelTest {
     private lateinit var patients: FakePatientRepository
     private lateinit var circles: FakeCareCircleRepository
 
+    private val exporter by lazy {
+        io.github.lgpy.familycare.core.ui.export.PatientExporter(
+            patientRepository = patients,
+            sources = io.github.lgpy.familycare.core.ui.export.PatientExportSources(emptyList()),
+            directory = java.io.File(System.getProperty("java.io.tmpdir"), "family-care-test-exports"),
+        )
+    }
+
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -80,6 +88,7 @@ class PatientProfileViewModelTest {
         patientRepository = patients,
         careCircleRepository = circles,
         timelineSources = TimelineSources(sources.toList()),
+        exporter = exporter,
         zone = zone,
     )
 
@@ -143,6 +152,7 @@ class PatientProfileViewModelTest {
             patientRepository = patients,
             careCircleRepository = circles,
             timelineSources = TimelineSources(emptyList()),
+            exporter = exporter,
             zone = zone,
         )
 

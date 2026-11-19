@@ -26,6 +26,8 @@ data class PatientRowUi(
  */
 data class PatientsUiState(
     val patients: List<PatientRowUi> = emptyList(),
+    /** The circle's archived patients, shown collapsed at the bottom (D30). */
+    val archivedPatients: List<PatientRowUi> = emptyList(),
     val canWrite: Boolean = false,
     val loaded: Boolean = false,
 )
@@ -42,18 +44,18 @@ class PatientsViewModel(
 
     val uiState: StateFlow<PatientsUiState> = combine(
         patientRepository.patients,
+        patientRepository.archivedPatients,
         careCircleRepository.members,
         careCircleRepository.myRole,
-    ) { patients, members, role ->
+    ) { patients, archived, members, role ->
         val names = members.associate { it.userId to it.displayName }
+        fun row(patient: Patient) = PatientRowUi(
+            patient = patient,
+            primaryCaregiverName = patient.primaryCaregiverId?.let { names[it] },
+        )
         PatientsUiState(
-            patients = patients.map { patient ->
-                PatientRowUi(
-                    patient = patient,
-                    primaryCaregiverName =
-                        patient.primaryCaregiverId?.let { names[it] },
-                )
-            },
+            patients = patients.map(::row),
+            archivedPatients = archived.map(::row),
             canWrite = role.canWrite,
             loaded = true,
         )
