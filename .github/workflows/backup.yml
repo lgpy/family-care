@@ -11,6 +11,10 @@ on:
   schedule:
     # 02:17 UTC every night, after the provider's own maintenance window.
     - cron: "17 2 * * *"
+    # A second run at 05:47 UTC: GitHub may delay or silently drop scheduled
+    # runs (the first night, 2026-11-19, had none at all). Two small backups a
+    # day cost nothing; one missing night is what the RPO cannot afford.
+    - cron: "47 5 * * *"
   workflow_dispatch:
     inputs:
       environment:
