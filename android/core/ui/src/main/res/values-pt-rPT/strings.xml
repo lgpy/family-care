@@ -623,4 +623,34 @@
     <string name="appointments_push_body">Uma consulta foi marcada ou alterada</string>
     <string name="appointments_card_title">Próximos 7 dias</string>
     <string name="appointments_card_more">+%1$d mais</string>
+
+    <!-- M7/D30: More → Activity, the owner-only audit feed. -->
+    <string name="more_activity">Atividade</string>
+    <string name="more_activity_body">Veja quem alterou o quê no círculo.</string>
+    <string name="activity_title">Atividade</string>
+    <string name="activity_refresh">Atualizar</string>
+    <string name="activity_load_more">Carregar mais</string>
+    <string name="activity_empty">Ainda não há atividade.</string>
+    <string name="activity_offline">Está offline. A atividade precisa de ligação.</string>
+    <string name="activity_not_allowed">Só os donos podem ver a atividade.</string>
+    <string name="activity_error">Algo falhou. Tente novamente.</string>
+    <string name="activity_someone">Alguém</string>
+    <string name="activity_added_medication">%1$s adicionou o medicamento %2$s a %3$s</string>
+    <string name="activity_updated_medication">%1$s alterou o medicamento %2$s de %3$s</string>
+    <string name="activity_removed_medication">%1$s removeu o medicamento %2$s de %3$s</string>
+    <string name="activity_recorded_dose">%1$s registou uma toma de %2$s para %3$s</string>
+    <string name="activity_added_appointment">%1$s marcou a consulta %2$s para %3$s</string>
+    <string name="activity_updated_appointment">%1$s alterou a consulta %2$s de %3$s</string>
+    <string name="activity_removed_appointment">%1$s eliminou a consulta %2$s de %3$s</string>
+    <string name="activity_updated_patient_info">%1$s atualizou a informação de %2$s</string>
+    <string name="activity_added_patient">%1$s adicionou o doente %2$s</string>
+    <string name="activity_updated_patient">%1$s atualizou %2$s</string>
+    <string name="activity_removed_patient">%1$s removeu %2$s</string>
+    <string name="activity_changed_circle">%1$s alterou o círculo familiar</string>
+    <string name="activity_changed_invitations">%1$s alterou os convites</string>
+    <string name="activity_signed_in">%1$s iniciou sessão</string>
+    <string name="activity_signed_out">%1$s terminou sessão</string>
+    <string name="activity_erased_patient">%1$s apagou um doente</string>
+    <string name="activity_exported_patient_data">%1$s exportou os dados de %2$s</string>
+    <string name="activity_changed">%1$s alterou %2$s</string>
 </resources>

@@ -624,4 +624,34 @@
     <string name="appointments_push_body">An appointment was added or changed</string>
     <string name="appointments_card_title">Next 7 days</string>
     <string name="appointments_card_more">+%1$d more</string>
+
+    <!-- M7/D30: More → Activity, the owner-only audit feed. -->
+    <string name="more_activity">Activity</string>
+    <string name="more_activity_body">See who changed what in the circle.</string>
+    <string name="activity_title">Activity</string>
+    <string name="activity_refresh">Refresh</string>
+    <string name="activity_load_more">Load more</string>
+    <string name="activity_empty">No activity yet.</string>
+    <string name="activity_offline">You are offline. Activity needs a connection.</string>
+    <string name="activity_not_allowed">Only owners can see the activity.</string>
+    <string name="activity_error">Something went wrong. Try again.</string>
+    <string name="activity_someone">Someone</string>
+    <string name="activity_added_medication">%1$s added medication %2$s for %3$s</string>
+    <string name="activity_updated_medication">%1$s updated medication %2$s for %3$s</string>
+    <string name="activity_removed_medication">%1$s removed medication %2$s for %3$s</string>
+    <string name="activity_recorded_dose">%1$s recorded a dose of %2$s for %3$s</string>
+    <string name="activity_added_appointment">%1$s added appointment %2$s for %3$s</string>
+    <string name="activity_updated_appointment">%1$s changed appointment %2$s for %3$s</string>
+    <string name="activity_removed_appointment">%1$s removed appointment %2$s for %3$s</string>
+    <string name="activity_updated_patient_info">%1$s updated %2$s\'s info</string>
+    <string name="activity_added_patient">%1$s added patient %2$s</string>
+    <string name="activity_updated_patient">%1$s updated %2$s</string>
+    <string name="activity_removed_patient">%1$s removed %2$s</string>
+    <string name="activity_changed_circle">%1$s changed the family circle</string>
+    <string name="activity_changed_invitations">%1$s changed the invitations</string>
+    <string name="activity_signed_in">%1$s signed in</string>
+    <string name="activity_signed_out">%1$s signed out</string>
+    <string name="activity_erased_patient">%1$s erased a patient</string>
+    <string name="activity_exported_patient_data">%1$s exported %2$s\'s data</string>
+    <string name="activity_changed">%1$s changed %2$s</string>
 </resources>

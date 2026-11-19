@@ -26,6 +26,9 @@ internal enum class RpcCall {
 
     /** `core.erase_patient` (D30): owner only, and gone is gone. */
     ERASE_PATIENT,
+
+    /** `core.circle_activity` (D30): owner only, online only. */
+    CIRCLE_ACTIVITY,
 }
 
 /**

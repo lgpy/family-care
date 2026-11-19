@@ -6,6 +6,7 @@ import io.github.lgpy.familycare.BuildConfig
 import io.github.lgpy.familycare.auth.GoogleSignIn
 import io.github.lgpy.familycare.auth.PushAwareAuthRepository
 import io.github.lgpy.familycare.core.data.DataLayer
+import io.github.lgpy.familycare.core.data.activity.ActivityRepository
 import io.github.lgpy.familycare.core.data.auth.AuthRepository
 import io.github.lgpy.familycare.core.data.sync.SyncService
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
@@ -67,6 +68,7 @@ import io.github.lgpy.familycare.feature.patientinfo.profile.InfoPatientTab
 import io.github.lgpy.familycare.ui.MoreViewModel
 import io.github.lgpy.familycare.ui.SignInViewModel
 import io.github.lgpy.familycare.ui.TodayViewModel
+import io.github.lgpy.familycare.ui.activity.ActivityViewModel
 import io.github.lgpy.familycare.ui.circle.CircleGateViewModel
 import io.github.lgpy.familycare.ui.circle.FamilyCircleViewModel
 import io.github.lgpy.familycare.ui.patients.PatientFormViewModel
@@ -137,6 +139,8 @@ val appModule: Module = module {
     single<CareCircleRepository> { get<DataLayer>().careCircleRepository }
     single<PatientRepository> { get<DataLayer>().patientRepository }
     single<ProfileRepository> { get<DataLayer>().profileRepository }
+    // D30: the owner-only activity feed; online, because the audit log is not synced.
+    single<ActivityRepository> { get<DataLayer>().activityRepository }
 
     // M3 medications. The module builds its repositories from the same local
     // database; screens inject only the interfaces.
@@ -339,6 +343,7 @@ val appModule: Module = module {
     viewModel { FamilyCircleViewModel(careCircleRepository = get()) }
     viewModel { YourNameViewModel(profileRepository = get()) }
     viewModel { MoreViewModel(profileRepository = get()) }
+    viewModel { ActivityViewModel(activityRepository = get(), careCircleRepository = get()) }
 
     // App shell: the message about a change the server refused. It only needs
     // the sync state, which is a domain type.

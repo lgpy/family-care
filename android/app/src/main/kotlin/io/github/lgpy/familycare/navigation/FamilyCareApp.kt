@@ -44,6 +44,7 @@ import io.github.lgpy.familycare.feature.patientinfo.edit.PatientInfoEditScreen
 import io.github.lgpy.familycare.ui.AboutScreen
 import io.github.lgpy.familycare.ui.MoreScreen
 import io.github.lgpy.familycare.ui.TodayScreen
+import io.github.lgpy.familycare.ui.activity.ActivityScreen
 import io.github.lgpy.familycare.ui.circle.FamilyCircleScreen
 import io.github.lgpy.familycare.ui.patients.PatientFormScreen
 import io.github.lgpy.familycare.ui.patients.PatientProfileScreen
@@ -194,11 +195,15 @@ fun FamilyCareApp(
                         navController.navigate(Destination.Reminders.route)
                     },
                     onOpenYourName = { navController.navigate(Destination.YourName.route) },
+                    onOpenActivity = { navController.navigate(Destination.Activity.route) },
                     onOpenAbout = { navController.navigate(Destination.About.route) },
                 )
             }
             composable(Destination.FamilyCircle.route) {
                 FamilyCircleScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Destination.Activity.route) {
+                ActivityScreen(onBack = { navController.popBackStack() })
             }
             composable(Destination.Reminders.route) {
                 RemindersScreen(onBack = { navController.popBackStack() })

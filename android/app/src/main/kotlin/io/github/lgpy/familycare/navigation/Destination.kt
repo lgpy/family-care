@@ -28,6 +28,7 @@ enum class Destination(val route: String) {
     Shopping(MedicationsRoutes.SHOPPING),
     More("more"),
     FamilyCircle("more/family-circle"),
+    Activity("more/activity"),
     Reminders(ReminderRoutes.SETUP),
     YourName("more/your-name"),
     PatientNew("patients/new"),
