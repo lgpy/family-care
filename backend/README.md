@@ -56,7 +56,7 @@ Nothing in this repository links to a remote project: linking and `db push` are
 done by hand, on purpose, so a stray command cannot touch prod. Dev holds
 invented test data only — never real health data.
 
-## What exists so far (M1–M6)
+## What exists so far (M1–M7)
 
 M1 (walking skeleton):
 
@@ -502,6 +502,97 @@ Do this on **dev** first, never against prod without the build-plan §5 gate.
    `select * from net._http_response order by id desc limit 5;` plus the function
    logs in the dashboard. An update of `notes` must produce no request; changing
    `starts_local` must produce one.
+
+## M7 (patient lifecycle: archive, erase, export, activity)
+
+Database — `migrations/20261123120000_patient_lifecycle.sql`
+(`docs/domain/patient-lifecycle.md`, D30; touches every module's tables).
+Archive, erasure, export logging and the Activity feed share one transaction-
+local flag, so they land together.
+
+- **Archive is enforced read-only.** `core.patients.archived_at` (added in M2)
+  is now honoured: `core.assert_patient_writable(patient_id)` raises `42501`
+  with message `patient is archived` when the patient is archived. BEFORE
+  INSERT/UPDATE/DELETE triggers on `meds.medications`, `meds.regimens`,
+  `meds.dose_log`, `meds.stock_movements`, `appointments.appointments`,
+  `info.patient_info` and `core.patient_access_overrides` call it (the meds
+  tables without a `patient_id` resolve it through `medication_id`). On
+  `core.patients`, `core.check_patient_archive()` lets **only an owner** set or
+  clear `archived_at`; while archived, the only accepted update is clearing it.
+  Server jobs (`auth.uid()` null) are not exempt: the rule is in the database,
+  not the app.
+- **Hidden from server jobs.** `meds.effective_reminder` (same columns and
+  grants) now also requires `p.archived_at is null`, which covers escalation.
+  `functions/stock-low/index.ts` marks medicines of archived patients with
+  `patient_archived`; the pure planner in `_shared/stockAlerts.ts` skips them
+  and clears their `meds.stock_alerts` row like a stopped medicine, and
+  `appointments.notify_appointment_changed()` returns early for an archived
+  patient.
+- **Erase is the only delete path.** `core.erase_patient(p_patient_id)`
+  (`security definer`, authenticated only): checks `core.can(p, 'manage')`,
+  sets `familycare.erasing_patient` transaction-locally, deletes the patient's
+  `core.audit_log` rows, writes one minimal `event_kind = 'security'` row
+  (`action = 'patient.erased'`, `table_name = 'patients'`, `record_id = id`,
+  `circle_id`, actor, **null** `patient_id`/`old_data`/`new_data`) and deletes
+  the patient. Cascades remove medications → regimens → dose log, stock
+  movements/alerts/escalations, appointments, patient info and access
+  overrides. `DELETE` is revoked from `authenticated` on `core.patients` and
+  the old owner delete policy is dropped, so the RPC is the only path.
+  Every audit trigger (core, meds, appointments, info) skips rows whose patient
+  is being erased, and `core.audit_log_is_append_only()` opens a DELETE window
+  for exactly those rows while the flag names that patient (a client still has
+  no DELETE privilege, so it cannot open the window itself).
+- **Cascade attribution.** A medication's `BEFORE DELETE` trigger stashes its
+  `patient_id`/`circle_id` in transaction-local settings; `core.patients` does
+  the same for its circle. The four audit functions fall back to those stashes,
+  so deleting a medication still gives its cascaded regimens and dose-log rows
+  their patient and circle (previously they were null because the parent was
+  already gone).
+- **Export.** `core.log_patient_export(p_patient_id, p_format)`
+  (`'json'|'pdf'`, else `22023`) requires `core.can(p, 'write')` (owner or
+  caregiver, `42501` otherwise) and writes one `security` row
+  `action = 'patient.exported'` with `new_data = {"format": …}` and no health
+  data. It works for archived patients; the app calls it before building the
+  file, so export needs a connection.
+- **Activity.** `core.circle_activity(p_circle_id, p_before default null,
+  p_limit default 50)` returns `(id, occurred_at, event_kind, action,
+  table_name, record_id, actor_id, actor_name, patient_id, patient_name,
+  label)`, newest first, `occurred_at < p_before` for paging, `p_limit` clamped
+  to 1..200. Owner only (`core.can_circle(p_circle_id, 'manage')`, else
+  `42501`). It includes the circle's audit rows **and** its current members'
+  `auth.sign_in` / `auth.session_ended` rows (which have no `circle_id`).
+  `label` is a short non-clinical string from `new_data`/`old_data`:
+  medication name, appointment `coalesce(title, kind)`, patient display name,
+  member/invitation **role** (never an email); regimens/dose-log/stock rows
+  look up the medication name and patient-info rows the patient name. The
+  function never returns `old_data`/`new_data`.
+- **Hosted security-advisor fixes.** The migration moves `pg_net` from
+  `public` to the `extensions` schema (`drop extension` + `create extension …
+  with schema extensions`, tolerant of images without it; its functions stay
+  in `net`, so `core.post_to_function` is unaffected) and revokes EXECUTE on
+  `public.rls_auto_enable()` from `anon`, `authenticated` and `public` when
+  that hosted-only function exists.
+- The remaining "authenticated can execute SECURITY DEFINER function" advisor
+  notices are accepted: they are the intended RPCs (`core.create_circle`,
+  `core.erase_patient`, `core.circle_activity`, `core.log_patient_export`, …)
+  and the access helpers that RLS policies call as the caller
+  (`core.can`, `core.can_circle`, `core.circle_role`,
+  `core.shares_circle_with`, `meds.patient_of_medication`). Each either checks
+  `auth.uid()` itself or reveals only the caller's own membership/role; none
+  takes a role or user id from the caller to act as someone else.
+
+### Running the M7 tests locally
+
+`npx supabase@latest test db` (from `backend/`) runs
+`supabase/tests/lifecycle_test.sql` with the rest. It covers archive refusal by
+role, every child table of an archived patient, unarchive and write-again, the
+reminder view, the erase rules (caregiver/viewer refused, owner ok, no child or
+audit rows left, exactly one minimal `patient.erased` row, direct delete
+refused), cascade attribution for a medication delete, export logging, the
+Activity feed (owner only, sign-in inclusion, paging, both limit clamps, no
+old/new columns) and the quiet appointment push for an archived patient.
+`db lint --level error` and the Deno suite/type-check in `supabase/functions/`
+are unchanged.
 
 ## Tests
 

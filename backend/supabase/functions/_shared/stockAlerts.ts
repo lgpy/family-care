@@ -40,6 +40,11 @@ export interface ActiveStockMedication extends StockMedication {
   id: string;
   patient_id: string;
   circle_id: string;
+  /**
+   * The patient is archived (D30): the medication is hidden from the job, so
+   * it is never low here and its alert row is cleared like a stopped one.
+   */
+  patient_archived?: boolean;
 }
 
 /** A `meds.stock_movements` row as the job reads it (one medication each). */
@@ -188,6 +193,10 @@ export function planStockAlerts(input: StockAlertInput): StockAlertPlan {
   const low: string[] = [];
 
   for (const medication of input.medications) {
+    // An archived patient is hidden from every server job (D30). It is not
+    // low here, so its ledger row falls out through `cleared` below.
+    if (medication.patient_archived) continue;
+
     const regimens = regimensByMedication.get(medication.id) ?? [];
     // No regimen means no scheduled consumption, so days remaining is unknown
     // and the medication can never be low.

@@ -20,7 +20,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(137);
+select plan(138);
 
 -- --- Fixtures ---------------------------------------------------------------
 -- Eight users. Alice owns circle A; Bob is a caregiver, Carol a viewer and Erin
@@ -317,11 +317,11 @@ select results_eq(
   $$ values ('Bob renamed') $$,
   'caregiver can update a patient');
 
-select is_empty(
+select throws_ok(
   $$ delete from core.patients
-      where id = '40000000-0000-4000-8000-000000000004'
-      returning id $$,
-  'caregiver cannot delete a patient (manage)');
+      where id = '40000000-0000-4000-8000-000000000004' $$,
+  '42501', null,
+  'caregiver cannot delete a patient (delete privilege is reserved for the RPC)');
 
 select throws_ok(
   $$ select core.remove_member('30000000-0000-4000-8000-000000000003') $$,
@@ -360,11 +360,11 @@ select is_empty(
       returning id $$,
   'viewer updates zero patient rows');
 
-select is_empty(
+select throws_ok(
   $$ delete from core.patients
-      where id = '40000000-0000-4000-8000-000000000001'
-      returning id $$,
-  'viewer deletes zero patient rows');
+      where id = '40000000-0000-4000-8000-000000000001' $$,
+  '42501', null,
+  'viewer cannot delete a patient (delete privilege is reserved for the RPC)');
 
 select throws_ok(
   $$ select core.create_invitation('20000000-0000-4000-8000-00000000000a',
@@ -732,27 +732,28 @@ select is((
      and action = 'update'), 'Bob renamed',
   'a patient update stores the new value');
 
--- The owner deletes that patient: the log keeps the row even though the
--- patient is gone (no foreign keys on audit_log, by design).
+-- The owner can no longer delete directly (D30): the RPC is the only path,
+-- and it removes the patient's audit history rather than keeping old_data.
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
 
-select lives_ok(
+select throws_ok(
   $$ delete from core.patients
       where id = '40000000-0000-4000-8000-000000000004' $$,
-  'the owner can delete a patient');
+  '42501', null,
+  'a direct delete of a patient is refused; core.erase_patient() is the only path');
+
+select lives_ok(
+  $$ select core.erase_patient('40000000-0000-4000-8000-000000000004') $$,
+  'the owner can erase a patient through the RPC');
 
 reset role;
 
 select is((
   select count(*)::int from core.audit_log
    where table_name = 'patients'
-     and record_id = '40000000-0000-4000-8000-000000000004'
-     and action = 'delete'
-     and actor_id = '10000000-0000-4000-8000-000000000001'
-     and old_data ->> 'display_name' = 'Bob renamed'
-     and new_data is null), 1,
-  'a patient delete writes an audit row with the old values and the actor');
+     and record_id = '40000000-0000-4000-8000-000000000004'), 1,
+  'erasure leaves exactly one minimal patient.erased row for the patient');
 
 select is((
   select count(*)::int from core.audit_log

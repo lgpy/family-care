@@ -139,6 +139,20 @@ Deno.test('stock-alerts: a stopped medication is not considered and its row clea
   assertEquals(plan.cleared, [MED]);
 });
 
+Deno.test('stock-alerts: an archived patient hides the medication and clears its row', () => {
+  // D30: the job leaves the medication in place but marks the patient
+  // archived; it must not push, and the episode re-arms when unarchived.
+  const plan = planStockAlerts(baseInput({
+    medications: [{ ...MEDICATION, patient_archived: true }],
+    alerted: [MED],
+  }));
+
+  assertEquals(plan.low, []);
+  assertEquals(plan.notifications, []);
+  assertEquals(plan.alerts, []);
+  assertEquals(plan.cleared, [MED]);
+});
+
 Deno.test('stock-alerts: viewers never receive a stock push', () => {
   const plan = planStockAlerts(baseInput({
     devices: [
