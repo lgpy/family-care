@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.ui.patients
 
 import androidx.annotation.StringRes
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,10 +16,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,11 +35,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -45,6 +53,7 @@ import io.github.lgpy.familycare.core.domain.circle.CoreField
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.domain.circle.canWrite
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.DiscardChangesDialog
 import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.SectionHeader
@@ -52,16 +61,16 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * The patient screen (docs/ux/screens.md §3, screens v2): name and year of
- * birth, linked app user, reminder policy, primary caregiver, escalation and
- * missed-window minutes, and the optional agreement note. One screen for adding
- * and editing.
+ * The patient screen (docs/ux/screens.md §3, screens v2): name, year of birth,
+ * allergies on Add patient, linked app user, reminder policy, primary caregiver,
+ * and — under a collapsed "More options" — the escalation and missed-window
+ * minutes and the optional agreement note. One screen for adding and editing.
  *
  * Screens v2 restyle: a close button and title in the top bar, labelled sections
  * with icons, and the save action as a full-width bar at the bottom. Viewers see
  * the same values without the ability to change them; the save bar is only shown
  * when [MemberRole.canWrite], and the repository refuses a write from a viewer
- * anyway.
+ * anyway. Closing with changes asks before throwing them away.
  */
 @Composable
 fun PatientFormScreen(
@@ -73,6 +82,14 @@ fun PatientFormScreen(
         parameters = { parametersOf(patientId ?: "") },
     )
     val uiState by viewModel.uiState.collectAsState()
+    var discardDialog by remember { mutableStateOf(false) }
+
+    val requestClose = {
+        if (uiState.isDirty) discardDialog = true else onBack()
+    }
+
+    // The system back gesture asks the same question as the close button.
+    BackHandler(enabled = uiState.isDirty) { discardDialog = true }
 
     LaunchedEffect(uiState.saved) {
         if (uiState.saved) onBack()
@@ -89,7 +106,7 @@ fun PatientFormScreen(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = requestClose) {
                 Icon(
                     imageVector = FcIcons.Close,
                     contentDescription = stringResource(R.string.close),
@@ -126,6 +143,16 @@ fun PatientFormScreen(
         if (uiState.loaded && !uiState.notFound && uiState.canWrite) {
             PatientFormSaveBar(saving = uiState.saving, onSave = viewModel::save)
         }
+    }
+
+    if (discardDialog) {
+        DiscardChangesDialog(
+            onKeepEditing = { discardDialog = false },
+            onDiscard = {
+                discardDialog = false
+                onBack()
+            },
+        )
     }
 }
 
@@ -186,6 +213,29 @@ private fun PatientFormFields(
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
     )
+
+    // Add patient only: editing the record's allergies and conditions lives on
+    // the profile's Info → Edit info screen, so it is not offered twice.
+    if (uiState.isNew) {
+        OutlinedTextField(
+            value = uiState.allergies,
+            onValueChange = viewModel::onAllergiesChanged,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = canWrite && !uiState.noneKnown,
+            singleLine = true,
+            label = { FieldLabel(R.string.patient_allergies_label, FcIcons.Warning) },
+            supportingText = {
+                Text(text = stringResource(R.string.patient_allergies_helper))
+            },
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+        )
+        FilterChip(
+            selected = uiState.noneKnown,
+            onClick = { viewModel.onNoneKnownChanged(!uiState.noneKnown) },
+            enabled = canWrite,
+            label = { Text(text = stringResource(R.string.patient_allergies_none)) },
+        )
+    }
 
     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -271,12 +321,73 @@ private fun PatientFormFields(
 
     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
+    PatientMoreOptions(viewModel = viewModel, uiState = uiState)
+
+    uiState.error?.let { error ->
+        ErrorText(stringResource(error.messageRes()))
+    }
+}
+
+/**
+ * The escalation delay, missed window and agreement note, collapsed behind
+ * "More options" with their current values in the summary — the same expander
+ * the New medicine form uses (screens v2 §4). Their defaults stay visible.
+ */
+@Composable
+private fun PatientMoreOptions(
+    viewModel: PatientFormViewModel,
+    uiState: PatientFormUiState,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Surface(
+        onClick = { expanded = !expanded },
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = FcIcons.Tune,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.patient_more_options),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.patient_more_summary,
+                        uiState.escalationDelay,
+                        uiState.missedWindow,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = FcIcons.ExpandMore,
+                contentDescription = null,
+                modifier = Modifier.rotate(if (expanded) 180f else 0f),
+            )
+        }
+    }
+
+    if (!expanded) return
+
     MinuteField(
         label = R.string.patient_escalation_label,
         icon = FcIcons.Schedule,
         helper = R.string.patient_escalation_helper,
         value = uiState.escalationDelay,
-        enabled = canWrite,
+        enabled = uiState.canWrite,
         hasError = CoreField.PATIENT_ESCALATION_DELAY in uiState.errors,
         errorMessage = R.string.patient_error_escalation,
         presets = listOf(15, 30, 60),
@@ -288,20 +399,18 @@ private fun PatientFormFields(
         icon = FcIcons.Alarm,
         helper = R.string.patient_missed_helper,
         value = uiState.missedWindow,
-        enabled = canWrite,
+        enabled = uiState.canWrite,
         hasError = CoreField.PATIENT_MISSED_WINDOW in uiState.errors,
         errorMessage = R.string.patient_error_missed,
         presets = listOf(60, 120, 180),
         onValueChange = viewModel::onMissedWindowChanged,
     )
 
-    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
     OutlinedTextField(
         value = uiState.agreementNote,
         onValueChange = viewModel::onAgreementNoteChanged,
         modifier = Modifier.fillMaxWidth(),
-        enabled = canWrite,
+        enabled = uiState.canWrite,
         minLines = 3,
         label = { FieldLabel(R.string.patient_note_label, FcIcons.StickyNote2) },
         isError = CoreField.PATIENT_AGREEMENT_NOTE in uiState.errors,
@@ -314,10 +423,6 @@ private fun PatientFormFields(
         },
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
     )
-
-    uiState.error?.let { error ->
-        ErrorText(stringResource(error.messageRes()))
-    }
 }
 
 /** The save action as a full-width bar, pinned below the scrolling fields. */
@@ -460,4 +565,5 @@ internal fun PatientFormError.messageRes(): Int = when (this) {
     PatientFormError.NotAllowed -> R.string.error_not_allowed
     PatientFormError.NotFound -> R.string.error_not_found
     PatientFormError.Unknown -> R.string.error_unknown
+    PatientFormError.AllergiesInvalid -> R.string.patient_info_error_allergies
 }

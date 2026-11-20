@@ -9,13 +9,14 @@ import io.github.lgpy.familycare.feature.medications.reminders.ReminderRoutes
  *
  * [topLevel] are the five bottom-bar destinations — Today, Patients, Agenda,
  * Shopping and More. The others are pushed screens: More opens the family circle
- * and the user's name; Patients opens a patient's profile (D29) and the add and
- * edit forms; from the profile's Medications tab, the patient's medications with
- * their add, detail, edit and schedule screens and the dose slot. Shopping is
- * the M5 list of low medications (D28). The medication routes come from
- * [MedicationsRoutes] so the module owns them and the shell just composes them.
- * The Agenda is the appointments module's list; its add, detail, edit and
- * follow-up screens are addressed by [AppointmentsRoutes] and wired in
+ * (and its invite variant, with the email field focused), the patient list for
+ * "who gets reminded", and the user's name; Patients opens a patient's profile
+ * (D29) and the add and edit forms; from the profile's Medications tab, the
+ * patient's medications with their add, detail, edit and schedule screens and
+ * the dose slot. Shopping is the M5 list of low medications (D28). The medication
+ * routes come from [MedicationsRoutes] so the module owns them and the shell just
+ * composes them. The Agenda is the appointments module's list; its add, detail,
+ * edit and follow-up screens are addressed by [AppointmentsRoutes] and wired in
  * `FamilyCareApp`.
  *
  * Editing a patient is a menu action on the profile (D29), so the edit form has
@@ -28,6 +29,9 @@ enum class Destination(val route: String) {
     Shopping(MedicationsRoutes.SHOPPING),
     More("more"),
     FamilyCircle("more/family-circle"),
+    /** The circle screen, with the invite email field focused on arrival. */
+    FamilyCircleInvite("more/family-circle/invite"),
+    WhoGetsReminded("more/who-reminded"),
     Activity("more/activity"),
     Reminders(ReminderRoutes.SETUP),
     YourName("more/your-name"),

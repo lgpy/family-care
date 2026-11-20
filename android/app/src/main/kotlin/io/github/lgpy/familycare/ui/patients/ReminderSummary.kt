@@ -1,6 +1,9 @@
 package io.github.lgpy.familycare.ui.patients
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
+import io.github.lgpy.familycare.core.ui.R
 
 /**
  * What a patient's reminder line says, as data — the screen renders each kind
@@ -62,3 +65,28 @@ internal fun firstNameOf(displayName: String?): String? = displayName
     ?.trim()
     ?.substringBefore(' ')
     ?.takeIf { it.isNotEmpty() }
+
+/**
+ * The one-line reminder summary of the policy, or the policy's own label when
+ * it has no short human phrase; null while the policy is not loaded.
+ *
+ * Shared by the profile head and the "Who gets reminded" list so both describe
+ * the same routing with the same words.
+ */
+@Composable
+internal fun reminderSummary(
+    policy: ReminderPolicy?,
+    primaryCaregiverName: String?,
+    primaryCaregiverIsMe: Boolean,
+): String? {
+    val firstName = firstNameOf(primaryCaregiverName)
+    return when (reminderSummaryKind(policy, firstName, primaryCaregiverIsMe)) {
+        null -> null
+        ReminderSummaryKind.PRIMARY_FIRST ->
+            stringResource(R.string.patients_reminder_primary_first, firstName.orEmpty())
+
+        ReminderSummaryKind.YOU_FIRST -> stringResource(R.string.patients_reminder_you_first)
+        ReminderSummaryKind.EVERYONE -> stringResource(R.string.patients_reminder_everyone)
+        ReminderSummaryKind.POLICY -> stringResource(policy!!.labelRes())
+    }
+}

@@ -59,7 +59,6 @@ import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.CoreError
 import io.github.lgpy.familycare.core.domain.circle.PatientExportFormat
 import io.github.lgpy.familycare.core.domain.circle.PatientId
-import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
@@ -576,28 +575,6 @@ private fun PatientProfileHead(
                 }
             }
         }
-    }
-}
-
-/**
- * The one-line reminder summary of the policy, or the policy's own label when
- * it has no short human phrase; null while the patient is not loaded.
- */
-@Composable
-private fun reminderSummary(
-    policy: ReminderPolicy?,
-    primaryCaregiverName: String?,
-    primaryCaregiverIsMe: Boolean,
-): String? {
-    val firstName = firstNameOf(primaryCaregiverName)
-    return when (reminderSummaryKind(policy, firstName, primaryCaregiverIsMe)) {
-        null -> null
-        ReminderSummaryKind.PRIMARY_FIRST ->
-            stringResource(R.string.patients_reminder_primary_first, firstName.orEmpty())
-
-        ReminderSummaryKind.YOU_FIRST -> stringResource(R.string.patients_reminder_you_first)
-        ReminderSummaryKind.EVERYONE -> stringResource(R.string.patients_reminder_everyone)
-        ReminderSummaryKind.POLICY -> stringResource(policy!!.labelRes())
     }
 }
 

@@ -782,4 +782,56 @@ class MedicationFormViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    // --- Dirty tracking (the discard question) --------------------------------
+
+    @Test
+    fun `the loaded form is clean and an edit makes it dirty`() = runTest {
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            assertFalse(viewModel.uiState.value.isDirty)
+
+            viewModel.onNameChanged("Metformin")
+            assertTrue(viewModel.uiState.value.isDirty)
+
+            viewModel.onNameChanged("")
+            assertFalse(viewModel.uiState.value.isDirty)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a time chip or an amount makes the form dirty`() = runTest {
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            viewModel.onPresetTimeToggled(LunchTime)
+            assertTrue(viewModel.uiState.value.isDirty)
+
+            viewModel.onPresetTimeToggled(LunchTime)
+            assertFalse(viewModel.uiState.value.isDirty)
+
+            viewModel.onTimeQuantityChanged("2")
+            assertTrue(viewModel.uiState.value.isDirty)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `an unedited edit form is clean`() = runTest {
+        editModeMedication()
+        val viewModel = viewModel(medicationId = "med-1")
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            assertFalse(viewModel.uiState.value.isDirty)
+
+            viewModel.onLowStockThresholdChanged("10")
+            assertTrue(viewModel.uiState.value.isDirty)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

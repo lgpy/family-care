@@ -14,6 +14,10 @@ import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientRules
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.domain.circle.canWrite
+import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoError
+import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoRepository
+import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoResult
+import io.github.lgpy.familycare.feature.patientinfo.domain.PatientInfo
 import java.time.Year
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +32,9 @@ enum class PatientFormError {
     NotAllowed,
     NotFound,
     Unknown,
+
+    /** The typed allergies do not fit patient-info's rules (count or length). */
+    AllergiesInvalid,
 }
 
 /**
@@ -47,6 +54,7 @@ class PatientFormViewModel(
     private val patientId: String?,
     private val patientRepository: PatientRepository,
     private val careCircleRepository: CareCircleRepository,
+    private val patientInfoRepository: PatientInfoRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PatientFormUiState())
@@ -94,6 +102,9 @@ class PatientFormViewModel(
                 )
             }
         }
+        // Whatever the screen opened with is the state the discard question
+        // compares against: only the user's own edits make the form dirty.
+        _uiState.update { it.copy(baseline = it.draft()) }
     }
 
     fun onNameChanged(value: String) {
@@ -186,6 +197,26 @@ class PatientFormViewModel(
         }
     }
 
+    /** The allergies as typed on Add patient; saved through patient-info. */
+    fun onAllergiesChanged(value: String) {
+        _uiState.update { it.copy(allergies = value, error = null) }
+    }
+
+    /**
+     * The explicit "None known" answer. It turns the free-text field off and
+     * saves no allergy row, because the record has no "none" value: an empty
+     * list means "not recorded", never a clinical claim (docs/domain/patient-info.md).
+     */
+    fun onNoneKnownChanged(noneKnown: Boolean) {
+        _uiState.update {
+            it.copy(
+                noneKnown = noneKnown,
+                allergies = if (noneKnown) "" else it.allergies,
+                error = null,
+            )
+        }
+    }
+
     fun dismissError() {
         _uiState.update { it.copy(error = null) }
     }
@@ -269,11 +300,41 @@ class PatientFormViewModel(
             return
         }
 
+        // The allergies are Add patient's only extra field. They are stored in
+        // `info.patient_info` through the patient-info repository, the same row
+        // the profile's Info → Edit info screen writes. "None known" and an
+        // empty field both write nothing: the record has no "none" value.
+        val allergies = if (state.noneKnown || !state.isNew) {
+            null
+        } else {
+            PatientInfo(allergies = parseAllergyEntries(state.allergies)).normalized()
+                .takeIf { it.allergies.isNotEmpty() }
+        }
+        if (allergies != null && !allergies.validate().isValid) {
+            _uiState.update { it.copy(error = PatientFormError.AllergiesInvalid) }
+            return
+        }
+
         _uiState.update { it.copy(errors = emptySet(), saving = true, error = null) }
         viewModelScope.launch {
             when (val result = patientRepository.save(patient)) {
-                is CoreResult.Success -> _uiState.update {
-                    it.copy(saving = false, saved = true)
+                is CoreResult.Success -> {
+                    val allergyError = allergies?.let { info ->
+                        when (val saved = patientInfoRepository.save(result.value, info)) {
+                            is PatientInfoResult.Success -> null
+                            is PatientInfoResult.Failure -> saved.error
+                        }
+                    }
+                    _uiState.update {
+                        if (allergyError == null) {
+                            it.copy(saving = false, saved = true)
+                        } else {
+                            it.copy(
+                                saving = false,
+                                error = allergyError.toPatientFormError(),
+                            )
+                        }
+                    }
                 }
 
                 is CoreResult.Failure -> _uiState.update { current ->
@@ -288,6 +349,52 @@ class PatientFormViewModel(
             }
         }
     }
+}
+
+/**
+ * The allergy text as the entries the record stores: one per comma or newline,
+ * trimmed, with a repeated entry kept once (case-insensitively). Blank input
+ * gives an empty list, which writes no allergy row.
+ */
+internal fun parseAllergyEntries(text: String): List<String> =
+    text.split(',', '\n')
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .distinctBy { it.lowercase() }
+
+/** What the discard question compares: only the fields the user can change. */
+data class PatientFormDraft(
+    val displayName: String,
+    val birthYear: String,
+    val linkedUserId: String?,
+    val reminderPolicy: ReminderPolicy,
+    val primaryCaregiverId: String?,
+    val escalationDelay: String,
+    val missedWindow: String,
+    val agreementNote: String,
+    val allergies: String,
+    val noneKnown: Boolean,
+)
+
+/** The current editable values, as the baseline is stored after loading. */
+internal fun PatientFormUiState.draft(): PatientFormDraft = PatientFormDraft(
+    displayName = displayName,
+    birthYear = birthYear,
+    linkedUserId = linkedUserId,
+    reminderPolicy = reminderPolicy,
+    primaryCaregiverId = primaryCaregiverId,
+    escalationDelay = escalationDelay,
+    missedWindow = missedWindow,
+    agreementNote = agreementNote,
+    allergies = allergies,
+    noneKnown = noneKnown,
+)
+
+/** The patient-info failure as the form's own refusal, so the screen can say it. */
+private fun PatientInfoError.toPatientFormError(): PatientFormError = when (this) {
+    PatientInfoError.NotAllowed, PatientInfoError.NoCircle -> PatientFormError.NotAllowed
+    is PatientInfoError.Invalid -> PatientFormError.AllergiesInvalid
+    PatientInfoError.Unknown -> PatientFormError.Unknown
 }
 
 /** The form state: what the fields hold, what is wrong, and whether it is saving. */
@@ -308,11 +415,20 @@ data class PatientFormUiState(
         PatientRules.DEFAULT_ESCALATION_DELAY_MINUTES.toString(),
     val missedWindow: String = PatientRules.DEFAULT_MISSED_WINDOW_MINUTES.toString(),
     val agreementNote: String = "",
+    /** Add patient's allergies, as typed and separated by commas. */
+    val allergies: String = "",
+    /** The explicit "None known" answer: no allergy row is written. */
+    val noneKnown: Boolean = false,
     val errors: Set<CoreField> = emptySet(),
     val saving: Boolean = false,
     val saved: Boolean = false,
     val error: PatientFormError? = null,
+    /** The loaded values; null until the form has loaded. */
+    val baseline: PatientFormDraft? = null,
 ) {
+    /** Whether the user changed anything that closing the form would lose. */
+    val isDirty: Boolean get() = baseline != null && baseline != draft()
+
     /** A patient with a linked user is reminded first, so the picker is not shown. */
     val isSelfManaged: Boolean get() = linkedUserId != null
 

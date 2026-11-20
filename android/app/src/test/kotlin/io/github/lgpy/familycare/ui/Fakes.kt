@@ -23,6 +23,9 @@ import io.github.lgpy.familycare.core.domain.circle.Profile
 import io.github.lgpy.familycare.core.domain.circle.ProfileRepository
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.domain.sync.SyncState
+import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoRepository
+import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoResult
+import io.github.lgpy.familycare.feature.patientinfo.domain.PatientInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -194,6 +197,25 @@ class FakePatientRepository : PatientRepository {
     ): CoreResult<Unit> {
         exports += patientId to format
         return exportResult
+    }
+}
+
+/** One recorded [PatientInfoRepository.save] call. */
+data class SavedPatientInfo(val patientId: PatientId, val info: PatientInfo)
+
+/** The patient-info row the Add patient form writes allergies into. */
+class FakePatientInfoRepository : PatientInfoRepository {
+
+    val flows = mutableMapOf<String, MutableStateFlow<PatientInfo?>>()
+    val saves = mutableListOf<SavedPatientInfo>()
+    var saveResult: PatientInfoResult<Unit> = PatientInfoResult.Success(Unit)
+
+    override fun observe(patientId: PatientId): Flow<PatientInfo?> =
+        flows.getOrPut(patientId.value) { MutableStateFlow(null) }
+
+    override suspend fun save(patientId: PatientId, info: PatientInfo): PatientInfoResult<Unit> {
+        saves += SavedPatientInfo(patientId, info)
+        return saveResult
     }
 }
 

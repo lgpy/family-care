@@ -83,6 +83,7 @@ import io.github.lgpy.familycare.ui.circle.FamilyCircleViewModel
 import io.github.lgpy.familycare.ui.patients.PatientFormViewModel
 import io.github.lgpy.familycare.ui.patients.PatientProfileViewModel
 import io.github.lgpy.familycare.ui.patients.PatientsViewModel
+import io.github.lgpy.familycare.ui.patients.WhoGetsRemindedViewModel
 import io.github.lgpy.familycare.ui.patients.export.AppointmentsExportSource
 import io.github.lgpy.familycare.ui.patients.export.DoseLogExportSource
 import io.github.lgpy.familycare.ui.patients.export.MedicationsExportSource
@@ -409,6 +410,13 @@ val appModule: Module = module {
     viewModel { (patientId: String) ->
         PatientFormViewModel(
             patientId = patientId.ifBlank { null },
+            patientRepository = get(),
+            careCircleRepository = get(),
+            patientInfoRepository = get(),
+        )
+    }
+    viewModel {
+        WhoGetsRemindedViewModel(
             patientRepository = get(),
             careCircleRepository = get(),
         )

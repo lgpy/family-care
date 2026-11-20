@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     // NotificationCompat / NotificationManagerCompat for the dose reminders.
     implementation(libs.androidx.core.ktx)

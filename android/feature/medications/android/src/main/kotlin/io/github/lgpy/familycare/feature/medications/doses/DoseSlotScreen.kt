@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.feature.medications.doses
 
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +56,7 @@ import io.github.lgpy.familycare.core.domain.circle.CircleMember
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.AllergyBanner
+import io.github.lgpy.familycare.core.ui.components.DiscardChangesDialog
 import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
@@ -118,6 +120,14 @@ fun DoseSlotScreen(
 
     var skipTarget by remember { mutableStateOf<SlotMedicationUi?>(null) }
     var givenByOpen by remember { mutableStateOf(false) }
+    var discardDialog by remember { mutableStateOf(false) }
+
+    val requestClose = {
+        if (uiState.hasUnsavedChanges) discardDialog = true else onBack()
+    }
+
+    // The system back gesture asks the same question as the close button.
+    BackHandler(enabled = uiState.hasUnsavedChanges) { discardDialog = true }
 
     LaunchedEffect(uiState.saved) {
         if (uiState.saved) onBack()
@@ -134,7 +144,7 @@ fun DoseSlotScreen(
                 .padding(start = 4.dp, end = 16.dp, top = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = requestClose) {
                 Icon(
                     imageVector = FcIcons.Close,
                     contentDescription = stringResource(R.string.close),
@@ -330,6 +340,16 @@ fun DoseSlotScreen(
                 TextButton(onClick = { givenByOpen = false }) {
                     Text(text = stringResource(R.string.close))
                 }
+            },
+        )
+    }
+
+    if (discardDialog) {
+        DiscardChangesDialog(
+            onKeepEditing = { discardDialog = false },
+            onDiscard = {
+                discardDialog = false
+                onBack()
             },
         )
     }
