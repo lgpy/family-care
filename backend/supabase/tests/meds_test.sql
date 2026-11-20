@@ -20,7 +20,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(150);
+select plan(151);
 
 -- --- Fixtures ---------------------------------------------------------------
 -- Alice owns circle A; Bob is a caregiver, Carol a viewer, Erin a caregiver who
@@ -1038,6 +1038,11 @@ select throws_ok(
   $$ update meds.medications set pill_shape = 'square'
       where id = '50000000-0000-4000-8000-000000000001' $$,
   '23514', null, 'an unknown pill shape is refused');
+
+select lives_ok(
+  $$ update meds.medications set pill_shape = 'pentagon'
+      where id = '50000000-0000-4000-8000-000000000001' $$,
+  'a five-sided tablet is an allowed pill shape');
 
 select throws_ok(
   $$ update meds.medications set pill_color = 'black'

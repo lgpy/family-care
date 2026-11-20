@@ -939,6 +939,7 @@
 
     <string name="pill_color_white">white</string>
     <string name="pill_color_white_fem">white</string>
+    <string name="pill_shape_pentagon">five-sided tablet</string>
     <string name="pill_color_cream">cream</string>
     <string name="pill_color_cream_fem">cream</string>
     <string name="pill_color_yellow">yellow</string>

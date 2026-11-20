@@ -161,7 +161,7 @@ dose slot, the patient profile tabs, the stock/shopping rows and the medication
 form preview. The same component is used in every feature; a feature never
 draws its own.
 
-- **Shapes:** round, oval, oblong, capsule, diamond, triangle and drops. **No
+- **Shapes:** round, oval, oblong, capsule, diamond, triangle, pentagon and drops. **No
   shape set** (or an app version that predates the column) renders the neutral
   pill glyph, never an empty box.
 - **Colours:** the twelve palette tokens (`white`, `cream`, `yellow`, `orange`,

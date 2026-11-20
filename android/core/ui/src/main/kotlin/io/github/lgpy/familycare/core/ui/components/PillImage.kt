@@ -45,6 +45,8 @@ import io.github.lgpy.familycare.core.domain.medication.PillSize
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import java.util.Locale
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * The fixed pill palette of D33 (docs/ux/mockups/screens-v2.html, `pill()`).
@@ -242,6 +244,7 @@ private fun pillShapeName(shape: PillShape): Int = when (shape) {
     PillShape.CAPSULE -> R.string.pill_shape_capsule
     PillShape.DIAMOND -> R.string.pill_shape_diamond
     PillShape.TRIANGLE -> R.string.pill_shape_triangle
+    PillShape.PENTAGON -> R.string.pill_shape_pentagon
     PillShape.DROPS -> R.string.pill_shape_drops
 }
 
@@ -461,6 +464,41 @@ fun DrawScope.drawPill(
                     PillOutline,
                     Offset(cx - r * 0.55f, cy),
                     Offset(cx + r * 0.55f, cy),
+                    scoreWidth,
+                    StrokeCap.Round,
+                )
+            }
+        }
+
+        PillShape.PENTAGON -> {
+            val r = box * 0.33f * k
+            // A regular pentagon, point up, its centroid on the box centre.
+            val path = Path().apply {
+                for (i in 0 until 5) {
+                    val angle = Math.toRadians(-90.0 + i * 72.0)
+                    val x = cx + r * cos(angle).toFloat()
+                    val y = cy + r * 0.08f + r * sin(angle).toFloat()
+                    if (i == 0) moveTo(x, y) else lineTo(x, y)
+                }
+                close()
+            }
+            // Same corner rounding as the triangle: a fat stroke in the fill
+            // colour with round joins, then the real outline on top.
+            drawPath(path, fill)
+            drawPath(path, fill, style = Stroke(width = r * 0.22f, join = StrokeJoin.Round))
+            drawPath(path, PillOutline, style = Stroke(width = strokeWidth, join = StrokeJoin.Round))
+            clipPath(path) {
+                drawOval(
+                    color = PillHighlight,
+                    topLeft = Offset(cx - r * 0.5f, cy - r * 0.45f),
+                    size = Size(r * 0.44f, r * 0.24f),
+                )
+            }
+            if (look.score) {
+                drawLine(
+                    PillOutline,
+                    Offset(cx - r * 0.7f, cy + r * 0.08f),
+                    Offset(cx + r * 0.7f, cy + r * 0.08f),
                     scoreWidth,
                     StrokeCap.Round,
                 )

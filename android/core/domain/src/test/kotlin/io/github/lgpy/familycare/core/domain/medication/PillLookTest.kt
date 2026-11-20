@@ -57,7 +57,7 @@ class PillLookTest {
     @Test
     fun `every documented shape and colour token parses`() {
         assertEquals(
-            listOf("round", "oval", "oblong", "capsule", "diamond", "triangle", "drops"),
+            listOf("round", "oval", "oblong", "capsule", "diamond", "triangle", "pentagon", "drops"),
             PillShape.entries.map { it.serverValue },
         )
         assertEquals(
@@ -128,7 +128,7 @@ class PillLookTest {
 
     @Test
     fun `a second colour on a non-capsule is dropped`() {
-        listOf("round", "oval", "oblong", "diamond", "triangle", "drops").forEach { shape ->
+        listOf("round", "oval", "oblong", "diamond", "triangle", "pentagon", "drops").forEach { shape ->
             assertNull(
                 PillLookRules.fromServer(shape, "white", "pink", false, null)?.color2,
                 "expected no second colour on $shape",

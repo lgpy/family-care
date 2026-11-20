@@ -943,6 +943,7 @@
 
     <string name="pill_color_white">branco</string>
     <string name="pill_color_white_fem">branca</string>
+    <string name="pill_shape_pentagon">comprimido pentagonal</string>
     <string name="pill_color_cream">creme</string>
     <string name="pill_color_cream_fem">creme</string>
     <string name="pill_color_yellow">amarelo</string>

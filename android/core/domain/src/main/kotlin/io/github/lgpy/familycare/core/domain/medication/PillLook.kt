@@ -45,6 +45,7 @@ enum class PillShape(val serverValue: String) {
     CAPSULE("capsule"),
     DIAMOND("diamond"),
     TRIANGLE("triangle"),
+    PENTAGON("pentagon"),
     DROPS("drops"),
     ;
 
