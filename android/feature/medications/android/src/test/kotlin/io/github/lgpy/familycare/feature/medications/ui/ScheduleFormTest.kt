@@ -3,6 +3,7 @@ package io.github.lgpy.familycare.feature.medications.ui
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.domain.MedicationId
 import io.github.lgpy.familycare.feature.medications.domain.RegimenId
+import java.math.BigDecimal
 import java.time.LocalTime
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
@@ -77,5 +78,16 @@ class ScheduleFormTest {
 
         assertTrue(parsed.fields.isEmpty())
         assertEquals(LocalTime.of(20, 0), parsed.regimen?.times?.last()?.time)
+    }
+
+    @Test
+    fun `dose steps go by halves and snap typed amounts to the half grid`() {
+        assertEquals(BigDecimal("1.5"), steppedQuantity(BigDecimal.ONE, 1))
+        assertEquals(BigDecimal("0.5"), steppedQuantity(BigDecimal.ONE, -1))
+        assertEquals(BigDecimal("0.5"), steppedQuantity(BigDecimal("0.5"), -1))
+        assertEquals(BigDecimal("1"), steppedQuantity(BigDecimal("0.75"), 1))
+        assertEquals(BigDecimal("0.5"), steppedQuantity(BigDecimal("0.75"), -1))
+        assertEquals(BigDecimal("0.25"), steppedQuantity(BigDecimal("0.25"), -1))
+        assertEquals(BigDecimal("0.5"), steppedQuantity(BigDecimal("0.25"), 1))
     }
 }

@@ -543,6 +543,9 @@
     <string name="meds_summary_reminders_inherit">lembretes da pessoa</string>
     <string name="meds_summary_reminders_override">lembretes: %1$s</string>
     <string name="meds_different_amounts">Quantidade diferente em cada toma</string>
+    <string name="meds_dose_type">Escrever a quantidade</string>
+    <string name="meds_dose_type_title">Quanto de cada vez</string>
+    <string name="meds_dose_type_confirm">Definir</string>
     <string name="meds_decrease_amount">Diminuir a quantidade</string>
     <string name="meds_increase_amount">Aumentar a quantidade</string>
     <string name="meds_decrease_stock">Diminuir quantos tem</string>

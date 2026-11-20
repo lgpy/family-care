@@ -1,13 +1,13 @@
 package io.github.lgpy.familycare.feature.medications.list
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +42,7 @@ import io.github.lgpy.familycare.core.ui.components.ScreenHeader
 import io.github.lgpy.familycare.core.ui.components.StockMeter
 import io.github.lgpy.familycare.core.ui.components.stockMeterFraction
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
+import io.github.lgpy.familycare.feature.medications.ui.MedsInstructionsItem
 import io.github.lgpy.familycare.feature.medications.ui.MedsMetaItem
 import io.github.lgpy.familycare.feature.medications.ui.regimenAmountTimesSummary
 import org.koin.compose.viewmodel.koinViewModel
@@ -56,10 +56,10 @@ import org.koin.core.parameter.parametersOf
  * header.
  *
  * "Add medicine" exists for owners and caregivers only, the same rule the
- * repository enforces: an extended floating button here, and the tonal button
- * on the profile tab, which has no Scaffold of its own. On an empty profile the
- * tonal button becomes the empty state's own "Add their first medicine" action,
- * so the first step is where the user is already looking.
+ * repository enforces: an extended floating button, bottom-right, both here and
+ * on the profile tab. On an empty profile the floating button gives way to the
+ * empty state's own "Add their first medicine" action, so the first step is
+ * where the user is already looking.
  *
  * The list itself ([PatientMedicationsSection]) is also the content of the
  * Medications tab of the patient profile (D29).
@@ -122,9 +122,10 @@ fun PatientMedicationsScreen(
  * The Medications tab of the patient profile (D29): the same list, embedded
  * below the profile's own header and tabs.
  *
- * It has no Scaffold of its own: the profile owns the screen. "Add medication"
- * is a tonal button at the top of the list instead of a floating button,
- * because a floating button would hover over the whole profile.
+ * It has no Scaffold of its own: the profile owns the screen and gives the tab
+ * the space below its tabs, so "Add medicine" floats bottom-right of that
+ * space, where it sits on the Patients and Agenda tabs too, instead of pushing
+ * the list down from the top.
  */
 @Composable
 fun PatientMedicationsSection(
@@ -138,13 +139,27 @@ fun PatientMedicationsSection(
     )
     val uiState by viewModel.uiState.collectAsState()
 
-    PatientMedicationsList(
-        uiState = uiState,
-        onToggleStopped = viewModel::toggleStopped,
-        onOpenMedication = onOpenMedication,
-        modifier = modifier.fillMaxSize(),
-        onAdd = onAdd.takeIf { uiState.canWrite && !uiState.patientMissing },
-    )
+    val canAdd = uiState.canWrite && !uiState.patientMissing
+    Box(modifier = modifier.fillMaxSize()) {
+        PatientMedicationsList(
+            uiState = uiState,
+            onToggleStopped = viewModel::toggleStopped,
+            onOpenMedication = onOpenMedication,
+            modifier = Modifier.fillMaxSize(),
+            onAdd = onAdd.takeIf { canAdd },
+        )
+        // While the list is empty the empty state carries the action itself.
+        if (canAdd && uiState.loaded && !uiState.isEmpty) {
+            ExtendedFloatingActionButton(
+                onClick = onAdd,
+                icon = { Icon(imageVector = FcIcons.Add, contentDescription = null) },
+                text = { Text(text = stringResource(R.string.meds_list_add)) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+            )
+        }
+    }
 }
 
 @Composable
@@ -158,31 +173,11 @@ private fun PatientMedicationsList(
 ) {
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         if (header != null) {
             item { header() }
-        }
-
-        // While the list is empty the tonal button would repeat the empty
-        // state's own action; the empty state carries it instead.
-        val showAddButton = onAdd != null && (!uiState.loaded || !uiState.isEmpty)
-        if (showAddButton) {
-            item {
-                FilledTonalButton(
-                    onClick = { onAdd?.invoke() },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Icon(
-                        imageVector = FcIcons.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.meds_list_add))
-                }
-            }
         }
 
         if (!uiState.loaded) {
@@ -287,9 +282,7 @@ private fun MedicationRow(item: PatientMedicationUi, onClick: () -> Unit) {
                     )
                 }
 
-                item.medication.instructions?.let { note ->
-                    MedsMetaItem(icon = FcIcons.Restaurant, text = note)
-                }
+                item.medication.instructions?.let { note -> MedsInstructionsItem(note) }
 
                 item.daysRemaining?.let { days ->
                     Row(

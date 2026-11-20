@@ -191,7 +191,7 @@ class MedicationFormViewModelTest {
             awaitWhere { it.loaded }
             viewModel.onNameChanged("Metformin")
             viewModel.onPresetTimeToggled(LunchTime)
-            viewModel.onTimeQuantityStep(-3)
+            viewModel.onTimeQuantityStep(-1)
             viewModel.save()
 
             val regimen = meds.created.single().regimen
@@ -200,7 +200,7 @@ class MedicationFormViewModelTest {
                 regimen.times.map { it.time },
             )
             assertEquals(
-                listOf(BigDecimal("0.25"), BigDecimal("0.25")),
+                listOf(BigDecimal("0.5"), BigDecimal("0.5")),
                 regimen.times.map { it.quantity },
             )
             cancelAndIgnoreRemainingEvents()
@@ -333,7 +333,7 @@ class MedicationFormViewModelTest {
             viewModel.onNameChanged("Metformin")
             viewModel.onPresetTimeToggled(LunchTime)
             viewModel.onDifferentAmountsPerTimeChanged(true)
-            viewModel.onTimeQuantityStep(LunchTime, -2)
+            viewModel.onTimeQuantityStep(LunchTime, -1)
             viewModel.save()
 
             val quantities = meds.created.single().regimen.times.associate { it.time to it.quantity }

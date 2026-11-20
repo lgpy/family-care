@@ -108,7 +108,7 @@ class ChangeRegimenViewModelTest {
         val viewModel = viewModel()
         viewModel.uiState.test {
             awaitWhere { it.loaded }
-            viewModel.onQuantityStep(0, 2)
+            viewModel.onQuantityStep(0, 1)
             viewModel.save()
 
             assertEquals(

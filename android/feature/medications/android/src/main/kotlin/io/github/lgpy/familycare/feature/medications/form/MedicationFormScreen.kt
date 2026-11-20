@@ -83,6 +83,7 @@ import io.github.lgpy.familycare.feature.medications.domain.QuantityRules
 import io.github.lgpy.familycare.feature.medications.reminders.FirstMedicineReminderPrompt
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
 import io.github.lgpy.familycare.feature.medications.ui.PillLookSheet
+import io.github.lgpy.familycare.feature.medications.ui.DoseStepper
 import io.github.lgpy.familycare.feature.medications.ui.QuantityField
 import io.github.lgpy.familycare.feature.medications.ui.ScheduleFields
 import io.github.lgpy.familycare.feature.medications.ui.formatQuantity
@@ -629,103 +630,47 @@ private fun WhenSection(
     )
 }
 
-/** The amounts one tap away; anything else is typed. */
-private val QuickDoseAmounts: List<BigDecimal> = listOf(BigDecimal("0.5"), BigDecimal.ONE, BigDecimal("2"))
-
 /** Which plural the stock unit takes for [quantity]: one up to a whole unit, more above it. */
 private fun unitCount(quantity: BigDecimal?): Int =
     if (quantity != null && quantity > BigDecimal.ONE) 2 else 1
 
 /**
- * The amount taken at each time: one typed amount for every time, or — with
- * "Different amount per time" on — a field beside each time. Either way it is
- * the same place on the screen, so an amount is never only inside More options.
+ * The amount taken at each time: one [DoseStepper] for every time, or — with
+ * "Different amount per time" on — a slim stepper row per time. Either way it
+ * is the same place on the screen, so an amount is never only inside More options.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EachTimeSection(viewModel: MedicationFormViewModel, state: MedicationFormUiState) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionTitle(icon = FcIcons.Pill, title = stringResource(R.string.meds_each_time))
-        // With a field per time, no single field carries the unit; say it once
-        // here instead of shrinking every row's number at large font sizes.
-        if (state.differentAmountsPerTime) {
-            Text(
-                text = stockUnitLabel(state.stockUnit, count = 2),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    SectionTitle(icon = FcIcons.Pill, title = stringResource(R.string.meds_each_time))
 
+    val isError = MedicationField.REGIMEN_TIMES in state.errors
     if (state.differentAmountsPerTime) {
-        state.selectedTimes.forEach { time ->
-            val amount = parseDoseQuantity(state.quantityTextFor(time))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = formatTime(time),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                QuantityField(
-                    value = state.quantityTextFor(time),
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            state.selectedTimes.forEach { time ->
+                DoseStepper(
+                    text = state.quantityTextFor(time),
+                    unit = state.stockUnit,
+                    pillLook = state.pillLook,
                     onValueChange = { value -> viewModel.onTimeQuantityChanged(time, value) },
                     onStep = { steps -> viewModel.onTimeQuantityStep(time, steps) },
-                    // The row's time is the label; a unit here would squeeze
-                    // the value at large font sizes. The pills show the unit.
-                    unit = "",
                     enabled = state.canWrite,
-                    modifier = Modifier.weight(1f),
-                    isError = MedicationField.REGIMEN_TIMES in state.errors,
-                    decreaseLabel = stringResource(R.string.meds_decrease_time_amount, formatTime(time)),
-                    increaseLabel = stringResource(R.string.meds_increase_time_amount, formatTime(time)),
+                    time = formatTime(time),
+                    isError = isError,
                 )
-                if (amount != null) {
-                    PillAmount(look = state.pillLook, quantity = amount, size = 22.dp)
-                }
             }
         }
         return
     }
 
-    val amount = parseDoseQuantity(state.eachTimeText)
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        QuantityField(
-            value = state.eachTimeText,
-            onValueChange = viewModel::onTimeQuantityChanged,
-            onStep = viewModel::onTimeQuantityStep,
-            unit = stockUnitLabel(state.stockUnit, unitCount(amount)),
-            enabled = state.canWrite,
-            isError = MedicationField.REGIMEN_TIMES in state.errors,
-            modifier = Modifier.weight(1f),
-        )
-        if (amount != null) {
-            PillAmount(look = state.pillLook, quantity = amount, size = 26.dp)
-        }
-    }
-
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        QuickDoseAmounts.forEach { quick ->
-            FilterChip(
-                selected = amount?.compareTo(quick) == 0,
-                onClick = { viewModel.onTimeQuantityChanged(QuantityRules.format(quick)) },
-                enabled = state.canWrite,
-                label = { Text(text = formatQuantity(quick)) },
-            )
-        }
-    }
+    DoseStepper(
+        text = state.eachTimeText,
+        unit = state.stockUnit,
+        pillLook = state.pillLook,
+        onValueChange = viewModel::onTimeQuantityChanged,
+        onStep = viewModel::onTimeQuantityStep,
+        enabled = state.canWrite,
+        isError = isError,
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

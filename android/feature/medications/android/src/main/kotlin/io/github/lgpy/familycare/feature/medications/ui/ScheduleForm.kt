@@ -10,6 +10,7 @@ import io.github.lgpy.familycare.feature.medications.domain.RegimenRules
 import io.github.lgpy.familycare.feature.medications.domain.ScheduleType
 import io.github.lgpy.familycare.feature.medications.domain.WeekdayMask
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -42,12 +43,18 @@ fun parseTime(value: String): LocalTime? {
 fun parseDoseQuantity(value: String): BigDecimal? =
     parseStockQuantity(value)?.let(QuantityRules::normalize)?.takeIf(QuantityRules::isValid)
 
-/** A quantity one step up or down, kept inside the storable range. */
+/**
+ * A dose one step up or down, in half units (½, 1, 1½, 2 …), kept inside the
+ * storable range. An amount off the half grid (a typed ¾) snaps to the next
+ * half in the direction stepped. Stepping down never goes below ½, unless the
+ * amount was typed smaller already (¼ stays ¼); smaller amounts are typed.
+ */
 fun steppedQuantity(current: BigDecimal, steps: Int): BigDecimal {
-    val step = BigDecimal("0.25")
-    val next = current.add(step.multiply(BigDecimal(steps)))
+    val half = BigDecimal("0.5")
+    val halves = current.divide(half).setScale(0, if (steps > 0) RoundingMode.FLOOR else RoundingMode.CEILING)
+    val next = halves.add(BigDecimal(steps)).multiply(half)
     return when {
-        next < step -> step
+        next < half -> if (current < half) QuantityRules.normalize(current) else QuantityRules.normalize(half)
         next > QuantityRules.MAX -> QuantityRules.MAX
         else -> QuantityRules.normalize(next)
     }
