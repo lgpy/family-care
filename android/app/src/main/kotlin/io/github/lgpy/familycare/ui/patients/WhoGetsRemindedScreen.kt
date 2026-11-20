@@ -141,6 +141,7 @@ private fun ReminderPatientRow(
                 policy = row.patient.reminderPolicy,
                 primaryCaregiverName = row.primaryCaregiverName,
                 primaryCaregiverIsMe = row.primaryCaregiverIsMe,
+                escalationDelayMinutes = row.escalationDelayMinutes,
             )?.let { summary ->
                 Text(
                     text = summary,

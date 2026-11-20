@@ -49,6 +49,8 @@
     <string name="error_already_accepted">That invitation was already used.</string>
     <string name="error_not_found">That is no longer available.</string>
     <string name="error_invalid_email">Enter a valid email address.</string>
+    <!-- An empty required name is a different mistake from a name that is too long. -->
+    <string name="error_name_empty">Enter a name.</string>
 
     <!-- M1: a queued change the server permanently refused and the queue dropped. -->
     <string name="sync_rejected_change">A change to %1$s couldn’t be saved on the server and was undone (%2$s).</string>
@@ -63,14 +65,15 @@
 
     <!-- M2: patients. -->
     <string name="patients_title">Patients</string>
-    <string name="patients_empty">No patients yet. Add the people whose medication and appointments you help with.</string>
+    <string name="patients_empty">No patients yet. Add the people whose medicines and appointments you help with.</string>
     <string name="patients_add">Add patient</string>
     <string name="patients_open">Open patient</string>
-    <string name="patients_policy_primary_with_escalation">Primary with escalation</string>
-    <string name="patients_policy_all_caregivers">All caregivers</string>
+    <string name="patients_policy_primary_with_escalation">One person first; everyone after %1$d min</string>
+    <string name="patients_policy_primary_with_escalation_short">One person first, then everyone</string>
+    <string name="patients_policy_all_caregivers">Everyone is reminded</string>
     <string name="patients_policy_unavailable">Reminder policy not available</string>
-    <string name="patients_reminder_primary_first">%1$s first, then everyone</string>
-    <string name="patients_reminder_you_first">You first, then everyone</string>
+    <string name="patients_reminder_primary_first">%1$s first; everyone after %2$d min</string>
+    <string name="patients_reminder_you_first">You first; everyone after %1$d min</string>
     <string name="patients_reminder_everyone">Everyone is reminded</string>
     <string name="patients_tag_allergies">Allergies</string>
     <string name="patients_summary_low_stock">%1$s low</string>
@@ -133,7 +136,7 @@
     <string name="patient_unarchive_confirm_title">Unarchive %1$s?</string>
     <string name="patient_unarchive_confirm_body">The patient becomes editable again and appears again in Today, the Agenda and reminders.</string>
     <string name="patient_delete_dialog_title">Delete patient?</string>
-    <string name="patient_delete_warning">This cannot be undone. All of this patient\'s medications, appointments, information and history will be erased. Backups keep the data until they expire, within a year.</string>
+    <string name="patient_delete_warning">This cannot be undone. All of this patient\'s medicines, appointments, information and history will be erased. Backups keep the data until they expire, within a year.</string>
     <string name="patient_delete_name_label">Type the patient\'s name (%1$s) to confirm</string>
     <string name="patient_delete_confirm">Delete patient</string>
     <string name="patient_action_offline">You are offline. Deleting a patient needs a connection.</string>
@@ -229,7 +232,7 @@
     <string name="more_group_data">Data</string>
     <string name="more_circle_members">Circle members</string>
     <string name="more_invite">Invite someone</string>
-    <string name="more_invite_status">Send a code by WhatsApp</string>
+    <string name="more_invite_status">Invite with a code</string>
     <string name="more_reminders_reliable">Make reminders reliable</string>
     <string name="more_reminders_all_set">All set</string>
     <string name="more_who_reminded">Who gets reminded</string>
@@ -323,6 +326,19 @@
     <string name="meds_countdown_now">now</string>
     <string name="meds_countdown_minutes">in %1$d min</string>
     <string name="meds_countdown_hours">in %1$d h %2$d min</string>
+    <!-- How long an unrecorded slot is past its time; it replaces the countdown. -->
+    <plurals name="meds_late_minutes">
+        <item quantity="one">%1$d min late</item>
+        <item quantity="other">%1$d min late</item>
+    </plurals>
+    <plurals name="meds_late_hours">
+        <item quantity="one">%1$d h late</item>
+        <item quantity="other">%1$d h late</item>
+    </plurals>
+    <plurals name="meds_late_hours_minutes">
+        <item quantity="one">%1$d h %2$d min late</item>
+        <item quantity="other">%1$d h %2$d min late</item>
+    </plurals>
     <string name="meds_slot_given_by_you">Given by you at %1$s</string>
     <string name="meds_slot_given_by_name">Given by %1$s at %2$s</string>
     <string name="meds_slot_given_by_someone">Given by someone at %1$s</string>
@@ -337,7 +353,7 @@
     <string name="meds_someone_else">someone else</string>
     <string name="meds_give">Give</string>
     <plurals name="meds_give_all">
-        <item quantity="one">Give it</item>
+        <item quantity="one">Give</item>
         <item quantity="other">Give all %1$d</item>
     </plurals>
     <string name="meds_attention_group_title">%1$s’s %2$s not confirmed</string>
@@ -391,14 +407,14 @@
     <string name="meds_give_toggle">%1$s given</string>
 
     <!-- M3: a patient's medications. -->
-    <string name="meds_list_title">Medications</string>
-    <string name="meds_tab_title">Medications</string>
-    <string name="meds_list_empty">No medications yet. Add the first one.</string>
+    <string name="meds_list_title">Medicines</string>
+    <string name="meds_tab_title">Medicines</string>
+    <string name="meds_list_empty">No medicines yet. Add the first one.</string>
     <string name="meds_list_add_first">Add their first medicine</string>
     <string name="meds_list_stopped">Stopped (%1$d)</string>
-    <string name="meds_list_add">Add medication</string>
+    <string name="meds_list_add">Add medicine</string>
     <string name="meds_list_open">Open %1$s</string>
-    <string name="meds_open_medications">Medications</string>
+    <string name="meds_open_medications">Medicines</string>
     <string name="meds_patient_not_available">This patient is not available.</string>
     <string name="meds_schedule_daily_summary">%1$s, daily</string>
     <string name="meds_schedule_weekdays_summary">%1$s, on %2$s</string>
@@ -409,7 +425,7 @@
     <string name="meds_regimen_quantity_unit">%1$s</string>
 
     <!-- M3: add / edit medication. -->
-    <string name="meds_edit_title">Edit medication</string>
+    <string name="meds_edit_title">Edit medicine</string>
     <string name="meds_step_stock">Stock</string>
     <string name="meds_name_label">Name</string>
     <string name="meds_catalog_otc">OTC</string>
@@ -458,8 +474,8 @@
     <string name="meds_end_date_label">End date (optional)</string>
     <string name="meds_reminders_same">Same as the patient (%1$s)</string>
     <string name="meds_reminders_same_unknown">Same as the patient</string>
-    <string name="meds_reminders_override">Different for this medication</string>
-    <string name="meds_reminders_hint">Who is reminded comes from the patient by default; this only records the choice for this medication.</string>
+    <string name="meds_reminders_override">Different for this medicine</string>
+    <string name="meds_reminders_hint">Who is reminded comes from the patient by default; this only records the choice for this medicine.</string>
 
     <string name="meds_error_name">Enter a name of up to 200 characters.</string>
     <string name="meds_error_ingredient">Keep the active ingredient to 200 characters or fewer.</string>
@@ -469,14 +485,14 @@
     <string name="meds_error_low_stock">Enter a number of days between 0 and 365.</string>
     <string name="meds_error_policy">This reminder policy is not available.</string>
     <string name="meds_error_primary">Choose a member of this circle.</string>
-    <string name="meds_error_schedule">Choose how often the medication is taken.</string>
+    <string name="meds_error_schedule">Choose how often the medicine is taken.</string>
     <string name="meds_error_weekdays">Choose at least one weekday.</string>
     <string name="meds_error_interval">Enter a number of days between 2 and 365.</string>
     <string name="meds_error_start">Enter a valid start date (YYYY-MM-DD).</string>
     <string name="meds_error_end">The end date must be on or after the start date.</string>
     <string name="meds_error_times">Add at least one time with an amount, as HH:MM.</string>
     <string name="meds_error_times_duplicate">Two doses have the same time. Change one of them.</string>
-    <string name="meds_error_overlap">These dates overlap another schedule of this medication.</string>
+    <string name="meds_error_overlap">These dates overlap another schedule of this medicine.</string>
     <string name="meds_error_stock_quantity">Enter a quantity between 0 and 100000, with up to three decimals.</string>
     <string name="meds_error_stock_quantity_positive">Enter a quantity greater than 0, with up to three decimals.</string>
     <string name="meds_error_stock_reason">Say why the stock is being discarded.</string>
@@ -531,7 +547,7 @@
     <string name="meds_add_action_empty">Add medicine</string>
 
     <!-- M3: medication detail. -->
-    <string name="meds_detail_title">Medication</string>
+    <string name="meds_detail_title">Medicine</string>
     <string name="meds_detail_info">Details</string>
     <string name="meds_detail_current">Current schedule</string>
     <string name="meds_detail_history">Earlier schedules</string>
@@ -561,11 +577,11 @@
     <string name="meds_stop_title">Stop %1$s?</string>
     <string name="meds_stop_body">No doses from the day after the last day. The history stays.</string>
     <string name="meds_stop_last_day">Last day</string>
-    <string name="meds_stop_action">Stop medication</string>
+    <string name="meds_stop_action">Stop medicine</string>
     <string name="meds_change_title">Change dose or schedule</string>
     <string name="meds_change_effective">Effective from</string>
     <string name="meds_change_effective_helper">The new schedule starts on this date; the previous one ends the day before.</string>
-    <string name="meds_not_found">This medication is not available.</string>
+    <string name="meds_not_found">This medicine is not available.</string>
 
     <!-- M5: stock (D28). The section, its actions and their errors. -->
     <plurals name="meds_stock_left">
@@ -602,12 +618,17 @@
         <item quantity="one">About %1$d day left</item>
         <item quantity="other">About %1$d days left</item>
     </plurals>
+    <!-- The same label while the stock is below its threshold: it says what to do. -->
+    <plurals name="meds_stock_days_left_low">
+        <item quantity="one">About %1$d day left · buy soon</item>
+        <item quantity="other">About %1$d days left · buy soon</item>
+    </plurals>
     <string name="meds_stock_no_schedule">No active schedule</string>
     <string name="meds_stock_low_badge">Low stock</string>
     <string name="meds_stock_ready_to_buy">Ready to buy</string>
     <string name="meds_stock_refill">Record refill</string>
     <string name="meds_stock_recount">Recount</string>
-    <string name="meds_stock_count">Count</string>
+    <string name="meds_stock_count">Recount stock</string>
     <string name="meds_stock_discard">Discard</string>
     <string name="meds_stock_refill_title">Record refill</string>
     <string name="meds_stock_refill_body">Add the stock that came in, for example a new box.</string>
@@ -628,7 +649,7 @@
     <string name="shopping_title">Shopping</string>
     <string name="shopping_group_needs_prescription">Ask for a prescription first</string>
     <string name="shopping_empty_title">Nothing to buy</string>
-    <string name="shopping_empty_body">Medications appear here when they are running low.</string>
+    <string name="shopping_empty_body">Medicines appear here when they are running low.</string>
     <string name="shopping_prescription_missing">Prescription missing</string>
     <string name="shopping_prescription_expired">Prescription expired on %1$s</string>
     <string name="shopping_bought">Bought</string>
@@ -639,7 +660,7 @@
     <string name="shopping_prescription_save">Save date</string>
 
     <!-- D12: sign in with Google -->
-    <string name="sign_in_body">Family Care keeps your family’s medication and appointments in one private place. Sign in with the Google account that was invited to your care circle.</string>
+    <string name="sign_in_body">Sign in with Google to create or join your family circle.</string>
     <string name="sign_in_with_google">Sign in with Google</string>
     <string name="sign_in_in_progress">Signing in…</string>
     <string name="sign_in_loading">Checking your session…</string>
@@ -654,14 +675,14 @@
     <string name="reminder_action_given">Given ✓</string>
     <string name="reminder_action_snooze">Snooze 15 min</string>
     <plurals name="reminder_notification_medications">
-        <item quantity="one">%1$d medication</item>
-        <item quantity="other">%1$d medications</item>
+        <item quantity="one">%1$d medicine</item>
+        <item quantity="other">%1$d medicines</item>
     </plurals>
 
     <!-- M4: server escalation pushes (D4/D27). The channel name is what Android's
          notification settings show; the text is generic — no names, no health data. -->
     <string name="escalation_channel_name">Dose alerts</string>
-    <string name="escalation_channel_description">Alerts when a dose stayed unconfirmed. They say nothing about the medication on the lock screen.</string>
+    <string name="escalation_channel_description">Alerts when a dose stayed unconfirmed. They say nothing about the medicine on the lock screen.</string>
     <string name="escalation_notification_title">Family Care</string>
     <string name="escalation_notification_body">A dose needs attention</string>
     <string name="escalation_notification_public_text">Family Care · A dose is due</string>
@@ -669,9 +690,9 @@
     <!-- M5: low-stock pushes (D28). Same rule as the escalation text: generic, no
          names or health data, and the public (locked) version says the same. -->
     <string name="stock_channel_name">Low stock</string>
-    <string name="stock_channel_description">When a medication is running low</string>
+    <string name="stock_channel_description">When a medicine is running low</string>
     <string name="stock_notification_title">Family Care</string>
-    <string name="stock_notification_body">A medication is running low</string>
+    <string name="stock_notification_body">A medicine is running low</string>
 
     <string name="reminders_needs_attention_title">Needs attention</string>
     <string name="reminders_needs_attention_line">%1$s · %2$s · %3$s · not confirmed</string>
@@ -689,12 +710,19 @@
     <string name="reminders_title">Make reminders reliable</string>
     <string name="reminders_intro">Dose reminders are alarms on this phone. Phone makers sometimes stop apps in the background, so these steps keep them reliable.</string>
     <string name="reminders_checks_title">Checks</string>
-    <string name="reminders_notifications">Notifications are allowed</string>
-    <string name="reminders_channel">The dose reminders channel is on</string>
-    <string name="reminders_exact_alarms">Alarms can be exact</string>
-    <string name="reminders_battery">Family Care is not battery-optimised</string>
-    <string name="reminders_alarms_scheduled">Reminders scheduled: %1$d of %2$d</string>
-    <string name="reminders_push_registered">Escalation alerts registered</string>
+    <!-- Each check is a status that is true either way (finding 14 of the UX audit). -->
+    <string name="reminders_check_notifications_on">Notifications: allowed</string>
+    <string name="reminders_check_notifications_off">Notifications: not allowed</string>
+    <string name="reminders_check_channel_on">Reminder channel: on</string>
+    <string name="reminders_check_channel_off">Reminder channel: off</string>
+    <string name="reminders_check_exact_alarms_on">Exact alarms: allowed</string>
+    <string name="reminders_check_exact_alarms_off">Exact alarms: not allowed</string>
+    <string name="reminders_check_battery_on">Battery optimisation: off</string>
+    <string name="reminders_check_battery_off">Battery optimisation: on</string>
+    <string name="reminders_check_alarms_on">Scheduled reminders: all %1$d</string>
+    <string name="reminders_check_alarms_off">Scheduled reminders: %1$d of %2$d</string>
+    <string name="reminders_check_push_on">Escalation alerts: registered</string>
+    <string name="reminders_check_push_off">Escalation alerts: not registered</string>
     <string name="reminders_next_alarm">Next reminder: %1$s</string>
     <string name="reminders_no_next_alarm">No reminder is scheduled yet.</string>
     <string name="reminders_all_good">Reminders look reliable on this phone.</string>
@@ -848,8 +876,8 @@
     <string name="export_health_centre_phone">Health centre phone</string>
     <string name="export_emergency_contact">Emergency contact</string>
     <string name="export_none">None recorded</string>
-    <string name="export_active_medications">Active medications</string>
-    <string name="export_stopped_medications">Stopped medications</string>
+    <string name="export_active_medications">Active medicines</string>
+    <string name="export_stopped_medications">Stopped medicines</string>
     <string name="export_stopped_on">stopped on %1$s</string>
     <string name="export_stock">Stock: %1$s %2$s</string>
     <string name="export_schedule_daily">daily</string>
@@ -873,9 +901,9 @@
     <string name="activity_not_allowed">Only owners can see the activity.</string>
     <string name="activity_error">Something went wrong. Try again.</string>
     <string name="activity_someone">Someone</string>
-    <string name="activity_added_medication">%1$s added medication %2$s for %3$s</string>
-    <string name="activity_updated_medication">%1$s updated medication %2$s for %3$s</string>
-    <string name="activity_removed_medication">%1$s removed medication %2$s for %3$s</string>
+    <string name="activity_added_medication">%1$s added medicine %2$s for %3$s</string>
+    <string name="activity_updated_medication">%1$s updated medicine %2$s for %3$s</string>
+    <string name="activity_removed_medication">%1$s removed medicine %2$s for %3$s</string>
     <string name="activity_recorded_dose">%1$s recorded a dose of %2$s for %3$s</string>
     <string name="activity_added_appointment">%1$s added appointment %2$s for %3$s</string>
     <string name="activity_updated_appointment">%1$s changed appointment %2$s for %3$s</string>

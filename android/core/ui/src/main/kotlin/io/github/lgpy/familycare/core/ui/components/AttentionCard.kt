@@ -126,6 +126,7 @@ private fun AttentionRowContent(item: AttentionItem) {
             .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
         AttentionRowLayout(
+            pinActionAtEnd = item.action == null,
             content = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -229,6 +230,12 @@ internal fun attentionContentNeed(natural: Int, longestWord: Int, indent: Int): 
 private fun AttentionRowLayout(
     modifier: Modifier = Modifier,
     spacing: Dp = TileGap,
+    /**
+     * A chevron is an affordance, not an action: it always stays at the end of
+     * the row and the text wraps beside it. A small button still moves below a
+     * long text that cannot share the line (finding 13 of the UX audit).
+     */
+    pinActionAtEnd: Boolean = false,
     content: @Composable () -> Unit,
     action: @Composable () -> Unit,
 ) {
@@ -257,7 +264,7 @@ private fun AttentionRowLayout(
                 indent = indentPx,
             )
             val sideBySide = !actionIsEmpty &&
-                reflowFits(available, contentNeed, actionNatural, spacingPx)
+                (pinActionAtEnd || reflowFits(available, contentNeed, actionNatural, spacingPx))
 
             if (actionIsEmpty) {
                 val contentPlaceable = contentMeasurable.measure(

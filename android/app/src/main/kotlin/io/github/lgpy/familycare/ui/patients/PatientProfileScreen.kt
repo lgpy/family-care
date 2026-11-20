@@ -181,6 +181,7 @@ fun PatientProfileScreen(
                     policy = uiState.reminderPolicy,
                     primaryCaregiverName = uiState.primaryCaregiverName,
                     primaryCaregiverIsMe = uiState.primaryCaregiverIsMe,
+                    escalationDelayMinutes = uiState.escalationDelayMinutes,
                 ),
             )
         }

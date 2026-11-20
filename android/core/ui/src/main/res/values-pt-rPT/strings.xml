@@ -49,6 +49,8 @@
     <string name="error_already_accepted">Esse convite já foi utilizado.</string>
     <string name="error_not_found">Isso já não está disponível.</string>
     <string name="error_invalid_email">Indique um endereço de email válido.</string>
+    <!-- Um nome obrigatório vazio é um erro diferente de um nome demasiado longo. -->
+    <string name="error_name_empty">Indique um nome.</string>
 
     <!-- M1: uma alteração em fila que o servidor recusou definitivamente. -->
     <string name="sync_rejected_change">Uma alteração %1$s não pôde ser guardada no servidor e foi anulada (%2$s).</string>
@@ -63,14 +65,15 @@
 
     <!-- M2: pessoas. -->
     <string name="patients_title">Pessoas</string>
-    <string name="patients_empty">Ainda não há pessoas. Adicione as pessoas cuja medicação e consultas ajuda a gerir.</string>
+    <string name="patients_empty">Ainda não há pessoas. Adicione as pessoas cujos medicamentos e consultas ajuda a gerir.</string>
     <string name="patients_add">Adicionar pessoa</string>
     <string name="patients_open">Abrir pessoa</string>
-    <string name="patients_policy_primary_with_escalation">Principal com escalonamento</string>
-    <string name="patients_policy_all_caregivers">Todos os cuidadores</string>
+    <string name="patients_policy_primary_with_escalation">Primeiro uma pessoa; todos após %1$d min</string>
+    <string name="patients_policy_primary_with_escalation_short">Primeiro uma pessoa, depois todos</string>
+    <string name="patients_policy_all_caregivers">Todos recebem lembretes</string>
     <string name="patients_policy_unavailable">Política de lembretes indisponível</string>
-    <string name="patients_reminder_primary_first">Primeiro %1$s, depois todos</string>
-    <string name="patients_reminder_you_first">Primeiro você, depois todos</string>
+    <string name="patients_reminder_primary_first">Primeiro %1$s; todos após %2$d min</string>
+    <string name="patients_reminder_you_first">Primeiro você; todos após %1$d min</string>
     <string name="patients_reminder_everyone">Todos recebem lembretes</string>
     <string name="patients_tag_allergies">Alergias</string>
     <string name="patients_summary_low_stock">%1$s a acabar</string>
@@ -133,7 +136,7 @@
     <string name="patient_unarchive_confirm_title">Desarquivar %1$s?</string>
     <string name="patient_unarchive_confirm_body">A pessoa volta a ser editável e volta a aparecer no Hoje, na Agenda e nos lembretes.</string>
     <string name="patient_delete_dialog_title">Eliminar pessoa?</string>
-    <string name="patient_delete_warning">Isto não pode ser anulado. Toda a medicação, consultas, informação e histórico desta pessoa serão apagados. As cópias de segurança guardam os dados até expirarem, no prazo de um ano.</string>
+    <string name="patient_delete_warning">Isto não pode ser anulado. Todos os medicamentos, consultas, informação e histórico desta pessoa serão apagados. As cópias de segurança guardam os dados até expirarem, no prazo de um ano.</string>
     <string name="patient_delete_name_label">Escreva o nome da pessoa (%1$s) para confirmar</string>
     <string name="patient_delete_confirm">Eliminar pessoa</string>
     <string name="patient_action_offline">Está sem ligação. Eliminar uma pessoa precisa de ligação à internet.</string>
@@ -229,7 +232,7 @@
     <string name="more_group_data">Dados</string>
     <string name="more_circle_members">Membros do círculo</string>
     <string name="more_invite">Convidar alguém</string>
-    <string name="more_invite_status">Envie um código por WhatsApp</string>
+    <string name="more_invite_status">Convidar com um código</string>
     <string name="more_reminders_reliable">Tornar os lembretes fiáveis</string>
     <string name="more_reminders_all_set">Tudo em ordem</string>
     <string name="more_who_reminded">Quem é lembrado</string>
@@ -305,7 +308,7 @@
 
     <string name="about_open">Sobre</string>
     <string name="about_title">Sobre</string>
-    <string name="about_body">A Family Care ajuda uma família a partilhar os cuidados das pessoas de quem cuida: medicação, consultas e compras, com lembretes que chegam à pessoa certa.</string>
+    <string name="about_body">A Family Care ajuda uma família a partilhar os cuidados das pessoas de quem cuida: medicamentos, consultas e compras, com lembretes que chegam à pessoa certa.</string>
     <string name="about_version">Versão %1$s (%2$d)</string>
 
     <!-- M3: cartão "Tomas de hoje" do ecrã Hoje. -->
@@ -324,6 +327,19 @@
     <string name="meds_countdown_now">agora</string>
     <string name="meds_countdown_minutes">daqui a %1$d min</string>
     <string name="meds_countdown_hours">daqui a %1$d h %2$d min</string>
+    <!-- Há quanto tempo uma toma por registar passou da hora; substitui a contagem. -->
+    <plurals name="meds_late_minutes" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d min de atraso</item>
+        <item quantity="other">%1$d min de atraso</item>
+    </plurals>
+    <plurals name="meds_late_hours" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d h de atraso</item>
+        <item quantity="other">%1$d h de atraso</item>
+    </plurals>
+    <plurals name="meds_late_hours_minutes" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d h %2$d min de atraso</item>
+        <item quantity="other">%1$d h %2$d min de atraso</item>
+    </plurals>
     <string name="meds_slot_given_by_you">Dada por si às %1$s</string>
     <string name="meds_slot_given_by_name">Dada por %1$s às %2$s</string>
     <string name="meds_slot_given_by_someone">Dada por outra pessoa às %1$s</string>
@@ -342,7 +358,7 @@
          words are joined to a number printed by stockLeftText(). -->
     <plurals name="meds_give_all" tools:ignore="ImpliedQuantity">
         <item quantity="one">Dar</item>
-        <item quantity="other">Dar todos (%1$d)</item>
+        <item quantity="other">Dar todos %1$d</item>
     </plurals>
     <string name="meds_attention_group_title">%1$s às %2$s por confirmar</string>
     <!-- MissingQuantity: pt-PT has no "many" form; the other plurals in this
@@ -397,14 +413,14 @@
     <string name="meds_give_toggle">Dado: %1$s</string>
 
     <!-- M3: medicação de uma pessoa. -->
-    <string name="meds_list_title">Medicação</string>
+    <string name="meds_list_title">Medicamentos</string>
     <string name="meds_tab_title">Medicamentos</string>
-    <string name="meds_list_empty">Ainda não há medicação. Adicione a primeira.</string>
+    <string name="meds_list_empty">Ainda não há medicamentos. Adicione o primeiro.</string>
     <string name="meds_list_add_first">Adicionar o primeiro medicamento</string>
-    <string name="meds_list_stopped">Suspensa (%1$d)</string>
-    <string name="meds_list_add">Adicionar medicação</string>
+    <string name="meds_list_stopped">Suspensos (%1$d)</string>
+    <string name="meds_list_add">Adicionar medicamento</string>
     <string name="meds_list_open">Abrir %1$s</string>
-    <string name="meds_open_medications">Medicação</string>
+    <string name="meds_open_medications">Medicamentos</string>
     <string name="meds_patient_not_available">Esta pessoa não está disponível.</string>
     <string name="meds_schedule_daily_summary">%1$s, todos os dias</string>
     <string name="meds_schedule_weekdays_summary">%1$s, %2$s</string>
@@ -415,7 +431,7 @@
     <string name="meds_regimen_quantity_unit">%1$s</string>
 
     <!-- M3: adicionar / editar medicação. -->
-    <string name="meds_edit_title">Editar medicação</string>
+    <string name="meds_edit_title">Editar medicamento</string>
     <string name="meds_step_stock">Stock</string>
     <string name="meds_name_label">Nome</string>
     <string name="meds_catalog_otc">Sem receita</string>
@@ -464,8 +480,8 @@
     <string name="meds_end_date_label">Data de fim (opcional)</string>
     <string name="meds_reminders_same">Igual à pessoa (%1$s)</string>
     <string name="meds_reminders_same_unknown">Igual à pessoa</string>
-    <string name="meds_reminders_override">Diferente para esta medicação</string>
-    <string name="meds_reminders_hint">Por omissão, quem é lembrado vem da pessoa; isto só registra a escolha para esta medicação.</string>
+    <string name="meds_reminders_override">Diferente para este medicamento</string>
+    <string name="meds_reminders_hint">Por omissão, quem é lembrado vem da pessoa; isto só regista a escolha para este medicamento.</string>
 
     <string name="meds_error_name">Indique um nome com até 200 caracteres.</string>
     <string name="meds_error_ingredient">Mantenha a substância ativa com 200 caracteres ou menos.</string>
@@ -475,22 +491,22 @@
     <string name="meds_error_low_stock">Indique um número de dias entre 0 e 365.</string>
     <string name="meds_error_policy">Esta política de lembretes não está disponível.</string>
     <string name="meds_error_primary">Escolha um membro deste círculo.</string>
-    <string name="meds_error_schedule">Escolha com que frequência a medicação é tomada.</string>
+    <string name="meds_error_schedule">Escolha com que frequência o medicamento é tomado.</string>
     <string name="meds_error_weekdays">Escolha pelo menos um dia da semana.</string>
     <string name="meds_error_interval">Indique um número de dias entre 2 e 365.</string>
     <string name="meds_error_start">Indique uma data de início válida (AAAA-MM-DD).</string>
     <string name="meds_error_end">A data de fim tem de ser igual ou posterior à data de início.</string>
     <string name="meds_error_times">Adicione pelo menos uma hora com quantidade, no formato HH:MM.</string>
     <string name="meds_error_times_duplicate">Duas tomas têm a mesma hora. Altere uma delas.</string>
-    <string name="meds_error_overlap">Estas datas sobrepõem-se a outro esquema desta medicação.</string>
+    <string name="meds_error_overlap">Estas datas sobrepõem-se a outro esquema deste medicamento.</string>
     <string name="meds_error_stock_quantity">Indique uma quantidade entre 0 e 100000, com até três casas decimais.</string>
     <string name="meds_error_stock_quantity_positive">Indique uma quantidade superior a 0, com até três casas decimais.</string>
     <string name="meds_error_stock_reason">Indique porque está a deitar fora o stock.</string>
     <string name="meds_error_prescription_date">Indique uma data válida (AAAA-MM-DD).</string>
 
     <!-- M9: o formulário de uma página e a folha do aspeto do comprimido. -->
-    <string name="meds_new_title">Nova medicação para %1$s</string>
-    <string name="meds_new_title_unknown">Nova medicação</string>
+    <string name="meds_new_title">Novo medicamento para %1$s</string>
+    <string name="meds_new_title_unknown">Novo medicamento</string>
     <string name="meds_medicine_section">Medicamento</string>
     <string name="meds_looks_section">Aspeto</string>
     <string name="meds_look_not_set">Por definir — toque para igualar ao comprimido da caixa</string>
@@ -534,10 +550,10 @@
     <string name="meds_decrease_time_amount">Diminuir a quantidade às %1$s</string>
     <string name="meds_increase_time_amount">Aumentar a quantidade às %1$s</string>
     <string name="meds_add_action">Adicionar %1$s</string>
-    <string name="meds_add_action_empty">Adicionar medicação</string>
+    <string name="meds_add_action_empty">Adicionar medicamento</string>
 
     <!-- M3: detalhe da medicação. -->
-    <string name="meds_detail_title">Medicação</string>
+    <string name="meds_detail_title">Medicamento</string>
     <string name="meds_detail_info">Detalhes</string>
     <string name="meds_detail_current">Esquema atual</string>
     <string name="meds_detail_history">Esquemas anteriores</string>
@@ -548,7 +564,7 @@
     <string name="meds_detail_change_look">Alterar o aspeto do comprimido</string>
     <string name="meds_detail_change">Alterar dose ou esquema</string>
     <string name="meds_detail_stop">Suspender</string>
-    <string name="meds_detail_stopped">Suspensa em %1$s</string>
+    <string name="meds_detail_stopped">Suspenso em %1$s</string>
     <string name="meds_detail_strength">Dosagem: %1$s</string>
     <string name="meds_detail_ingredient">Substância ativa: %1$s</string>
     <string name="meds_detail_form">Forma: %1$s</string>
@@ -567,11 +583,11 @@
     <string name="meds_stop_title">Suspender %1$s?</string>
     <string name="meds_stop_body">Não há tomas a partir do dia seguinte ao último dia. O histórico mantém-se.</string>
     <string name="meds_stop_last_day">Último dia</string>
-    <string name="meds_stop_action">Suspender medicação</string>
+    <string name="meds_stop_action">Suspender medicamento</string>
     <string name="meds_change_title">Alterar dose ou esquema</string>
     <string name="meds_change_effective">A partir de</string>
     <string name="meds_change_effective_helper">O novo esquema começa nesta data; o anterior termina no dia anterior.</string>
-    <string name="meds_not_found">Esta medicação não está disponível.</string>
+    <string name="meds_not_found">Este medicamento não está disponível.</string>
 
     <!-- M5: stock (D28). A secção, as ações e os respetivos erros. -->
     <plurals name="meds_stock_left">
@@ -608,12 +624,17 @@
         <item quantity="one">Cerca de %1$d dia para acabar</item>
         <item quantity="other">Cerca de %1$d dias para acabar</item>
     </plurals>
+    <!-- A mesma etiqueta quando o stock está abaixo do limite: diz o que fazer. -->
+    <plurals name="meds_stock_days_left_low" tools:ignore="MissingQuantity">
+        <item quantity="one">Cerca de %1$d dia para acabar · compre em breve</item>
+        <item quantity="other">Cerca de %1$d dias para acabar · compre em breve</item>
+    </plurals>
     <string name="meds_stock_no_schedule">Sem esquema ativo</string>
     <string name="meds_stock_low_badge">Stock baixo</string>
     <string name="meds_stock_ready_to_buy">Pronto a comprar</string>
     <string name="meds_stock_refill">Registar reabastecimento</string>
     <string name="meds_stock_recount">Recontar</string>
-    <string name="meds_stock_count">Contar</string>
+    <string name="meds_stock_count">Recontar stock</string>
     <string name="meds_stock_discard">Deitar fora</string>
     <string name="meds_stock_refill_title">Registar reabastecimento</string>
     <string name="meds_stock_refill_body">Adicione o stock que entrou, por exemplo uma caixa nova.</string>
@@ -645,7 +666,7 @@
     <string name="shopping_prescription_save">Guardar data</string>
 
     <!-- D12: início de sessão com o Google -->
-    <string name="sign_in_body">A aplicação Family Care guarda a medicação e as consultas da sua família num único local privado. Inicie sessão com a conta Google que foi convidada para o seu círculo de cuidados.</string>
+    <string name="sign_in_body">Inicie sessão com o Google para criar ou entrar no seu círculo familiar.</string>
     <string name="sign_in_with_google">Iniciar sessão com o Google</string>
     <string name="sign_in_in_progress">A iniciar sessão…</string>
     <string name="sign_in_loading">A verificar a sessão…</string>
@@ -660,13 +681,13 @@
     <string name="reminder_action_given">Dada ✓</string>
     <string name="reminder_action_snooze">Adiar 15 min</string>
     <plurals name="reminder_notification_medications">
-        <item quantity="one">%1$d medicação</item>
-        <item quantity="other">%1$d medicações</item>
+        <item quantity="one">%1$d medicamento</item>
+        <item quantity="other">%1$d medicamentos</item>
     </plurals>
 
     <!-- M4: server escalation pushes (D4/D27). -->
     <string name="escalation_channel_name">Alertas de tomas</string>
-    <string name="escalation_channel_description">Alertas quando uma toma fica por confirmar. No ecrã bloqueado não dizem nada sobre a medicação.</string>
+    <string name="escalation_channel_description">Alertas quando uma toma fica por confirmar. No ecrã bloqueado não dizem nada sobre o medicamento.</string>
     <string name="escalation_notification_title">Family Care</string>
     <string name="escalation_notification_body">Uma toma precisa de atenção</string>
     <string name="escalation_notification_public_text">Family Care · Há uma toma para dar</string>
@@ -694,12 +715,19 @@
     <string name="reminders_title">Tornar os lembretes fiáveis</string>
     <string name="reminders_intro">Os lembretes de tomas são alarmes neste telemóvel. Alguns fabricantes fecham aplicações em segundo plano; estes passos mantêm os lembretes fiáveis.</string>
     <string name="reminders_checks_title">Verificações</string>
-    <string name="reminders_notifications">As notificações estão permitidas</string>
-    <string name="reminders_channel">O canal de lembretes de tomas está ativo</string>
-    <string name="reminders_exact_alarms">Os alarmes podem ser exatos</string>
-    <string name="reminders_battery">O Family Care não está sujeito à otimização da bateria</string>
-    <string name="reminders_alarms_scheduled">Lembretes agendados: %1$d de %2$d</string>
-    <string name="reminders_push_registered">Alertas de escalonamento registados</string>
+    <!-- Cada verificação é um estado verdadeiro com ou sem problema (auditoria, ponto 14). -->
+    <string name="reminders_check_notifications_on">Notificações: permitidas</string>
+    <string name="reminders_check_notifications_off">Notificações: não permitidas</string>
+    <string name="reminders_check_channel_on">Canal de lembretes: ativo</string>
+    <string name="reminders_check_channel_off">Canal de lembretes: inativo</string>
+    <string name="reminders_check_exact_alarms_on">Alarmes exatos: permitidos</string>
+    <string name="reminders_check_exact_alarms_off">Alarmes exatos: não permitidos</string>
+    <string name="reminders_check_battery_on">Otimização da bateria: desligada</string>
+    <string name="reminders_check_battery_off">Otimização da bateria: ligada</string>
+    <string name="reminders_check_alarms_on">Lembretes agendados: todos (%1$d)</string>
+    <string name="reminders_check_alarms_off">Lembretes agendados: %1$d de %2$d</string>
+    <string name="reminders_check_push_on">Alertas de escalonamento: registados</string>
+    <string name="reminders_check_push_off">Alertas de escalonamento: não registados</string>
     <string name="reminders_next_alarm">Próximo lembrete: %1$s</string>
     <string name="reminders_no_next_alarm">Ainda não há lembretes agendados.</string>
     <string name="reminders_all_good">Os lembretes parecem fiáveis neste telemóvel.</string>
@@ -854,8 +882,8 @@
     <string name="export_health_centre_phone">Telefone do centro de saúde</string>
     <string name="export_emergency_contact">Contacto de emergência</string>
     <string name="export_none">Nada registado</string>
-    <string name="export_active_medications">Medicação ativa</string>
-    <string name="export_stopped_medications">Medicação suspensa</string>
+    <string name="export_active_medications">Medicamentos ativos</string>
+    <string name="export_stopped_medications">Medicamentos suspensos</string>
     <string name="export_stopped_on">suspensa em %1$s</string>
     <string name="export_stock">Stock: %1$s %2$s</string>
     <string name="export_schedule_daily">diariamente</string>

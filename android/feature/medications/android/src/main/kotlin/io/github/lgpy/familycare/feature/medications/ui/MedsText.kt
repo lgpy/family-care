@@ -131,6 +131,36 @@ fun regimenTimesSummary(regimen: Regimen): String {
     return parts.joinToString(separator)
 }
 
+/**
+ * "1 tablet · 08:00, 16:00" for the profile's medicine cards: one amount and
+ * the times it is taken. When the amounts differ per time, each time carries
+ * its own amount instead ("08:00 · ½ tablet · 21:00 · 1 tablet").
+ */
+@Composable
+fun regimenAmountTimesSummary(regimen: Regimen, stockUnit: String): String {
+    val times = regimen.sortedTimes()
+    val quantities = times.map { it.quantity }.distinct()
+    val separator = stringResource(R.string.meds_list_separator)
+    val comma = stringResource(R.string.meds_list_comma)
+
+    if (quantities.size == 1) {
+        val quantity = quantities.first()
+        val amount = formatQuantity(quantity) + " " + stockUnitLabel(stockUnit, unitCount(quantity))
+        return amount + separator + times.joinToString(comma) { formatTime(it.time) }
+    }
+    val parts = mutableListOf<String>()
+    for (doseTime in times) {
+        parts += formatTime(doseTime.time) + separator +
+            formatQuantity(doseTime.quantity) + " " +
+            stockUnitLabel(stockUnit, unitCount(doseTime.quantity))
+    }
+    return parts.joinToString(separator)
+}
+
+/** The plural form a whole number of units takes: one up to a whole unit. */
+private fun unitCount(quantity: BigDecimal): Int =
+    if (quantity > BigDecimal.ONE) 2 else 1
+
 /** "1 at 08:00 · ½ at 21:00, daily" — the one-line regimen summary. */
 @Composable
 fun regimenSummary(regimen: Regimen): String {

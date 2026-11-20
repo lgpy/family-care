@@ -14,12 +14,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,6 +40,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.ScreenHeader
 import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealth
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealthChecker
@@ -113,10 +119,17 @@ fun RemindersScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = stringResource(R.string.reminders_title),
-            style = MaterialTheme.typography.headlineMedium,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = FcIcons.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                ScreenHeader(title = stringResource(R.string.reminders_title))
+            }
+        }
         Text(
             text = stringResource(R.string.reminders_intro),
             style = MaterialTheme.typography.bodyMedium,
@@ -131,7 +144,8 @@ fun RemindersScreen(
             Text(text = stringResource(R.string.loading), style = MaterialTheme.typography.bodyMedium)
         } else {
             CheckRow(
-                label = stringResource(R.string.reminders_notifications),
+                statusOn = stringResource(R.string.reminders_check_notifications_on),
+                statusOff = stringResource(R.string.reminders_check_notifications_off),
                 ok = current.notificationsAllowed,
             ) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -141,25 +155,37 @@ fun RemindersScreen(
                 }
             }
             CheckRow(
-                label = stringResource(R.string.reminders_channel),
+                statusOn = stringResource(R.string.reminders_check_channel_on),
+                statusOff = stringResource(R.string.reminders_check_channel_off),
                 ok = current.channelEnabled,
             ) { openNotificationSettings(context) }
             CheckRow(
-                label = stringResource(R.string.reminders_exact_alarms),
+                statusOn = stringResource(R.string.reminders_check_exact_alarms_on),
+                statusOff = stringResource(R.string.reminders_check_exact_alarms_off),
                 ok = current.exactAlarmsAllowed,
             ) { requestExactAlarms(context) }
             CheckRow(
-                label = stringResource(R.string.reminders_battery),
+                statusOn = stringResource(R.string.reminders_check_battery_on),
+                statusOff = stringResource(R.string.reminders_check_battery_off),
                 ok = current.batteryOptimisationIgnored,
             ) { requestIgnoreBatteryOptimisation(context) }
             CheckRow(
-                label = stringResource(R.string.reminders_alarms_scheduled, current.scheduledCount, current.plannedCount),
+                statusOn = stringResource(
+                    R.string.reminders_check_alarms_on,
+                    current.plannedCount,
+                ),
+                statusOff = stringResource(
+                    R.string.reminders_check_alarms_off,
+                    current.scheduledCount,
+                    current.plannedCount,
+                ),
                 ok = current.alarmsInSync,
             ) { refresh(reschedule = true) }
             // M4/D27: informational only — escalation is the server-side safety
             // net, so an unregistered phone still reminds locally.
             CheckRow(
-                label = stringResource(R.string.reminders_push_registered),
+                statusOn = stringResource(R.string.reminders_check_push_on),
+                statusOff = stringResource(R.string.reminders_check_push_off),
                 ok = current.pushRegistered,
             )
             Text(
@@ -249,14 +275,16 @@ fun RemindersScreen(
         TextButton(onClick = { refresh(reschedule = true) }) {
             Text(text = stringResource(R.string.reminders_refresh))
         }
-        TextButton(onClick = onBack) {
-            Text(text = stringResource(R.string.back))
-        }
     }
 }
 
 @Composable
-private fun CheckRow(label: String, ok: Boolean, onFix: (() -> Unit)? = null) {
+private fun CheckRow(
+    statusOn: String,
+    statusOff: String,
+    ok: Boolean,
+    onFix: (() -> Unit)? = null,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -272,12 +300,20 @@ private fun CheckRow(label: String, ok: Boolean, onFix: (() -> Unit)? = null) {
             },
         )
         Text(
-            text = label,
+            text = if (ok) statusOn else statusOff,
             style = MaterialTheme.typography.bodyMedium,
+            color = if (ok) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.error
+            },
             modifier = Modifier.weight(1f),
         )
         if (!ok && onFix != null) {
-            TextButton(onClick = onFix) {
+            FilledTonalButton(
+                onClick = onFix,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
                 Text(text = stringResource(R.string.reminders_fix))
             }
         }

@@ -18,7 +18,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
-import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import java.math.BigDecimal
 import java.time.LocalTime
@@ -125,18 +124,4 @@ fun MedsTimeChip(
             Text(text = label, style = MaterialTheme.typography.labelLarge)
         }
     }
-}
-
-/**
- * The icon of a dose time's part of the day: morning (05–11) sun, lunch
- * (11–15), dinner (17–21) and bedtime (21–05); any other hour gets the plain
- * schedule symbol. Ranges follow docs/ux/mockups/screens-v2.html.
- */
-@Composable
-fun timeOfDayIcon(time: LocalTime): ImageVector = when (time.hour) {
-    in 5..10 -> FcIcons.WbSunny
-    in 11..14 -> FcIcons.LunchDining
-    in 17..20 -> FcIcons.DinnerDining
-    in 21..23, in 0..4 -> FcIcons.Bedtime
-    else -> FcIcons.Schedule
 }

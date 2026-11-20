@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,12 +35,15 @@ internal const val TimeRailMaxTimeWidthFraction = 0.26f
  * @param time The label, e.g. "08:00".
  * @param secondary Optional second line under the time ("in 3 h 48 min"). It
  *   wraps under the time instead of widening the rail column.
+ * @param late Whether [secondary] says the group is overdue ("40 min late"); it
+ *   is then drawn in the attention colour.
  * @param slots The patients whose doses are due at [time].
  */
 @Immutable
 data class DoseTimeGroup(
     val time: String,
     val secondary: String? = null,
+    val late: Boolean = false,
     val slots: List<DoseSlotUi>,
 )
 
@@ -89,7 +93,7 @@ fun TimeRail(
 
             val labels = groups.mapIndexed { index, group ->
                 subcompose(RailLabelKey(index)) {
-                    RailTimeLabel(group.time, group.secondary, doneGroups[index])
+                    RailTimeLabel(group.time, group.secondary, group.late, doneGroups[index])
                 }.map {
                     it.measure(
                         Constraints(
@@ -136,7 +140,7 @@ fun TimeRail(
             }
             val headingPlaceables = groups.mapIndexed { index, group ->
                 subcompose(StackedHeadingKey(index)) {
-                    StackedTimeHeading(group.time, group.secondary, doneGroups[index])
+                    StackedTimeHeading(group.time, group.secondary, group.late, doneGroups[index])
                 }.map { it.measure(headingConstraints) }
             }
             val slotConstraints = if (bounded) {
@@ -197,10 +201,9 @@ private fun TimeText(time: String, done: Boolean) {
     )
 }
 
-/** The time column cell: the time, with its countdown wrapped underneath. */
+/** The time column cell: the time, with its countdown or late line underneath. */
 @Composable
-private fun RailTimeLabel(time: String, secondary: String?, done: Boolean) {
-    val scheme = MaterialTheme.colorScheme
+private fun RailTimeLabel(time: String, secondary: String?, late: Boolean, done: Boolean) {
     Column {
         TimeText(time, done)
         secondary?.let {
@@ -208,17 +211,16 @@ private fun RailTimeLabel(time: String, secondary: String?, done: Boolean) {
                 text = it,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = scheme.onSurfaceVariant.copy(alpha = if (done) 0.55f else 1f),
+                color = secondaryColor(late = late, done = done),
                 modifier = Modifier.padding(top = 6.dp),
             )
         }
     }
 }
 
-/** The stacked heading: the time, then the countdown beside it if it fits. */
+/** The stacked heading: the time, then the countdown or late line beside it if it fits. */
 @Composable
-private fun StackedTimeHeading(time: String, secondary: String?, done: Boolean) {
-    val scheme = MaterialTheme.colorScheme
+private fun StackedTimeHeading(time: String, secondary: String?, late: Boolean, done: Boolean) {
     Row(
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -229,7 +231,7 @@ private fun StackedTimeHeading(time: String, secondary: String?, done: Boolean) 
                 text = it,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = scheme.onSurfaceVariant.copy(alpha = if (done) 0.55f else 1f),
+                color = secondaryColor(late = late, done = done),
                 modifier = Modifier
                     .weight(1f)
                     .padding(bottom = 2.dp),
@@ -237,6 +239,15 @@ private fun StackedTimeHeading(time: String, secondary: String?, done: Boolean) 
         }
     }
 }
+
+/** The countdown is quiet; a late line is the timeline's one attention colour. */
+@Composable
+private fun secondaryColor(late: Boolean, done: Boolean): Color =
+    if (late) {
+        FamilyCareTheme.colors.attentionAccent
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (done) 0.55f else 1f)
+    }
 
 private fun TimeProbeKey(index: Int) = "time-probe-$index"
 

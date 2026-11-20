@@ -79,7 +79,6 @@ import io.github.lgpy.familycare.feature.medications.ui.messageRes
 import io.github.lgpy.familycare.feature.medications.ui.prescriptionState
 import io.github.lgpy.familycare.feature.medications.ui.regimenSummary
 import io.github.lgpy.familycare.feature.medications.ui.stockUnitLabel
-import io.github.lgpy.familycare.feature.medications.ui.timeOfDayIcon
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.ZoneId
@@ -466,7 +465,7 @@ private fun WhenSection(
                             MedsTimeChip(
                                 time = doseTime.time,
                                 quantity = doseTime.quantity,
-                                icon = timeOfDayIcon(doseTime.time),
+                                icon = FcIcons.Schedule,
                             )
                         }
                     }
