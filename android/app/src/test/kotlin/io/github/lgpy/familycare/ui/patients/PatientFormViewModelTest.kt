@@ -10,6 +10,7 @@ import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.PatientRules
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.ui.FakeCareCircleRepository
+import io.github.lgpy.familycare.ui.FakePatientInfoRepository
 import io.github.lgpy.familycare.ui.FakePatientRepository
 import io.github.lgpy.familycare.ui.caregiverMember
 import io.github.lgpy.familycare.ui.ownerMember
@@ -37,12 +38,14 @@ class PatientFormViewModelTest {
 
     private lateinit var patients: FakePatientRepository
     private lateinit var circles: FakeCareCircleRepository
+    private lateinit var info: FakePatientInfoRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         patients = FakePatientRepository()
         circles = FakeCareCircleRepository()
+        info = FakePatientInfoRepository()
         circles.setCircle(
             circle = testCircle,
             role = MemberRole.OWNER,
@@ -66,6 +69,7 @@ class PatientFormViewModelTest {
             patientId = patientId,
             patientRepository = patients,
             careCircleRepository = circles,
+            patientInfoRepository = info,
         )
 
     @Test
@@ -418,5 +422,87 @@ class PatientFormViewModelTest {
         viewModel.onNameChanged("Avó")
 
         assertFalse(CoreField.PATIENT_DISPLAY_NAME in viewModel.uiState.value.errors)
+    }
+
+    // --- Dirty tracking and the add-form allergies -----------------------------
+
+    @Test
+    fun aFreshFormIsCleanAndAnEditMakesItDirty() {
+        val viewModel = viewModel()
+
+        assertFalse(viewModel.uiState.value.isDirty)
+
+        viewModel.onNameChanged("Avó")
+        assertTrue(viewModel.uiState.value.isDirty)
+
+        // Typing back the loaded value makes the form clean again.
+        viewModel.onNameChanged("")
+        assertFalse(viewModel.uiState.value.isDirty)
+    }
+
+    @Test
+    fun theAllergiesAndNoneKnownCountAsChanges() {
+        val viewModel = viewModel()
+
+        viewModel.onAllergiesChanged("Penicillin")
+        assertTrue(viewModel.uiState.value.isDirty)
+
+        viewModel.onNoneKnownChanged(true)
+        assertTrue(viewModel.uiState.value.isDirty)
+        assertEquals("", viewModel.uiState.value.allergies)
+    }
+
+    @Test
+    fun savingANewPatientWritesTheAllergiesThroughPatientInfo() {
+        val viewModel = viewModel()
+        viewModel.onNameChanged("Avó")
+        viewModel.onPrimaryCaregiverChanged(ownerMember.userId)
+        viewModel.onAllergiesChanged("Penicillin, ibuprofen, Penicillin")
+
+        viewModel.save()
+
+        val saved = info.saves.single()
+        assertEquals(patients.saved.single().id, saved.patientId)
+        assertEquals(listOf("Penicillin", "ibuprofen"), saved.info.allergies)
+        assertTrue(viewModel.uiState.value.saved)
+    }
+
+    @Test
+    fun noneKnownWritesNoAllergyRow() {
+        val viewModel = viewModel()
+        viewModel.onNameChanged("Avó")
+        viewModel.onPrimaryCaregiverChanged(ownerMember.userId)
+        viewModel.onNoneKnownChanged(true)
+
+        viewModel.save()
+
+        assertTrue(info.saves.isEmpty())
+        assertTrue(viewModel.uiState.value.saved)
+    }
+
+    @Test
+    fun blankAllergiesWriteNoAllergyRow() {
+        val viewModel = viewModel()
+        viewModel.onNameChanged("Avó")
+        viewModel.onPrimaryCaregiverChanged(ownerMember.userId)
+
+        viewModel.save()
+
+        assertTrue(info.saves.isEmpty())
+        assertTrue(viewModel.uiState.value.saved)
+    }
+
+    @Test
+    fun anAllergyLongerThanTheRecordAllowsIsRefusedBeforeAnythingIsWritten() {
+        val viewModel = viewModel()
+        viewModel.onNameChanged("Avó")
+        viewModel.onPrimaryCaregiverChanged(ownerMember.userId)
+        viewModel.onAllergiesChanged("x".repeat(101))
+
+        viewModel.save()
+
+        assertEquals(PatientFormError.AllergiesInvalid, viewModel.uiState.value.error)
+        assertTrue(patients.saved.isEmpty())
+        assertTrue(info.saves.isEmpty())
     }
 }

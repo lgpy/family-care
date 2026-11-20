@@ -37,6 +37,8 @@ class DestinationTest {
     @Test
     fun moreOpensTheCircleAndTheUsersName() {
         assertEquals("more/family-circle", Destination.FamilyCircle.route)
+        assertEquals("more/family-circle/invite", Destination.FamilyCircleInvite.route)
+        assertEquals("more/who-reminded", Destination.WhoGetsReminded.route)
         assertEquals("more/your-name", Destination.YourName.route)
         assertEquals("about", Destination.About.route)
     }

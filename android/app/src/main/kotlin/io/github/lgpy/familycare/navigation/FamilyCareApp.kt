@@ -58,6 +58,7 @@ import io.github.lgpy.familycare.ui.circle.FamilyCircleScreen
 import io.github.lgpy.familycare.ui.patients.PatientFormScreen
 import io.github.lgpy.familycare.ui.patients.PatientProfileScreen
 import io.github.lgpy.familycare.ui.patients.PatientsScreen
+import io.github.lgpy.familycare.ui.patients.WhoGetsRemindedScreen
 import io.github.lgpy.familycare.ui.profile.YourNameScreen
 import io.github.lgpy.familycare.ui.reminders.RemindersScreen
 import io.github.lgpy.familycare.ui.sync.UploadRejectionBanner
@@ -234,8 +235,15 @@ fun FamilyCareApp(
                     onOpenFamilyCircle = {
                         navController.navigate(Destination.FamilyCircle.route)
                     },
+                    onInviteSomeone = {
+                        navController.navigate(Destination.FamilyCircleInvite.route)
+                    },
                     onOpenReminders = {
                         navController.navigate(Destination.Reminders.route)
+                    },
+                    // Per-patient routing, not the phone's reliability checklist.
+                    onOpenWhoReminded = {
+                        navController.navigate(Destination.WhoGetsReminded.route)
                     },
                     onOpenYourName = { navController.navigate(Destination.YourName.route) },
                     onOpenActivity = { navController.navigate(Destination.Activity.route) },
@@ -247,6 +255,20 @@ fun FamilyCareApp(
             }
             composable(Destination.FamilyCircle.route) {
                 FamilyCircleScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Destination.FamilyCircleInvite.route) {
+                FamilyCircleScreen(
+                    onBack = { navController.popBackStack() },
+                    focusInviteEmail = true,
+                )
+            }
+            composable(Destination.WhoGetsReminded.route) {
+                WhoGetsRemindedScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenPatient = { patientId ->
+                        navController.navigate(Destination.patientEditRoute(patientId))
+                    },
+                )
             }
             composable(Destination.Activity.route) {
                 ActivityScreen(onBack = { navController.popBackStack() })

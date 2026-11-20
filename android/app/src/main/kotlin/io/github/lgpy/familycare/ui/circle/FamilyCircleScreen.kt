@@ -39,7 +39,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -60,21 +63,36 @@ import org.koin.compose.viewmodel.koinViewModel
  * Members come from the local database. The pending-invitation list is an online
  * read, so it is fetched on entry and can be refreshed; every online action shows
  * its failure ("no connection") instead of failing silently.
+ *
+ * [focusInviteEmail] is set by More → "Invite someone": the same screen opens
+ * with the invite email field focused and its keyboard up, so the row lands
+ * where the user meant to type.
  */
 @Composable
 fun FamilyCircleScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    focusInviteEmail: Boolean = false,
 ) {
     val viewModel = koinViewModel<FamilyCircleViewModel>()
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val inviteFocus = remember { FocusRequester() }
 
     var email by rememberSaveable { mutableStateOf("") }
     var copied by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isOwner) {
         if (uiState.isOwner) viewModel.refreshInvitations()
+    }
+
+    // The invite field only exists for the owner, so wait until both are ready.
+    LaunchedEffect(focusInviteEmail, uiState.loaded, uiState.isOwner) {
+        if (focusInviteEmail && uiState.loaded && uiState.isOwner) {
+            inviteFocus.requestFocus()
+            keyboard?.show()
+        }
     }
 
     Column(
@@ -143,7 +161,9 @@ fun FamilyCircleScreen(
                     email = it
                     viewModel.dismissError()
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(inviteFocus),
                 enabled = !uiState.inviteBusy,
                 singleLine = true,
                 label = { Text(text = stringResource(R.string.family_circle_invite_email_label)) },

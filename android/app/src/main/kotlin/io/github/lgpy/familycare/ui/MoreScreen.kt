@@ -61,16 +61,18 @@ import org.koin.compose.viewmodel.koinViewModel
  * settings and data, in the mockup's four groups.
  *
  * Every entry that existed before is still reachable: the circle and invitation
- * live under Family, reminders and who gets reminded under Reminders, the user's
- * name, language, About and the account under App, and export and the
- * owner-only activity feed under Data. The reminders row's status is contributed
- * by the medications feature through a core contract, so this screen names no
- * feature module (D5).
+ * live under Family, reminders — the phone's reliability and the per-patient
+ * "who gets reminded" — under Reminders, the user's name, language, About and
+ * the account under App, and export and the owner-only activity feed under Data.
+ * The reminders row's status is contributed by the medications feature through a
+ * core contract, so this screen names no feature module (D5).
  */
 @Composable
 fun MoreScreen(
     onOpenFamilyCircle: () -> Unit,
+    onInviteSomeone: () -> Unit,
     onOpenReminders: () -> Unit,
+    onOpenWhoReminded: () -> Unit,
     onOpenYourName: () -> Unit,
     onOpenActivity: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -133,7 +135,7 @@ fun MoreScreen(
                 icon = FcIcons.PersonAdd,
                 title = stringResource(R.string.more_invite),
                 status = stringResource(R.string.more_invite_status),
-                onClick = onOpenFamilyCircle,
+                onClick = onInviteSomeone,
             )
         }
 
@@ -149,7 +151,7 @@ fun MoreScreen(
                 icon = FcIcons.Alarm,
                 title = stringResource(R.string.more_who_reminded),
                 status = stringResource(R.string.more_who_reminded_status),
-                onClick = onOpenReminders,
+                onClick = onOpenWhoReminded,
             )
         }
 

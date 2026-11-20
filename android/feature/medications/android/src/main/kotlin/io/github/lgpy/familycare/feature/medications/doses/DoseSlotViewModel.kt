@@ -158,7 +158,7 @@ class DoseSlotViewModel(
             }
             edits + (regimenIdValue to toggled)
         }
-        local.update { it.copy(editing = true) }
+        local.update { it.copy(editing = true, togglesChanged = true) }
     }
 
     fun onOutcome(regimenIdValue: String, outcome: DoseOutcome) {
@@ -173,7 +173,7 @@ class DoseSlotViewModel(
                 },
             ))
         }
-        local.update { it.copy(editing = true) }
+        local.update { it.copy(editing = true, togglesChanged = true) }
     }
 
     fun onSkipReason(regimenIdValue: String, reason: SkipReason) {
@@ -184,7 +184,7 @@ class DoseSlotViewModel(
                 skipReason = reason,
             ))
         }
-        local.update { it.copy(editing = true) }
+        local.update { it.copy(editing = true, togglesChanged = true) }
     }
 
     /** Unlocks a fully recorded slot so its entries can be corrected. */
@@ -300,11 +300,21 @@ data class DoseSlotUiState(
     val error: MedsUiError? = null,
     /** True once the user has touched a pill or asked to correct a saved slot. */
     val editing: Boolean = false,
+    /** True once a pill's outcome or reason was changed and not saved yet. */
+    val togglesChanged: Boolean = false,
     /** True when every slot already has an entry and nothing was edited. */
     val confirmed: Boolean = false,
     /** The domain group being edited; null until the rows arrive. */
     val group: TodayDoseGroup? = null,
 ) {
+
+    /**
+     * Whether closing the sheet would lose the caregiver's work: a typed note,
+     * or pills whose outcome was changed, and nothing saved yet. Merely asking
+     * to correct a recorded slot ([editing]) does not count until a toggle moves.
+     */
+    val hasUnsavedChanges: Boolean
+        get() = !saved && !saving && (note.isNotBlank() || togglesChanged)
 
     /** How many pills the button would give. */
     val givenCount: Int get() = items.count { it.outcome == DoseOutcome.TAKEN }

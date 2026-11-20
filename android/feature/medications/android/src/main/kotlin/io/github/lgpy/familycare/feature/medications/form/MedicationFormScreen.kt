@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.feature.medications.form
 
 import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,6 +70,7 @@ import androidx.compose.ui.window.DialogProperties
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.components.DiscardChangesDialog
 import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PillAmount
 import io.github.lgpy.familycare.core.ui.components.PillTile
@@ -149,6 +151,14 @@ fun MedicationFormScreen(
 
     var showPillSheet by remember { mutableStateOf(false) }
     var showOtherTime by remember { mutableStateOf(false) }
+    var discardDialog by remember { mutableStateOf(false) }
+
+    val requestClose = {
+        if (uiState.isDirty) discardDialog = true else onBack()
+    }
+
+    // The system back gesture asks the same question as the close button.
+    BackHandler(enabled = uiState.isDirty) { discardDialog = true }
 
     Scaffold(
         modifier = modifier
@@ -169,7 +179,7 @@ fun MedicationFormScreen(
                 .padding(top = 8.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            FormHeader(state = uiState, onClose = onBack)
+            FormHeader(state = uiState, onClose = requestClose)
 
             when {
                 !uiState.loaded -> CircularProgressIndicator()
@@ -223,6 +233,16 @@ fun MedicationFormScreen(
             onConfirm = { hour, minute ->
                 viewModel.onCustomTimeAdded(hour, minute)
                 showOtherTime = false
+            },
+        )
+    }
+
+    if (discardDialog) {
+        DiscardChangesDialog(
+            onKeepEditing = { discardDialog = false },
+            onDiscard = {
+                discardDialog = false
+                onBack()
             },
         )
     }

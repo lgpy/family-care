@@ -178,6 +178,9 @@ class MedicationFormViewModel(
                 )
             }
         }
+        // The loaded form is the baseline the discard question compares against;
+        // only the caregiver's own edits make it dirty.
+        _uiState.update { it.copy(baseline = it.draft()) }
     }
 
     // --- Medicine -----------------------------------------------------------
@@ -626,7 +629,12 @@ data class MedicationFormUiState(
      */
     val firstMedicineSaved: Boolean = false,
     val error: MedsUiError? = null,
+    /** The loaded values; null until the form has loaded. */
+    val baseline: MedicationFormDraft? = null,
 ) {
+
+    /** Whether the caregiver changed anything that closing would lose. */
+    val isDirty: Boolean get() = baseline != null && baseline != draft()
 
     /** Presets plus custom times, in clock order, as the regimen will store them. */
     val selectedTimes: List<LocalTime>
@@ -670,6 +678,62 @@ data class MedicationFormUiState(
         },
     )
 }
+
+/**
+ * The values the caregiver can change, as the discard question compares them.
+ *
+ * Volatile state (suggestions, errors, saving, the loaded patient) is left out:
+ * typing a name may replace a suggestion list without the user having edited
+ * anything else.
+ */
+data class MedicationFormDraft(
+    val name: String,
+    val activeIngredient: String,
+    val strength: String,
+    val form: MedicationForm,
+    val stockUnit: String,
+    val pillLook: PillLook?,
+    val requiresPrescription: Boolean,
+    val prescriptionValidUntil: String,
+    val instructions: String,
+    val lowStockThresholdDays: String,
+    val stockQuantity: String,
+    val recountQuantity: String,
+    val schedule: ScheduleFormState,
+    val presetTimes: Set<LocalTime>,
+    val customTimes: List<LocalTime>,
+    val eachTimeText: String,
+    val differentAmountsPerTime: Boolean,
+    val timeQuantityTexts: Map<LocalTime, String>,
+    val inheritReminders: Boolean,
+    val reminderPolicy: ReminderPolicy,
+    val primaryCaregiverId: String?,
+)
+
+/** The current editable values, as the baseline is stored after loading. */
+internal fun MedicationFormUiState.draft(): MedicationFormDraft = MedicationFormDraft(
+    name = name,
+    activeIngredient = activeIngredient,
+    strength = strength,
+    form = form,
+    stockUnit = stockUnit,
+    pillLook = pillLook,
+    requiresPrescription = requiresPrescription,
+    prescriptionValidUntil = prescriptionValidUntil,
+    instructions = instructions,
+    lowStockThresholdDays = lowStockThresholdDays,
+    stockQuantity = stockQuantity,
+    recountQuantity = recountQuantity,
+    schedule = schedule,
+    presetTimes = presetTimes,
+    customTimes = customTimes,
+    eachTimeText = eachTimeText,
+    differentAmountsPerTime = differentAmountsPerTime,
+    timeQuantityTexts = timeQuantityTexts,
+    inheritReminders = inheritReminders,
+    reminderPolicy = reminderPolicy,
+    primaryCaregiverId = primaryCaregiverId,
+)
 
 /**
  * How many days the typed opening count lasts at the amounts and schedule the

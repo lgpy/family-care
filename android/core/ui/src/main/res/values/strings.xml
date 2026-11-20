@@ -5,6 +5,10 @@
     <string name="back">Back</string>
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>
+    <!-- A form that would lose typed changes asks before closing (screens v2). -->
+    <string name="discard_changes_title">Discard changes?</string>
+    <string name="discard_changes_keep_editing">Keep editing</string>
+    <string name="discard_changes_discard">Discard</string>
 
     <!-- Bottom navigation (M2: Today, Patients, More; M5: Shopping). -->
     <string name="nav_today">Today</string>
@@ -106,6 +110,11 @@
     <string name="patient_birth_year_label">Year of birth (optional)</string>
     <string name="patient_birth_year_helper">Used only to show the age.</string>
     <string name="patient_error_birth_year">Enter a year between 1900 and this year.</string>
+    <string name="patient_allergies_label">Allergies (optional)</string>
+    <string name="patient_allergies_helper">Separate allergies with commas.</string>
+    <string name="patient_allergies_none">None known</string>
+    <string name="patient_more_options">More options</string>
+    <string name="patient_more_summary">Escalation after %1$s min · missed after %2$s min</string>
     <plurals name="patient_age_years">
         <item quantity="one">%1$d year</item>
         <item quantity="other">%1$d years</item>
@@ -180,7 +189,7 @@
         <item>Osteoporosis</item>
         <item>Dementia</item>
     </string-array>
-    <string name="patient_info_empty">No medical information recorded yet.</string>
+    <string name="patient_info_empty">No allergies or conditions recorded yet.</string>
     <string name="patient_info_no_details">No other information recorded yet.</string>
     <string name="patient_info_edit">Edit info</string>
     <string name="patient_info_edit_title">Edit info</string>
@@ -225,6 +234,8 @@
     <string name="more_reminders_all_set">All set</string>
     <string name="more_who_reminded">Who gets reminded</string>
     <string name="more_who_reminded_status">Per patient</string>
+    <string name="who_reminded_intro">Tap a person to change who is reminded about their doses.</string>
+    <string name="who_reminded_empty">No patients yet.</string>
     <string name="more_about_status">Version %1$s</string>
     <string name="more_export_patient">Export a patient</string>
     <string name="more_export_patient_status">PDF for the doctor, or JSON</string>
@@ -293,7 +304,7 @@
 
     <string name="about_open">About</string>
     <string name="about_title">About</string>
-    <string name="about_body">Family Care is being built one step at a time. This screen exists to prove navigation works.</string>
+    <string name="about_body">Family Care helps a family share the care of the people they look after: medicines, appointments and shopping, with reminders that reach the right person.</string>
     <string name="about_version">Version %1$s (%2$d)</string>
 
     <!-- M3: "Doses today" dashboard card. -->

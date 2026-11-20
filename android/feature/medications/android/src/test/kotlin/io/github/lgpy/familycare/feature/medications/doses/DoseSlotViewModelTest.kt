@@ -312,4 +312,61 @@ class DoseSlotViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    // --- Unsaved changes (the discard question) -------------------------------
+
+    @Test
+    fun `a fresh sheet has nothing to discard`() = runTest {
+        doses.todayFlow.value = listOf(todayGroup(listOf(firstSlot, secondSlot)))
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && it.items.size == 2 }
+            assertFalse(state.hasUnsavedChanges)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a typed note or a changed toggle is unsaved until saving`() = runTest {
+        doses.todayFlow.value = listOf(todayGroup(listOf(firstSlot, secondSlot)))
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.items.size == 2 }
+            viewModel.onNoteChanged("half a tablet")
+            assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+            viewModel.onNoteChanged("")
+            assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+
+            viewModel.onToggle("reg-1")
+            assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+            viewModel.save()
+            assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `unlocking a recorded slot alone is not an unsaved change`() = runTest {
+        doses.todayFlow.value = listOf(
+            todayGroup(
+                slots = listOf(firstSlot),
+                statuses = listOf(
+                    status(firstSlot, DoseState.TAKEN, listOf(entry(firstSlot, id = "entry-1"))),
+                ),
+            ),
+        )
+
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.items.size == 1 }
+            viewModel.onEdit()
+            assertTrue(viewModel.uiState.value.editing)
+            assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

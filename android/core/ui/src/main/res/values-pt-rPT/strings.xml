@@ -5,6 +5,10 @@
     <string name="back">Voltar</string>
     <string name="cancel">Cancelar</string>
     <string name="close">Fechar</string>
+    <!-- Um formulário com alterações por guardar pergunta antes de fechar. -->
+    <string name="discard_changes_title">Descartar alterações?</string>
+    <string name="discard_changes_keep_editing">Continuar a editar</string>
+    <string name="discard_changes_discard">Descartar</string>
 
     <!-- Navegação inferior (M2: Hoje, Pessoas, Mais). -->
     <string name="nav_today">Hoje</string>
@@ -106,6 +110,11 @@
     <string name="patient_birth_year_label">Ano de nascimento (opcional)</string>
     <string name="patient_birth_year_helper">Usado apenas para mostrar a idade.</string>
     <string name="patient_error_birth_year">Indique um ano entre 1900 e o ano atual.</string>
+    <string name="patient_allergies_label">Alergias (opcional)</string>
+    <string name="patient_allergies_helper">Separe as alergias com vírgulas.</string>
+    <string name="patient_allergies_none">Nenhuma conhecida</string>
+    <string name="patient_more_options">Mais opções</string>
+    <string name="patient_more_summary">Escalonamento após %1$s min · em falta após %2$s min</string>
     <plurals name="patient_age_years">
         <item quantity="one">%1$d ano</item>
         <item quantity="other">%1$d anos</item>
@@ -180,7 +189,7 @@
         <item>Osteoporose</item>
         <item>Demência</item>
     </string-array>
-    <string name="patient_info_empty">Ainda não há informação médica registada.</string>
+    <string name="patient_info_empty">Ainda não há alergias nem doenças registadas.</string>
     <string name="patient_info_no_details">Ainda não há mais informação registada.</string>
     <string name="patient_info_edit">Editar informação</string>
     <string name="patient_info_edit_title">Editar informação</string>
@@ -225,6 +234,8 @@
     <string name="more_reminders_all_set">Tudo em ordem</string>
     <string name="more_who_reminded">Quem é lembrado</string>
     <string name="more_who_reminded_status">Por pessoa</string>
+    <string name="who_reminded_intro">Toque numa pessoa para alterar quem é lembrado das suas tomas.</string>
+    <string name="who_reminded_empty">Ainda não há pessoas.</string>
     <string name="more_about_status">Versão %1$s</string>
     <string name="more_export_patient">Exportar uma pessoa</string>
     <string name="more_export_patient_status">PDF para o médico ou JSON</string>
@@ -294,7 +305,7 @@
 
     <string name="about_open">Sobre</string>
     <string name="about_title">Sobre</string>
-    <string name="about_body">A aplicação Family Care está a ser construída passo a passo. Este ecrã existe para confirmar que a navegação funciona.</string>
+    <string name="about_body">A Family Care ajuda uma família a partilhar os cuidados das pessoas de quem cuida: medicação, consultas e compras, com lembretes que chegam à pessoa certa.</string>
     <string name="about_version">Versão %1$s (%2$d)</string>
 
     <!-- M3: cartão "Tomas de hoje" do ecrã Hoje. -->
