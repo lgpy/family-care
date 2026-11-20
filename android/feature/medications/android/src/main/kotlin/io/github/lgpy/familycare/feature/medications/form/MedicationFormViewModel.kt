@@ -25,13 +25,16 @@ import io.github.lgpy.familycare.feature.medications.domain.MedicationId
 import io.github.lgpy.familycare.feature.medications.domain.MedicationRules
 import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestion
 import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestionRules
+import io.github.lgpy.familycare.feature.medications.domain.QuantityRules
 import io.github.lgpy.familycare.feature.medications.domain.RegimenId
 import io.github.lgpy.familycare.feature.medications.domain.StockMovementKind
+import io.github.lgpy.familycare.feature.medications.domain.StockRules
 import io.github.lgpy.familycare.feature.medications.ui.DoseTimeEntry
 import io.github.lgpy.familycare.feature.medications.ui.MedsUiError
 import io.github.lgpy.familycare.feature.medications.ui.MemberOrder
 import io.github.lgpy.familycare.feature.medications.ui.ScheduleFormState
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
+import io.github.lgpy.familycare.feature.medications.ui.parseDoseQuantity
 import io.github.lgpy.familycare.feature.medications.ui.parseStockQuantity
 import io.github.lgpy.familycare.feature.medications.ui.parseThresholdDays
 import io.github.lgpy.familycare.feature.medications.ui.steppedQuantity
@@ -65,9 +68,12 @@ import kotlinx.coroutines.launch
  * ([defaultPillLook]) until the caregiver picks one in the sheet.
  *
  * **When and how much:** a set of daily presets plus any custom times, each with
- * a quantity. One stepper ("Each time") changes every selected time; the "More
- * options" expander can give individual times their own amount. Times are
- * [LocalTime]s in the state, so no half-typed text is ever reinterpreted.
+ * a quantity. "Each time" is one typed amount applied to every selected time;
+ * the "Different amount per time" switch (under More options) turns it into one
+ * amount per time, shown in the same section. Times are [LocalTime]s in the
+ * state, so no half-typed time is ever reinterpreted; amounts stay text until
+ * [save]/[daysOfStock] parse them, so a half-typed `1,` never becomes a stored
+ * quantity.
  *
  * **Stock:** an optional opening count ([MedicationRepository.create] writes it
  * with the medication in one transaction, D28) and the low-stock threshold in
@@ -272,7 +278,7 @@ class MedicationFormViewModel(
                 time in state.selectedTimes -> state
                 else -> state.copy(
                     customTimes = state.customTimes + time,
-                    timeQuantities = state.timeQuantities + (time to state.eachTimeQuantity),
+                    timeQuantityTexts = state.timeQuantityTexts + (time to state.eachTimeText),
                     errors = state.errors - MedicationField.REGIMEN_TIMES,
                 )
             }
@@ -283,32 +289,44 @@ class MedicationFormViewModel(
     fun onCustomTimeRemoved(time: LocalTime) = _uiState.update { state ->
         state.copy(
             customTimes = state.customTimes - time,
-            timeQuantities = state.timeQuantities - time,
+            timeQuantityTexts = state.timeQuantityTexts - time,
         )
     }
 
-    /** The "Each time" stepper: applies its amount to every selected time, clearing overrides. */
+    /** The "Each time" field, as typed. */
+    fun onTimeQuantityChanged(value: String) = _uiState.update { state ->
+        state.copy(eachTimeText = value).clearingQuantityError()
+    }
+
+    /** The "Each time" buttons: one step of the shared amount, applied to every selected time. */
     fun onTimeQuantityStep(steps: Int) = _uiState.update { state ->
         state.copy(
-            eachTimeQuantity = steppedQuantity(state.eachTimeQuantity, steps),
-            timeQuantities = emptyMap(),
-        )
+            eachTimeText = QuantityRules.format(steppedQuantity(state.eachTimeQuantity, steps)),
+        ).clearingQuantityError()
     }
 
-    /** One time's own amount while "Different amount per time" is on. */
-    fun onTimeQuantityStep(time: LocalTime, steps: Int) = _uiState.update { state ->
-        val current = state.timeQuantities[time] ?: state.eachTimeQuantity
+    /** One time's own amount, as typed, while "Different amount per time" is on. */
+    fun onTimeQuantityChanged(time: LocalTime, value: String) = _uiState.update { state ->
         state.copy(
             differentAmountsPerTime = true,
-            timeQuantities = state.timeQuantities + (time to steppedQuantity(current, steps)),
-        )
+            timeQuantityTexts = state.timeQuantityTexts + (time to value),
+        ).clearingQuantityError()
+    }
+
+    /** One time's buttons, while "Different amount per time" is on. */
+    fun onTimeQuantityStep(time: LocalTime, steps: Int) = _uiState.update { state ->
+        val next = QuantityRules.format(steppedQuantity(state.quantityFor(time), steps))
+        state.copy(
+            differentAmountsPerTime = true,
+            timeQuantityTexts = state.timeQuantityTexts + (time to next),
+        ).clearingQuantityError()
     }
 
     fun onDifferentAmountsPerTimeChanged(enabled: Boolean) = _uiState.update { state ->
         state.copy(
             differentAmountsPerTime = enabled,
-            timeQuantities = if (enabled) {
-                state.selectedTimes.associateWith { state.timeQuantities[it] ?: state.eachTimeQuantity }
+            timeQuantityTexts = if (enabled) {
+                state.selectedTimes.associateWith { state.timeQuantityTexts[it] ?: state.eachTimeText }
             } else {
                 emptyMap()
             },
@@ -321,26 +339,27 @@ class MedicationFormViewModel(
 
     // --- Stock --------------------------------------------------------------
 
+    /** The opening count ("How many do you have?"), as typed. */
+    fun onStockQuantityChanged(value: String) =
+        _uiState.update {
+            it.copy(stockQuantity = value, errors = it.errors - MedicationField.STOCK_QUANTITY)
+        }
+
     /**
-     * The opening-count stepper ("How many do you have?").
+     * The opening count's − and + buttons.
      *
-     * The field starts empty ("Not counted"): the first `+` starts from a whole
-     * pack when the catalogue offers one, otherwise from 1, rather than making
-     * the caregiver tap once per tablet. `−` from empty stays at zero.
+     * The count is typed first and nudged here; a blank field starts at 1 on the
+     * first `+` and at 0 on the first `−`, so an empty field never jumps to a
+     * number the caregiver did not choose. A whole pack is one tap away on its
+     * own chip ([onUsePackQuantity]).
      */
     fun onStockQuantityStep(steps: Int) = _uiState.update { state ->
-        val typed = parseStockQuantity(state.stockQuantity)
-        val next = when {
-            typed != null -> typed.add(BigDecimal(steps))
-            // A single tap on "+" starts from a whole pack when the catalogue
-            // offers one, so the caregiver does not tap once per tablet.
-            steps > 0 -> BigDecimal(state.packOptions.firstOrNull() ?: steps)
-            else -> BigDecimal.ZERO
-        }
+        val typed = parseStockQuantity(state.stockQuantity) ?: BigDecimal.ZERO
+        val next = typed.add(BigDecimal(steps))
             .coerceAtLeast(BigDecimal.ZERO)
             .coerceAtMost(MAX_STOCK_STEP)
         state.copy(
-            stockQuantity = next.stripTrailingZeros().toPlainString(),
+            stockQuantity = QuantityRules.format(next),
             errors = state.errors - MedicationField.STOCK_QUANTITY,
         )
     }
@@ -408,6 +427,11 @@ class MedicationFormViewModel(
                 timeZone = timeZone,
             )
             fields += parsed.fields
+            // An amount that is not a valid dose marks the same field the
+            // domain would: the When section owns the times and their amounts.
+            if (state.invalidQuantityTimes().isNotEmpty()) {
+                fields += MedicationField.REGIMEN_TIMES
+            }
             // The opening count is optional: a blank field writes no count row.
             val quantityText = state.stockQuantity.trim()
             val quantity = quantityText.takeIf { it.isNotEmpty() }?.let(::parseStockQuantity)
@@ -518,7 +542,7 @@ val PresetTimes: Set<LocalTime> = setOf(MorningTime, LunchTime, DinnerTime, Bedt
 /** How many catalogue suggestions the name field shows at once. */
 private const val SUGGESTION_LIMIT = 12
 
-/** The upper bound the opening-count stepper can reach (the domain's stock maximum). */
+/** The upper bound the opening count's buttons can reach (the domain's stock maximum). */
 private val MAX_STOCK_STEP: BigDecimal = BigDecimal("100000")
 
 /**
@@ -562,12 +586,12 @@ data class MedicationFormUiState(
     val presetTimes: Set<LocalTime> = setOf(MorningTime),
     /** The extra times added through "Other time". */
     val customTimes: List<LocalTime> = emptyList(),
-    /** The amount the "Each time" stepper applies to every selected time. */
-    val eachTimeQuantity: BigDecimal = BigDecimal.ONE,
+    /** The amount every selected time gets ("Each time"), as typed. */
+    val eachTimeText: String = "1",
     /** Whether "More options" gives individual times their own amount. */
     val differentAmountsPerTime: Boolean = false,
-    /** The per-time overrides, used only while [differentAmountsPerTime] is on. */
-    val timeQuantities: Map<LocalTime, BigDecimal> = emptyMap(),
+    /** The per-time amounts, as typed, used only while [differentAmountsPerTime] is on. */
+    val timeQuantityTexts: Map<LocalTime, String> = emptyMap(),
     val inheritReminders: Boolean = true,
     val reminderPolicy: ReminderPolicy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
     val primaryCaregiverId: String? = null,
@@ -581,9 +605,36 @@ data class MedicationFormUiState(
     val selectedTimes: List<LocalTime>
         get() = (presetTimes + customTimes).sorted()
 
-    /** The amount [time] gets: its override, or the shared "Each time" value. */
+    /** The shared amount, or 1 while its text is not a number (the save reports that). */
+    val eachTimeQuantity: BigDecimal
+        get() = parseDoseQuantity(eachTimeText) ?: BigDecimal.ONE
+
+    /** The amount [time] shows: its own text, or the shared "Each time" text. */
+    fun quantityTextFor(time: LocalTime): String =
+        if (differentAmountsPerTime) timeQuantityTexts[time] ?: eachTimeText else eachTimeText
+
+    /** The amount [time] gets: its own value, or the shared "Each time" value. */
     fun quantityFor(time: LocalTime): BigDecimal =
-        if (differentAmountsPerTime) timeQuantities[time] ?: eachTimeQuantity else eachTimeQuantity
+        parseDoseQuantity(quantityTextFor(time)) ?: BigDecimal.ONE
+
+    /**
+     * The selected times whose typed amount is not a valid dose, so the form can
+     * refuse the save and mark the same field the domain would. Empty means
+     * every amount can be stored.
+     */
+    fun invalidQuantityTimes(): Set<LocalTime> =
+        selectedTimes.filterNot { parseDoseQuantity(quantityTextFor(it)) != null }.toSet()
+
+    /** Drops the When section's error once every amount parses; keeps it otherwise. */
+    internal fun clearingQuantityError(): MedicationFormUiState =
+        if (MedicationField.REGIMEN_TIMES in errors &&
+            selectedTimes.isNotEmpty() &&
+            invalidQuantityTimes().isEmpty()
+        ) {
+            copy(errors = errors - MedicationField.REGIMEN_TIMES)
+        } else {
+            this
+        }
 
     /** The schedule editor with the chip-selected times, ready for [ScheduleFormState.parse]. */
     fun scheduleForRegimen(): ScheduleFormState = schedule.copy(
@@ -591,6 +642,23 @@ data class MedicationFormUiState(
             DoseTimeEntry(time = formatTime(time), quantity = quantityFor(time))
         },
     )
+}
+
+/**
+ * How many days the typed opening count lasts at the amounts and schedule the
+ * form currently has, or null when there is nothing to estimate from (no
+ * count, no parsable schedule or no consumption). It is the same rule the stock
+ * card uses ([StockRules.daysRemaining]), so the form cannot promise something
+ * the detail screen contradicts.
+ *
+ * The regimen is only parsed, never stored, so it gets placeholder ids.
+ */
+internal fun MedicationFormUiState.daysOfStock(timeZone: ZoneId = ZoneId.systemDefault()): Int? {
+    val stock = parseStockQuantity(stockQuantity) ?: return null
+    val regimen = scheduleForRegimen()
+        .parse(RegimenId("preview"), MedicationId("preview"), timeZone)
+        .regimen ?: return null
+    return StockRules.daysRemaining(stock, regimen)
 }
 
 /**

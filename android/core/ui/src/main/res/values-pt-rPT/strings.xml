@@ -503,7 +503,7 @@
     <string name="meds_remove_custom_time">Remover %1$s</string>
     <string name="meds_each_time">Em cada toma</string>
     <string name="meds_how_many">Quantos tem?</string>
-    <string name="meds_stock_not_counted">Sem contagem</string>
+    <string name="meds_stock_optional_hint">Sem contagem. Os avisos de stock baixo ficam desligados.</string>
     <string name="meds_optional">opcional</string>
     <string name="meds_more_options">Mais opções</string>
     <string name="meds_more_summary">%1$s · %2$s · limite de stock: %3$d</string>
@@ -515,8 +515,12 @@
     <string name="meds_summary_reminders_inherit">lembretes da pessoa</string>
     <string name="meds_summary_reminders_override">lembretes: %1$s</string>
     <string name="meds_different_amounts">Quantidade diferente em cada toma</string>
-    <string name="meds_decrease">Diminuir</string>
-    <string name="meds_increase">Aumentar</string>
+    <string name="meds_decrease_amount">Diminuir a quantidade</string>
+    <string name="meds_increase_amount">Aumentar a quantidade</string>
+    <string name="meds_decrease_stock">Diminuir quantos tem</string>
+    <string name="meds_increase_stock">Aumentar quantos tem</string>
+    <string name="meds_decrease_time_amount">Diminuir a quantidade às %1$s</string>
+    <string name="meds_increase_time_amount">Aumentar a quantidade às %1$s</string>
     <string name="meds_add_action">Adicionar %1$s</string>
     <string name="meds_add_action_empty">Adicionar medicação</string>
 

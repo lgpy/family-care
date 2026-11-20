@@ -191,10 +191,14 @@
   .suggest div { padding: 10px 14px; font-size: 14px; display: flex; gap: 10px; align-items: center; }
   .suggest div + div { border-top: 1px solid var(--outline-v); }
   .suggest small { display: block; color: var(--on-sv); font-size: 12px; }
-  .stepper { display: flex; align-items: center; gap: 0; border-radius: 14px; background: var(--sc-mid); width: max-content; }
-  .stepper .s { width: 52px; height: 52px; display: grid; place-items: center; color: var(--primary); }
-  .stepper .v { min-width: 64px; text-align: center; font-size: 20px; font-weight: 700; }
-  .stepper .u { font-size: 14px; color: var(--on-sv); padding-right: 14px; }
+  /* A typed amount: the bordered box is the affordance that the number can be
+     edited, and the − / + stay for a nudge. */
+  .qty { display: flex; align-items: center; border: 1px solid var(--outline-v); border-radius: 14px; background: var(--sc-low); min-height: 56px; }
+  .qty .s { width: 52px; height: 56px; display: grid; place-items: center; color: var(--primary); flex: none; }
+  .qty .s:last-child { margin-left: auto; }
+  .qty .v { font-size: 20px; font-weight: 700; min-width: 2ch; }
+  .qty .u { font-size: 14px; color: var(--on-sv); margin-left: 6px; }
+  .hint { color: var(--on-sv); font-size: 12px; margin-top: 6px; }
   .row2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .expander { margin-top: 18px; display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--outline-v); font-size: 14px; }
   .expander .tx { flex: 1; }
@@ -472,10 +476,13 @@ const addMed = phone(`
     </div>
   </div>
   <div class="field"><label>${ic('pill')}Each time</label>
-    <div class="stepper"><span class="s">${ic('remove')}</span><span class="v">1</span><span class="u">tablet</span><span class="s">${ic('add')}</span></div>
+    <div class="qty"><span class="s">${ic('remove')}</span><span class="v">1</span><span class="u">tablet</span><span class="s">${ic('add')}</span></div>
+    <div class="chips"><span class="chip">½</span><span class="chip on">1</span><span class="chip">2</span><span style="margin-left:auto;display:flex;gap:4px;align-items:center">${pill(M.metformin.look, 28)}</span></div>
   </div>
   <div class="field"><label>${ic('inventory_2')}How many do you have? <span class="opt">optional</span></label>
-    <div class="row2"><div class="stepper"><span class="s">${ic('remove')}</span><span class="v">60</span><span class="s">${ic('add')}</span></div><span class="chip on">${ic('package_2')}1 pack (60)</span></div>
+    <div class="qty"><span class="s">${ic('remove')}</span><span class="v">60</span><span class="u">tablets</span><span class="s">${ic('add')}</span></div>
+    <div class="chips"><span class="chip">${ic('package_2')}1 pack (60)</span></div>
+    <div class="hint">About 30 days left</div>
   </div>
   <div class="expander">${ic('tune')}<div class="tx"><b>More options</b><small>Every day from today · reminders: Mom, then you · low at 7 days</small></div>${ic('expand_more')}</div>
   `, null, `<div class="footer"><span class="btn filled block">${ic('check')}Add Metformin</span></div>`);
@@ -622,7 +629,7 @@ document.getElementById('root').innerHTML =
   ]) +
   group('Medicines', [
     col('Medicine detail', 'The pill picture leads; tap the palette to change it. Schedule, stock and prescription as separate blocks with icons. "Bought" and "Count" are one tap.', medDetail),
-    col('Add medicine (one screen)', 'Was 4 steps. Now: pick from the catalogue, check the look, tap times of day, set how many, done. Dates, reminders and the low-stock threshold stay under More options with defaults.', addMed),
+    col('Add medicine (one screen)', 'Was 4 steps. Now: pick from the catalogue, check the look, tap times of day, type the amount and the count, done. Any number is typed (no tapping up from zero); the amount is drawn as pills with the medicine\'s own look (1¼ is a pill and a quarter); the count says how many days it lasts. Dates, reminders and the low-stock threshold stay under More options with defaults.', addMed),
     col('Pill look', 'Shape, one or two colours, score line, size. Or a photo of the actual pill. Opened from Add medicine or from the detail screen.', customizer),
   ]) +
   group('Appointments, shopping, more', [

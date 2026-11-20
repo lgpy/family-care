@@ -162,6 +162,62 @@ class MedicationFormViewModelTest {
     }
 
     @Test
+    fun `a typed shared amount applies to every selected time`() = runTest {
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.onNameChanged("Metformin")
+            viewModel.onPresetTimeToggled(LunchTime)
+            // A pt-PT keyboard types a comma; it must reach the regimen as 1.5.
+            viewModel.onTimeQuantityChanged("1,5")
+            viewModel.save()
+
+            assertEquals(
+                listOf(BigDecimal("1.5"), BigDecimal("1.5")),
+                meds.created.single().regimen.times.map { it.quantity },
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `an amount that is not a dose marks the times and writes nothing`() = runTest {
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.onNameChanged("Metformin")
+            viewModel.onTimeQuantityChanged("0")
+            viewModel.save()
+
+            assertTrue(MedicationField.REGIMEN_TIMES in viewModel.uiState.value.errors)
+            assertEquals(0, meds.created.size)
+
+            // Typing a valid amount clears the mark without another save.
+            viewModel.onTimeQuantityChanged("1")
+            assertFalse(MedicationField.REGIMEN_TIMES in viewModel.uiState.value.errors)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a per-time amount can be typed`() = runTest {
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.onNameChanged("Metformin")
+            viewModel.onPresetTimeToggled(LunchTime)
+            viewModel.onDifferentAmountsPerTimeChanged(true)
+            viewModel.onTimeQuantityChanged(LunchTime, "2")
+            viewModel.save()
+
+            val quantities = meds.created.single().regimen.times.associate { it.time to it.quantity }
+            assertEquals(BigDecimal.ONE, quantities[LocalTime.of(8, 0)])
+            assertEquals(BigDecimal("2"), quantities[LocalTime.of(13, 0)])
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `a custom time is added and removed`() = runTest {
         val viewModel = viewModel()
         viewModel.uiState.test {
@@ -478,6 +534,42 @@ class MedicationFormViewModelTest {
 
             assertEquals(0, meds.created.single().medication.lowStockThresholdDays)
             assertEquals(BigDecimal.ZERO, meds.created.single().openingQuantity)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the count is typed and its buttons start from zero`() = runTest {
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            assertEquals("", viewModel.uiState.value.stockQuantity)
+
+            viewModel.onStockQuantityStep(1)
+            assertEquals("1", viewModel.uiState.value.stockQuantity)
+
+            viewModel.onStockQuantityChanged("60")
+            assertEquals("60", viewModel.uiState.value.stockQuantity)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the count says how many days it lasts at the current amounts`() = runTest {
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            assertNull("nothing counted, nothing to estimate", viewModel.uiState.value.daysOfStock())
+
+            viewModel.onPresetTimeToggled(LunchTime)
+            viewModel.onTimeQuantityChanged("2")
+            viewModel.onStockQuantityChanged("60")
+            // Two tablets at 08:00 and two at 13:00: four a day, so 15 days.
+            assertEquals(15, viewModel.uiState.value.daysOfStock())
+
+            // Half a tablet twice a day is one a day: 60 days from 60.
+            viewModel.onTimeQuantityChanged("0,5")
+            assertEquals(60, viewModel.uiState.value.daysOfStock())
             cancelAndIgnoreRemainingEvents()
         }
     }

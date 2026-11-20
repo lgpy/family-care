@@ -54,12 +54,11 @@ Conditions: Hypertension, Type 2 diabetes
 - **Info:** emergency contacts, SNS number, family doctor. Basis for a future emergency card.
 - **History:** timeline filled by all modules (regimen changes, appointments, later measurements and documents).
 
-## 4. Add medication (4 steps)
+## 4. Add medication (one screen)
 
-1. **What:** name, strength, form, requires prescription?
-2. **When and how much:** schedule type, times, quantity per time, start/end date.
-3. **Stock:** current quantity, low-stock threshold in days (default 7).
-4. **Who's reminded:** inherited from the patient; can be overridden.
+Pick the medicine from the catalogue (or type it), check the drawn pill look, tap the times of day, then **type** how much is taken each time and, optionally, how many there are now (D34). The amount is drawn in that same pill look — one pill per whole unit plus a partly filled pill, so 1¼ is a pill and a quarter — and the count shows how many days it lasts at those amounts, which is what the low-stock warning uses. Quick chips cover the usual answers: ½, 1 or 2 per dose, and a whole pack for the count.
+
+Dates, an amount per time, the low-stock threshold in days (default 7) and who is reminded (inherited from the patient) stay under **More options** with defaults.
 
 ## 5. Shopping
 

@@ -34,6 +34,14 @@ fun parseTime(value: String): LocalTime? {
     return LocalTime.of(hour, minute)
 }
 
+/**
+ * Parses a typed amount per dose ("1", "1,5", "0.25"), or null when it is not a
+ * valid dose ([QuantityRules]). The screens keep the text as typed and use this
+ * to decide whether it can be stored.
+ */
+fun parseDoseQuantity(value: String): BigDecimal? =
+    parseStockQuantity(value)?.let(QuantityRules::normalize)?.takeIf(QuantityRules::isValid)
+
 /** A quantity one step up or down, kept inside the storable range. */
 fun steppedQuantity(current: BigDecimal, steps: Int): BigDecimal {
     val step = BigDecimal("0.25")

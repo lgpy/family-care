@@ -53,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -68,21 +69,27 @@ import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.inlineIconSize
+import io.github.lgpy.familycare.core.ui.components.PillAmount
 import io.github.lgpy.familycare.core.ui.components.PillTile
 import io.github.lgpy.familycare.core.ui.components.ReflowRow
 import io.github.lgpy.familycare.core.ui.components.pillDescription
 import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
 import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestion
+import io.github.lgpy.familycare.feature.medications.domain.QuantityRules
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
 import io.github.lgpy.familycare.feature.medications.ui.PillLookSheet
+import io.github.lgpy.familycare.feature.medications.ui.QuantityField
 import io.github.lgpy.familycare.feature.medications.ui.ScheduleFields
 import io.github.lgpy.familycare.feature.medications.ui.formatQuantity
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
 import io.github.lgpy.familycare.feature.medications.ui.labelRes
 import io.github.lgpy.familycare.feature.medications.ui.localizedDate
 import io.github.lgpy.familycare.feature.medications.ui.messageRes
-import io.github.lgpy.familycare.feature.medications.ui.stockUnitName
+import io.github.lgpy.familycare.feature.medications.ui.parseDoseQuantity
+import io.github.lgpy.familycare.feature.medications.ui.parseStockQuantity
+import io.github.lgpy.familycare.feature.medications.ui.stockUnitLabel
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalTime
 import org.koin.compose.viewmodel.koinViewModel
@@ -164,7 +171,7 @@ fun MedicationFormScreen(
                             onOtherTime = { showOtherTime = true },
                             onCustomTimeRemoved = viewModel::onCustomTimeRemoved,
                         )
-                        EachTimeSection(state = uiState, onStep = viewModel::onTimeQuantityStep)
+                        EachTimeSection(viewModel, uiState)
                         HowManySection(viewModel, uiState)
                     }
 
@@ -568,40 +575,144 @@ private fun WhenSection(
     )
 }
 
+/** The amounts one tap away; anything else is typed. */
+private val QuickDoseAmounts: List<BigDecimal> = listOf(BigDecimal("0.5"), BigDecimal.ONE, BigDecimal("2"))
+
+/** Which plural the stock unit takes for [quantity]: one up to a whole unit, more above it. */
+private fun unitCount(quantity: BigDecimal?): Int =
+    if (quantity != null && quantity > BigDecimal.ONE) 2 else 1
+
+/**
+ * The amount taken at each time: one typed amount for every time, or — with
+ * "Different amount per time" on — a field beside each time. Either way it is
+ * the same place on the screen, so an amount is never only inside More options.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun EachTimeSection(state: MedicationFormUiState, onStep: (Int) -> Unit) {
-    SectionTitle(icon = FcIcons.Pill, title = stringResource(R.string.meds_each_time))
-    Stepper(
-        valueText = formatQuantity(state.eachTimeQuantity),
-        unit = stockUnitName(state.stockUnit),
-        enabled = state.canWrite,
-        onStep = onStep,
+private fun EachTimeSection(viewModel: MedicationFormViewModel, state: MedicationFormUiState) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SectionTitle(icon = FcIcons.Pill, title = stringResource(R.string.meds_each_time))
+        // With a field per time, no single field carries the unit; say it once
+        // here instead of shrinking every row's number at large font sizes.
+        if (state.differentAmountsPerTime) {
+            Text(
+                text = stockUnitLabel(state.stockUnit, count = 2),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    if (state.differentAmountsPerTime) {
+        state.selectedTimes.forEach { time ->
+            val amount = parseDoseQuantity(state.quantityTextFor(time))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = formatTime(time),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                QuantityField(
+                    value = state.quantityTextFor(time),
+                    onValueChange = { value -> viewModel.onTimeQuantityChanged(time, value) },
+                    onStep = { steps -> viewModel.onTimeQuantityStep(time, steps) },
+                    // The row's time is the label; a unit here would squeeze
+                    // the value at large font sizes. The pills show the unit.
+                    unit = "",
+                    enabled = state.canWrite,
+                    modifier = Modifier.weight(1f),
+                    isError = MedicationField.REGIMEN_TIMES in state.errors,
+                    decreaseLabel = stringResource(R.string.meds_decrease_time_amount, formatTime(time)),
+                    increaseLabel = stringResource(R.string.meds_increase_time_amount, formatTime(time)),
+                )
+                if (amount != null) {
+                    PillAmount(look = state.pillLook, quantity = amount, size = 22.dp)
+                }
+            }
+        }
+        return
+    }
+
+    val amount = parseDoseQuantity(state.eachTimeText)
+    Row(
         modifier = Modifier.fillMaxWidth(),
-    )
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        QuantityField(
+            value = state.eachTimeText,
+            onValueChange = viewModel::onTimeQuantityChanged,
+            onStep = viewModel::onTimeQuantityStep,
+            unit = stockUnitLabel(state.stockUnit, unitCount(amount)),
+            enabled = state.canWrite,
+            isError = MedicationField.REGIMEN_TIMES in state.errors,
+            modifier = Modifier.weight(1f),
+        )
+        if (amount != null) {
+            PillAmount(look = state.pillLook, quantity = amount, size = 26.dp)
+        }
+    }
+
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        QuickDoseAmounts.forEach { quick ->
+            FilterChip(
+                selected = amount?.compareTo(quick) == 0,
+                onClick = { viewModel.onTimeQuantityChanged(QuantityRules.format(quick)) },
+                enabled = state.canWrite,
+                label = { Text(text = formatQuantity(quick)) },
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HowManySection(viewModel: MedicationFormViewModel, state: MedicationFormUiState) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionTitle(icon = FcIcons.Inventory2, title = stringResource(R.string.meds_how_many))
-        Text(
-            text = stringResource(R.string.meds_optional),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    // ReflowRow, not a plain Row: at large font sizes "optional" cannot share
+    // the line with the question and would wrap letter by letter.
+    ReflowRow(
+        modifier = Modifier.fillMaxWidth(),
+        content = {
+            SectionTitle(icon = FcIcons.Inventory2, title = stringResource(R.string.meds_how_many))
+        },
+        action = {
+            Text(
+                text = stringResource(R.string.meds_optional),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+    )
+
+    val counted = parseStockQuantity(state.stockQuantity)
+    val daysLeft = state.daysOfStock()
+    val hint = when {
+        state.stockQuantity.isBlank() -> stringResource(R.string.meds_stock_optional_hint)
+        daysLeft != null -> pluralStringResource(R.plurals.meds_stock_days_left, daysLeft, daysLeft)
+        else -> null
     }
 
-    Stepper(
-        valueText = state.stockQuantity,
-        placeholder = stringResource(R.string.meds_stock_not_counted),
-        unit = if (state.stockQuantity.isBlank()) "" else stockUnitName(state.stockUnit),
-        enabled = state.canWrite,
+    QuantityField(
+        value = state.stockQuantity,
+        onValueChange = viewModel::onStockQuantityChanged,
         onStep = viewModel::onStockQuantityStep,
-        modifier = Modifier.fillMaxWidth(),
+        unit = stockUnitLabel(state.stockUnit, unitCount(counted)),
+        enabled = state.canWrite,
+        isError = MedicationField.STOCK_QUANTITY in state.errors,
+        // No placeholder: at large font sizes it wrapped inside the field.
+        // The hint below says both that it is empty and why that matters.
+        supportingText = hint,
+        decreaseLabel = stringResource(R.string.meds_decrease_stock),
+        increaseLabel = stringResource(R.string.meds_increase_stock),
     )
 
     if (state.packOptions.isNotEmpty()) {
@@ -738,7 +849,7 @@ private fun MoreOptionsSection(viewModel: MedicationFormViewModel, state: Medica
             showTimes = false,
         )
 
-        DifferentAmountsPerTime(viewModel, state)
+        DifferentAmountsToggle(viewModel, state)
     }
 
     HorizontalDivider()
@@ -816,8 +927,13 @@ private fun MoreOptionsSection(viewModel: MedicationFormViewModel, state: Medica
     }
 }
 
+/**
+ * The switch that turns the shared "Each time" field into a field per time.
+ * The fields themselves stay in the "Each time" section, so they are never
+ * hidden inside this collapsed expander.
+ */
 @Composable
-private fun DifferentAmountsPerTime(
+private fun DifferentAmountsToggle(
     viewModel: MedicationFormViewModel,
     state: MedicationFormUiState,
 ) {
@@ -836,28 +952,6 @@ private fun DifferentAmountsPerTime(
             onCheckedChange = viewModel::onDifferentAmountsPerTimeChanged,
             enabled = state.canWrite,
         )
-    }
-
-    if (!state.differentAmountsPerTime) return
-
-    state.selectedTimes.forEach { time ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = formatTime(time),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Stepper(
-                valueText = formatQuantity(state.quantityFor(time)),
-                unit = stockUnitName(state.stockUnit),
-                enabled = state.canWrite,
-                onStep = { steps -> viewModel.onTimeQuantityStep(time, steps) },
-                modifier = Modifier.weight(1f),
-            )
-        }
     }
 }
 
@@ -1030,54 +1124,6 @@ private fun ReminderPolicy.labelRes(): Int = when (this) {
     ReminderPolicy.PRIMARY_WITH_ESCALATION -> R.string.patients_policy_primary_with_escalation
     ReminderPolicy.ALL_CAREGIVERS -> R.string.patients_policy_all_caregivers
     ReminderPolicy.ROTA -> R.string.patients_policy_unavailable
-}
-
-// --- Small controls ---------------------------------------------------------
-
-@Composable
-private fun Stepper(
-    valueText: String,
-    unit: String,
-    enabled: Boolean,
-    onStep: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String? = null,
-) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = { onStep(-1) }, enabled = enabled) {
-            Icon(
-                imageVector = FcIcons.Remove,
-                contentDescription = stringResource(R.string.meds_decrease),
-            )
-        }
-        val empty = valueText.isBlank() && placeholder != null
-        Text(
-            text = when {
-                valueText.isBlank() -> placeholder ?: valueText
-                unit.isBlank() -> valueText
-                else -> "$valueText $unit"
-            },
-            style = MaterialTheme.typography.bodyLarge,
-            // A muted prompt, so an uncounted value does not look like a control.
-            color = if (empty) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 4.dp),
-        )
-        IconButton(onClick = { onStep(1) }, enabled = enabled) {
-            Icon(
-                imageVector = FcIcons.Add,
-                contentDescription = stringResource(R.string.meds_increase),
-            )
-        }
-    }
 }
 
 // --- Time picker ------------------------------------------------------------

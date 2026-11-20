@@ -41,6 +41,17 @@ class ScheduleFormTest {
     }
 
     @Test
+    fun `a typed dose accepts a comma or a dot and rejects what the domain rejects`() {
+        assertEquals(java.math.BigDecimal("1.5"), parseDoseQuantity("1,5"))
+        assertEquals(java.math.BigDecimal("0.25"), parseDoseQuantity("0.25"))
+        assertEquals(java.math.BigDecimal("1"), parseDoseQuantity(" 1 "))
+        assertNull("zero is not a dose", parseDoseQuantity("0"))
+        assertNull("a bare separator is not a number", parseDoseQuantity(","))
+        assertNull("not a number", parseDoseQuantity("one"))
+        assertNull("over the maximum", parseDoseQuantity("101"))
+    }
+
+    @Test
     fun `two identical times mark the times field`() {
         val parsed = ScheduleFormState(
             times = listOf(DoseTimeEntry("08:00"), DoseTimeEntry("08:00")),

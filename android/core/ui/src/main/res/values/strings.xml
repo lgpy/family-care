@@ -497,7 +497,7 @@
     <string name="meds_remove_custom_time">Remove %1$s</string>
     <string name="meds_each_time">Each time</string>
     <string name="meds_how_many">How many do you have?</string>
-    <string name="meds_stock_not_counted">Not counted</string>
+    <string name="meds_stock_optional_hint">Not counted. Low-stock warnings stay off.</string>
     <string name="meds_optional">optional</string>
     <string name="meds_more_options">More options</string>
     <string name="meds_more_summary">%1$s · %2$s · low-stock threshold: %3$d</string>
@@ -509,8 +509,12 @@
     <string name="meds_summary_reminders_inherit">reminders from the patient</string>
     <string name="meds_summary_reminders_override">reminders: %1$s</string>
     <string name="meds_different_amounts">Different amount per time</string>
-    <string name="meds_decrease">Decrease</string>
-    <string name="meds_increase">Increase</string>
+    <string name="meds_decrease_amount">Decrease the amount</string>
+    <string name="meds_increase_amount">Increase the amount</string>
+    <string name="meds_decrease_stock">Decrease how many you have</string>
+    <string name="meds_increase_stock">Increase how many you have</string>
+    <string name="meds_decrease_time_amount">Decrease the amount at %1$s</string>
+    <string name="meds_increase_time_amount">Increase the amount at %1$s</string>
     <string name="meds_add_action">Add %1$s</string>
     <string name="meds_add_action_empty">Add medicine</string>
 
