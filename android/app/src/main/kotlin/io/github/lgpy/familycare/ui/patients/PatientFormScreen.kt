@@ -50,6 +50,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.CircleMember
 import io.github.lgpy.familycare.core.domain.circle.CoreField
+import io.github.lgpy.familycare.core.domain.circle.PatientRules
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.domain.circle.canWrite
 import io.github.lgpy.familycare.core.ui.R
@@ -190,7 +191,11 @@ private fun PatientFormFields(
         isError = CoreField.PATIENT_DISPLAY_NAME in uiState.errors,
         supportingText = errorSupport(
             show = CoreField.PATIENT_DISPLAY_NAME in uiState.errors,
-            message = R.string.patient_error_name,
+            message = if (uiState.displayName.isBlank()) {
+                R.string.error_name_empty
+            } else {
+                R.string.patient_error_name
+            },
         ),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
     )
@@ -276,7 +281,11 @@ private fun PatientFormFields(
         ChoiceRow(
             selected = uiState.reminderPolicy == policy,
             enabled = canWrite,
-            label = stringResource(policy.labelRes()),
+            label = reminderPolicyOption(
+                policy = policy,
+                escalationDelayMinutes = uiState.escalationDelay.trim().toIntOrNull()
+                    ?: PatientRules.DEFAULT_ESCALATION_DELAY_MINUTES,
+            ),
             onSelect = { viewModel.onReminderPolicyChanged(policy) },
         )
     }

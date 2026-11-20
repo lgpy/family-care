@@ -15,6 +15,7 @@ import io.github.lgpy.familycare.core.ui.export.PatientExportOutcome
 import io.github.lgpy.familycare.core.ui.export.PatientExporter
 import io.github.lgpy.familycare.core.ui.patient.TimelineEntry
 import io.github.lgpy.familycare.core.ui.patient.TimelineSources
+import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneId
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,6 +56,8 @@ data class PatientProfileUiState(
     val birthYear: Int? = null,
     /** The reminder line under the name, from the patient's policy. */
     val reminderPolicy: ReminderPolicy? = null,
+    /** Minutes after the first reminder before everyone else is alerted. */
+    val escalationDelayMinutes: Int = 0,
     /** The name of the caregiver reminded first, when there is one. */
     val primaryCaregiverName: String? = null,
     /** The caregiver reminded first is the signed-in user ("You first, then everyone"). */
@@ -100,6 +103,8 @@ class PatientProfileViewModel(
     timelineSources: TimelineSources,
     private val exporter: PatientExporter,
     zone: ZoneId = ZoneId.systemDefault(),
+    /** "Now" for the History tab: future events are not history yet. */
+    private val now: () -> Instant = { Instant.now() },
 ) : ViewModel() {
 
     private val id = PatientId(patientId)
@@ -128,6 +133,7 @@ class PatientProfileViewModel(
             displayName = patient?.displayName.orEmpty(),
             birthYear = patient?.birthYear,
             reminderPolicy = patient?.reminderPolicy,
+            escalationDelayMinutes = patient?.escalationDelayMinutes ?: 0,
             primaryCaregiverName = patient?.primaryCaregiverId?.let { primaryId ->
                 members.firstOrNull { it.userId == primaryId }?.displayName
             },
@@ -144,7 +150,7 @@ class PatientProfileViewModel(
             exporting = actionState.exporting,
             exportError = actionState.exportError,
             exportShare = actionState.exportShare,
-            history = groupByMonth(entries, zone),
+            history = groupByMonth(entries, zone, now()),
         )
     }.stateIn(
         scope = viewModelScope,
@@ -228,9 +234,18 @@ class PatientProfileViewModel(
 
     companion object {
 
-        /** Groups [entries] newest first into the months of [zone]. */
-        fun groupByMonth(entries: List<TimelineEntry>, zone: ZoneId): List<HistoryGroup> =
+        /**
+         * Groups [entries] that have already happened, newest first, into the
+         * months of [zone]. An appointment in the future is on the Agenda, not
+         * in the History tab (finding 19 of the UX audit).
+         */
+        fun groupByMonth(
+            entries: List<TimelineEntry>,
+            zone: ZoneId,
+            now: Instant = Instant.now(),
+        ): List<HistoryGroup> =
             entries
+                .filter { !it.at.isAfter(now) }
                 .sortedByDescending { entry -> entry.at }
                 .groupBy { YearMonth.from(it.at.atZone(zone)) }
                 .map { (month, monthEntries) -> HistoryGroup(month, monthEntries) }

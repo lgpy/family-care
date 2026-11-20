@@ -54,7 +54,11 @@ data class WhoGetsRemindedRow(
     val primaryCaregiverName: String?,
     /** Whether that caregiver is the signed-in user. */
     val primaryCaregiverIsMe: Boolean,
-)
+) {
+
+    /** The escalation delay the same summary line names. */
+    val escalationDelayMinutes: Int get() = patient.escalationDelayMinutes
+}
 
 /** The list's state; [rows] is empty until the patients arrive. */
 data class WhoGetsRemindedUiState(

@@ -112,7 +112,9 @@ fun DoseSlot(
     val container = when (slot.state) {
         DoseSlotState.DONE -> Color.Transparent
         DoseSlotState.NEXT -> scheme.primaryContainer
-        DoseSlotState.UPCOMING -> scheme.surfaceContainer
+        // A future slot sits on the normal surface so the overdue row stays the
+        // boldest thing in the timeline (UX audit findings 8 and 17).
+        DoseSlotState.UPCOMING -> scheme.surface
     }
     val contentColor = when (slot.state) {
         DoseSlotState.DONE -> scheme.onSurfaceVariant
@@ -213,18 +215,19 @@ private fun WhoRow(slot: DoseSlotUi) {
                             contentDescription = null,
                         )
                     }
-                    if (slot.pills.size > 1) {
-                        Text(
-                            text = pluralStringResource(
-                                R.plurals.meds_slot_pills,
-                                slot.pills.size,
-                                slot.pills.size,
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = LocalContentColor.current.copy(alpha = 0.8f),
-                            modifier = Modifier.padding(start = 4.dp),
-                        )
-                    }
+                    // The amount is part of every row, even when it is one pill:
+                    // a slot without a count made the single-dose rows look
+                    // different from the rest (UX audit finding 17).
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.meds_slot_pills,
+                            slot.pills.size,
+                            slot.pills.size,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = LocalContentColor.current.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
                 }
             }
         }

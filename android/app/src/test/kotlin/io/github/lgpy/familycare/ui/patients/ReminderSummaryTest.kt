@@ -1,6 +1,7 @@
 package io.github.lgpy.familycare.ui.patients
 
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
+import io.github.lgpy.familycare.core.ui.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -88,5 +89,57 @@ class ReminderSummaryTest {
         assertNull(firstNameOf(null))
         assertNull(firstNameOf(""))
         assertNull(firstNameOf("   "))
+    }
+
+    @Test
+    fun `a named primary and the delay share one sentence`() {
+        val text = reminderSummaryText(
+            policy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
+            primaryFirstName = "Leonardo",
+            primaryIsMe = false,
+            escalationDelayMinutes = 45,
+        )
+
+        assertEquals(R.string.patients_reminder_primary_first, text?.resource)
+        assertEquals(listOf("Leonardo", 45), text?.args)
+    }
+
+    @Test
+    fun `the signed-in user is named you and keeps the delay`() {
+        val text = reminderSummaryText(
+            policy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
+            primaryFirstName = "Leonardo",
+            primaryIsMe = true,
+            escalationDelayMinutes = 30,
+        )
+
+        assertEquals(R.string.patients_reminder_you_first, text?.resource)
+        assertEquals(listOf(30), text?.args)
+    }
+
+    @Test
+    fun `a primary with no name still describes the delay`() {
+        val text = reminderSummaryText(
+            policy = ReminderPolicy.PRIMARY_WITH_ESCALATION,
+            primaryFirstName = null,
+            primaryIsMe = false,
+            escalationDelayMinutes = 20,
+        )
+
+        assertEquals(R.string.patients_policy_primary_with_escalation, text?.resource)
+        assertEquals(listOf(20), text?.args)
+    }
+
+    @Test
+    fun `every policy has its own summary`() {
+        assertEquals(
+            ReminderSummaryText(R.string.patients_reminder_everyone),
+            reminderSummaryText(ReminderPolicy.ALL_CAREGIVERS, null, false),
+        )
+        assertEquals(
+            ReminderSummaryText(R.string.patients_policy_unavailable),
+            reminderSummaryText(ReminderPolicy.ROTA, null, false),
+        )
+        assertNull(reminderSummaryText(null, null, false))
     }
 }

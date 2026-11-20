@@ -2,6 +2,7 @@ package io.github.lgpy.familycare.ui.patients
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import io.github.lgpy.familycare.core.domain.circle.PatientRules
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
 
@@ -67,26 +68,85 @@ internal fun firstNameOf(displayName: String?): String? = displayName
     ?.takeIf { it.isNotEmpty() }
 
 /**
+ * One resource and the arguments that fill it: the summary's wording before it
+ * is rendered. Pure, so every policy value is unit-tested without a device.
+ */
+internal data class ReminderSummaryText(
+    val resource: Int,
+    val args: List<Any> = emptyList(),
+)
+
+/**
  * The one-line reminder summary of the policy, or the policy's own label when
  * it has no short human phrase; null while the policy is not loaded.
  *
  * Shared by the profile head and the "Who gets reminded" list so both describe
- * the same routing with the same words.
+ * the same routing with the same words, now including the escalation delay
+ * (finding 20 of the UX audit).
+ */
+internal fun reminderSummaryText(
+    policy: ReminderPolicy?,
+    primaryFirstName: String?,
+    primaryIsMe: Boolean,
+    escalationDelayMinutes: Int = PatientRules.DEFAULT_ESCALATION_DELAY_MINUTES,
+): ReminderSummaryText? = when (reminderSummaryKind(policy, primaryFirstName, primaryIsMe)) {
+    null -> null
+    ReminderSummaryKind.PRIMARY_FIRST -> ReminderSummaryText(
+        resource = R.string.patients_reminder_primary_first,
+        args = listOf(primaryFirstName.orEmpty(), escalationDelayMinutes),
+    )
+
+    ReminderSummaryKind.YOU_FIRST -> ReminderSummaryText(
+        resource = R.string.patients_reminder_you_first,
+        args = listOf(escalationDelayMinutes),
+    )
+
+    ReminderSummaryKind.EVERYONE -> ReminderSummaryText(
+        resource = R.string.patients_reminder_everyone,
+    )
+
+    ReminderSummaryKind.POLICY -> if (policy == ReminderPolicy.PRIMARY_WITH_ESCALATION) {
+        ReminderSummaryText(
+            resource = R.string.patients_policy_primary_with_escalation,
+            args = listOf(escalationDelayMinutes),
+        )
+    } else {
+        ReminderSummaryText(resource = policy!!.labelRes())
+    }
+}
+
+/**
+ * The one-line reminder summary of the policy, rendered from
+ * [reminderSummaryText]; null while the policy is not loaded.
  */
 @Composable
 internal fun reminderSummary(
     policy: ReminderPolicy?,
     primaryCaregiverName: String?,
     primaryCaregiverIsMe: Boolean,
+    escalationDelayMinutes: Int = PatientRules.DEFAULT_ESCALATION_DELAY_MINUTES,
 ): String? {
-    val firstName = firstNameOf(primaryCaregiverName)
-    return when (reminderSummaryKind(policy, firstName, primaryCaregiverIsMe)) {
-        null -> null
-        ReminderSummaryKind.PRIMARY_FIRST ->
-            stringResource(R.string.patients_reminder_primary_first, firstName.orEmpty())
-
-        ReminderSummaryKind.YOU_FIRST -> stringResource(R.string.patients_reminder_you_first)
-        ReminderSummaryKind.EVERYONE -> stringResource(R.string.patients_reminder_everyone)
-        ReminderSummaryKind.POLICY -> stringResource(policy!!.labelRes())
-    }
+    val text = reminderSummaryText(
+        policy = policy,
+        primaryFirstName = firstNameOf(primaryCaregiverName),
+        primaryIsMe = primaryCaregiverIsMe,
+        escalationDelayMinutes = escalationDelayMinutes,
+    ) ?: return null
+    return stringResource(text.resource, *text.args.toTypedArray())
 }
+
+/**
+ * The policy option in a form, with the same words as the profile summary and
+ * the current escalation delay (finding 20 of the UX audit).
+ */
+@Composable
+internal fun reminderPolicyOption(policy: ReminderPolicy, escalationDelayMinutes: Int): String =
+    when (policy) {
+        ReminderPolicy.PRIMARY_WITH_ESCALATION -> stringResource(
+            R.string.patients_policy_primary_with_escalation,
+            escalationDelayMinutes,
+        )
+
+        ReminderPolicy.ALL_CAREGIVERS -> stringResource(R.string.patients_policy_all_caregivers)
+        ReminderPolicy.ROTA -> stringResource(R.string.patients_policy_unavailable)
+    }

@@ -2,8 +2,6 @@ package io.github.lgpy.familycare.feature.medications.list
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,15 +44,16 @@ import io.github.lgpy.familycare.core.ui.components.StockMeter
 import io.github.lgpy.familycare.core.ui.components.stockMeterFraction
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.feature.medications.ui.MedsMetaItem
-import io.github.lgpy.familycare.feature.medications.ui.MedsTimeChip
+import io.github.lgpy.familycare.feature.medications.ui.regimenAmountTimesSummary
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
  * A patient's medications in the "screens v2" shape (docs/ux/mockups/
  * screens-v2.html, `profileMeds`): one row per medicine with its pill picture,
- * name and strength, a chip per dose time, the food note when there is one and
- * a stock meter. Stopped medicines stay collapsed behind their header.
+ * name and strength, the amount and times of each dose, the food note when
+ * there is one and a stock meter. Stopped medicines stay collapsed behind their
+ * header.
  *
  * "Add medicine" exists for owners and caregivers only, the same rule the
  * repository enforces: an extended floating button here, and the tonal button
@@ -247,11 +246,10 @@ private fun PatientMedicationsList(
 
 /**
  * One medicine: the 40 dp pill tile (the row's picture), the name and strength
- * as one wrapping title, a chip per dose time, the food note from the
+ * as one wrapping title, the amount and times, the food note from the
  * medication's instructions and the stock meter with its icon — the filled
  * error symbol in amber when the stock is low.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MedicationRow(item: PatientMedicationUi, onClick: () -> Unit) {
     Surface(
@@ -283,17 +281,10 @@ private fun MedicationRow(item: PatientMedicationUi, onClick: () -> Unit) {
                 )
 
                 item.item.currentRegimen?.let { regimen ->
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        regimen.sortedTimes().forEach { doseTime ->
-                            MedsTimeChip(
-                                time = doseTime.time,
-                                icon = FcIcons.Schedule,
-                            )
-                        }
-                    }
+                    MedsMetaItem(
+                        icon = FcIcons.Schedule,
+                        text = regimenAmountTimesSummary(regimen, item.medication.stockUnit),
+                    )
                 }
 
                 item.medication.instructions?.let { note ->
@@ -308,7 +299,11 @@ private fun MedicationRow(item: PatientMedicationUi, onClick: () -> Unit) {
                     ) {
                         StockMeter(
                             daysLeft = pluralStringResource(
-                                R.plurals.meds_stock_days_left,
+                                if (item.low) {
+                                    R.plurals.meds_stock_days_left_low
+                                } else {
+                                    R.plurals.meds_stock_days_left
+                                },
                                 days,
                                 days,
                             ),
@@ -316,16 +311,17 @@ private fun MedicationRow(item: PatientMedicationUi, onClick: () -> Unit) {
                             low = item.low,
                             modifier = Modifier.weight(1f),
                         )
-                        Icon(
-                            imageVector = if (item.low) FcIcons.ErrorFilled else FcIcons.Inventory2,
-                            contentDescription = null,
-                            tint = if (item.low) {
-                                FamilyCareTheme.colors.attentionAccent
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            modifier = Modifier.size(24.dp),
-                        )
+                        // Only the low-stock warning carries an icon: a plain
+                        // stock row does not need an unexplained box beside it
+                        // (finding 15 of the UX audit).
+                        if (item.low) {
+                            Icon(
+                                imageVector = FcIcons.ErrorFilled,
+                                contentDescription = stringResource(R.string.meds_stock_low_badge),
+                                tint = FamilyCareTheme.colors.attentionAccent,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
                     }
                 }
             }

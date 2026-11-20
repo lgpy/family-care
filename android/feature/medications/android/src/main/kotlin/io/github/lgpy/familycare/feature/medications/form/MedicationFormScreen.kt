@@ -364,7 +364,10 @@ private fun MedicineSection(viewModel: MedicationFormViewModel, state: Medicatio
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
-    FieldError(MedicationField.MEDICATION_NAME in errors, R.string.meds_error_name)
+    FieldError(
+        MedicationField.MEDICATION_NAME in errors,
+        if (state.name.isBlank()) R.string.error_name_empty else R.string.meds_error_name,
+    )
 
     if (state.suggestions.isNotEmpty()) {
         SuggestionList(
@@ -418,9 +421,15 @@ private fun MedicineSection(viewModel: MedicationFormViewModel, state: Medicatio
 /** A decorative icon per form; the chip's label is the real information. */
 @Composable
 private fun formIcon(form: MedicationForm): ImageVector = when (form) {
-    MedicationForm.TABLET, MedicationForm.CAPSULE, MedicationForm.DROPS -> FcIcons.Pill
+    MedicationForm.TABLET -> FcIcons.Pill
+    MedicationForm.CAPSULE -> FcIcons.Medication
+    MedicationForm.DROPS -> FcIcons.WaterDrop
+    MedicationForm.LIQUID -> FcIcons.Bottle
+    MedicationForm.INJECTION -> FcIcons.Vaccines
+    MedicationForm.INHALER -> FcIcons.Inhaler
+    MedicationForm.PATCH -> FcIcons.Healing
+    MedicationForm.CREAM -> FcIcons.Tube
     MedicationForm.OTHER -> FcIcons.MoreHoriz
-    else -> FcIcons.Medication
 }
 
 /**
@@ -1166,7 +1175,7 @@ private fun ReminderFields(viewModel: MedicationFormViewModel, state: Medication
 /** The policy label, the same words the patient form uses. */
 @Composable
 private fun ReminderPolicy.labelRes(): Int = when (this) {
-    ReminderPolicy.PRIMARY_WITH_ESCALATION -> R.string.patients_policy_primary_with_escalation
+    ReminderPolicy.PRIMARY_WITH_ESCALATION -> R.string.patients_policy_primary_with_escalation_short
     ReminderPolicy.ALL_CAREGIVERS -> R.string.patients_policy_all_caregivers
     ReminderPolicy.ROTA -> R.string.patients_policy_unavailable
 }

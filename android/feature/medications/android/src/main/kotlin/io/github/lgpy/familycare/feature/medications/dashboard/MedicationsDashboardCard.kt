@@ -122,7 +122,7 @@ class MedicationsDashboardCard : DashboardCard {
     }
 }
 
-/** One rail group per time, the next group first-class and the countdown on it. */
+/** One rail group per time, the overdue group first-class and the countdown on it. */
 @Composable
 private fun DosesTodayUiState.toTimeGroups(
     now: LocalDateTime,
@@ -134,15 +134,26 @@ private fun DosesTodayUiState.toTimeGroups(
         .groupBy { it.time }
         .toSortedMap()
 
+    val nowTime = now.toLocalTime()
     val nextTime = byTime
         .filterValues { timeGroups -> timeGroups.any { !it.allConfirmed } }
         .keys
-        .firstOrNull { time -> !time.isBefore(now.toLocalTime()) }
+        .firstOrNull { time -> time.isAfter(nowTime) }
 
     return byTime.map { (time, timeGroups) ->
+        val open = timeGroups.any { !it.allConfirmed }
+        // An unrecorded slot at or past its time is overdue: it keeps the strong
+        // button and gains the late line, so it is bolder than anything later.
+        val overdue = open && !time.isAfter(nowTime)
+        val late = if (overdue) lateSpan(now, timeGroups.first().scheduledLocal) else null
         DoseTimeGroup(
             time = formatTime(time),
-            secondary = if (time == nextTime) countdown(now, timeGroups.first().scheduledLocal) else null,
+            secondary = when {
+                late != null -> lateText(late)
+                time == nextTime -> countdown(now, timeGroups.first().scheduledLocal)
+                else -> null
+            },
+            late = late != null,
             slots = timeGroups
                 .sortedBy { it.patientName.lowercase() }
                 .map { group ->
@@ -157,7 +168,7 @@ private fun DosesTodayUiState.toTimeGroups(
                         ),
                         state = when {
                             done -> DoseSlotState.DONE
-                            time == nextTime -> DoseSlotState.NEXT
+                            overdue -> DoseSlotState.NEXT
                             else -> DoseSlotState.UPCOMING
                         },
                         pills = group.pills,
@@ -166,7 +177,15 @@ private fun DosesTodayUiState.toTimeGroups(
                         } else {
                             null
                         },
-                        actionLabel = if (!done && canWrite) stringResource(R.string.meds_give) else null,
+                        actionLabel = if (!done && canWrite) {
+                            pluralStringResource(
+                                R.plurals.meds_give_all,
+                                group.doseCount,
+                                group.doseCount,
+                            )
+                        } else {
+                            null
+                        },
                         onAction = if (!done && canWrite) {
                             { viewModel.give(group.patientId, group.scheduledLocal) }
                         } else {
@@ -182,6 +201,50 @@ private fun DosesTodayUiState.toTimeGroups(
                         },
                     )
                 },
+        )
+    }
+}
+
+/**
+ * How far past its time an unrecorded slot is, or null while it is not late.
+ * Pure, so the boundaries (just due, 40 minutes, whole hours) are unit-tested.
+ */
+internal sealed interface LateSpan {
+
+    /** Under an hour: "40 min late". */
+    data class Minutes(val minutes: Long) : LateSpan
+
+    /** An hour or more: "2 h late", or "2 h 15 min late" when not whole hours. */
+    data class Hours(val hours: Long, val minutes: Long) : LateSpan
+}
+
+/** The late span of [scheduled] at [now], or null at or before its time. */
+internal fun lateSpan(now: LocalDateTime, scheduled: LocalDateTime): LateSpan? {
+    val minutes = Duration.between(scheduled, now).toMinutes()
+    return when {
+        minutes < 1 -> null
+        minutes < 60 -> LateSpan.Minutes(minutes)
+        else -> LateSpan.Hours(minutes / 60, minutes % 60)
+    }
+}
+
+/** "40 min late", "2 h late" or "2 h 15 min late". */
+@Composable
+private fun lateText(span: LateSpan): String = when (span) {
+    is LateSpan.Minutes -> pluralStringResource(
+        R.plurals.meds_late_minutes,
+        span.minutes.toInt(),
+        span.minutes,
+    )
+
+    is LateSpan.Hours -> if (span.minutes == 0L) {
+        pluralStringResource(R.plurals.meds_late_hours, span.hours.toInt(), span.hours)
+    } else {
+        pluralStringResource(
+            R.plurals.meds_late_hours_minutes,
+            span.hours.toInt(),
+            span.hours,
+            span.minutes,
         )
     }
 }

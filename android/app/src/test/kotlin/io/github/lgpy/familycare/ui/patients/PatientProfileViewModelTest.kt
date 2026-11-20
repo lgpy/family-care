@@ -86,13 +86,17 @@ class PatientProfileViewModelTest {
         route = null,
     )
 
-    private fun viewModel(vararg sources: TimelineSource) = PatientProfileViewModel(
+    private fun viewModel(
+        vararg sources: TimelineSource,
+        now: () -> Instant = { Instant.parse("2026-11-20T00:00:00Z") },
+    ) = PatientProfileViewModel(
         patientId = patientId.value,
         patientRepository = patients,
         careCircleRepository = circles,
         timelineSources = TimelineSources(sources.toList()),
         exporter = exporter,
         zone = zone,
+        now = now,
     )
 
     @Test
@@ -132,6 +136,28 @@ class PatientProfileViewModelTest {
             val state = awaitWhere { it.loaded }
 
             assertTrue(state.history.isEmpty())
+        }
+    }
+
+    @Test
+    fun historyDoesNotListEventsInTheFuture() = runTest {
+        val source = FakeSource(
+            MutableStateFlow(
+                listOf(
+                    entry("past", "2026-11-16T09:00:00Z"),
+                    entry("today", "2026-11-20T00:00:00Z"),
+                    entry("future", "2026-11-23T08:30:00Z"),
+                ),
+            ),
+        )
+
+        viewModel(source).uiState.test {
+            val state = awaitWhere { it.loaded && it.history.isNotEmpty() }
+
+            assertEquals(
+                listOf("today", "past"),
+                state.history.flatMap { group -> group.entries.map { it.id } },
+            )
         }
     }
 

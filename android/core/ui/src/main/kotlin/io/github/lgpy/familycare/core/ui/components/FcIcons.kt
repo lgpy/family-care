@@ -89,6 +89,12 @@ object FcIcons {
     val Medication: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_medication)
     val MedicationFilled: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_medication_fill1)
     val Pill: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_pill)
+    val WaterDrop: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_water_drop)
+    val Bottle: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_bottle)
+    val Vaccines: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_vaccines)
+    val Inhaler: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_inhaler)
+    val Healing: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_healing)
+    val Tube: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_tube)
     val Prescriptions: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_prescriptions)
     val Inventory2: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_inventory_2)
     val Package2: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_package_2)
@@ -202,6 +208,12 @@ object FcIcons {
         "Medication" to Medication,
         "MedicationFilled" to MedicationFilled,
         "Pill" to Pill,
+        "WaterDrop" to WaterDrop,
+        "Bottle" to Bottle,
+        "Vaccines" to Vaccines,
+        "Inhaler" to Inhaler,
+        "Healing" to Healing,
+        "Tube" to Tube,
         "Prescriptions" to Prescriptions,
         "Inventory2" to Inventory2,
         "Package2" to Package2,
