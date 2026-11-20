@@ -104,14 +104,6 @@ android {
             // installing a debug APK would overwrite (or be blocked as a
             // signature conflict by) the real release-signed app on the phone.
             applicationIdSuffix = ".debug"
-            // The debug app only talks to the dev backend (test data), and the
-            // lock blocks adb-driven checks such as screenshots at 200% font.
-            // Release, and a debug build pointed at any other environment, keep
-            // the mandatory lock (D12).
-            buildConfigField("boolean", "APP_LOCK_ENABLED", (environmentName != "dev").toString())
-        }
-        getByName("release") {
-            buildConfigField("boolean", "APP_LOCK_ENABLED", "true")
         }
     }
 
@@ -168,7 +160,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.fragment)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     // The export's JSON document (D30) is built with kotlinx.serialization.
     implementation(libs.kotlinx.serialization.json)

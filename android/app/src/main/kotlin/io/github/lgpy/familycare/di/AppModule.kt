@@ -1,6 +1,5 @@
 package io.github.lgpy.familycare.di
 
-import android.os.SystemClock
 import android.app.AlarmManager
 import io.github.lgpy.familycare.BuildConfig
 import io.github.lgpy.familycare.auth.GoogleSignIn
@@ -27,8 +26,6 @@ import io.github.lgpy.familycare.core.ui.export.PatientExportFiles
 import io.github.lgpy.familycare.core.ui.export.PatientExportSource
 import io.github.lgpy.familycare.core.ui.export.PatientExportSources
 import io.github.lgpy.familycare.core.ui.export.PatientExporter
-import io.github.lgpy.familycare.core.ui.lock.AppLockController
-import io.github.lgpy.familycare.core.ui.lock.AppLockPolicy
 import io.github.lgpy.familycare.core.ui.locale.AppLanguageController
 import io.github.lgpy.familycare.core.ui.patient.PatientAlerts
 import io.github.lgpy.familycare.core.ui.patient.PatientHeader
@@ -102,7 +99,7 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 /**
- * The app's dependency graph: the app lock, language state, the Supabase
+ * The app's dependency graph: language state, the Supabase
  * session, sync and the core repositories (care circle, patients, profile),
  * plus the M2 screen view models.
  *
@@ -114,10 +111,6 @@ import org.koin.dsl.module
  * `koinInject<ProfileRepository>()`.
  */
 val appModule: Module = module {
-
-    // Monotonic clock: elapsedRealtime is unaffected by wall-clock changes.
-    single { AppLockPolicy(elapsedRealtime = SystemClock::elapsedRealtime) }
-    single { AppLockController(context = androidContext(), policy = get()) }
 
     single { AppLanguageController(context = androidContext()) }
 

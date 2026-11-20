@@ -62,7 +62,7 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * Every entry that existed before is still reachable: the circle and invitation
  * live under Family, reminders and who gets reminded under Reminders, the user's
- * name, language, app lock, About and the account under App, and export and the
+ * name, language, About and the account under App, and export and the
  * owner-only activity feed under Data. The reminders row's status is contributed
  * by the medications feature through a core contract, so this screen names no
  * feature module (D5).
@@ -81,7 +81,6 @@ fun MoreScreen(
     val viewModel = koinViewModel<MoreViewModel>()
     var selectedLanguage by remember { mutableStateOf(languageController.current()) }
     var languageDialogOpen by remember { mutableStateOf(false) }
-    var appLockDialogOpen by remember { mutableStateOf(false) }
     var accountDialogOpen by remember { mutableStateOf(false) }
 
     // D30: the activity feed is owner-only, so its entry is too.
@@ -166,12 +165,6 @@ fun MoreScreen(
                 title = stringResource(R.string.settings_language_title),
                 status = stringResource(selectedLanguage.labelRes()),
                 onClick = { languageDialogOpen = true },
-            )
-            MoreRow(
-                icon = FcIcons.Lock,
-                title = stringResource(R.string.settings_app_lock_title),
-                status = stringResource(R.string.more_app_lock_status),
-                onClick = { appLockDialogOpen = true },
             )
             MoreRow(
                 icon = FcIcons.Info,
@@ -263,24 +256,6 @@ fun MoreScreen(
             },
             confirmButton = {
                 TextButton(onClick = { languageDialogOpen = false }) {
-                    Text(text = stringResource(R.string.close))
-                }
-            },
-        )
-    }
-
-    if (appLockDialogOpen) {
-        AlertDialog(
-            onDismissRequest = { appLockDialogOpen = false },
-            title = { Text(text = stringResource(R.string.settings_app_lock_title)) },
-            text = {
-                Text(
-                    text = stringResource(R.string.settings_app_lock_body),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { appLockDialogOpen = false }) {
                     Text(text = stringResource(R.string.close))
                 }
             },

@@ -49,8 +49,8 @@ There is no "patient mode": the app is designed for caregivers.
 5. **Dashboard ("Today")**
    - Needs attention (overdue/unconfirmed doses, low stock), today's doses, next 7 days of appointments.
 6. **Foundations (invisible, non-negotiable)**
-   - Offline-first, database-enforced access control, audit log, backups, app lock, bilingual UI.
-   - Sign in with Google + app lock, per-patient export / delete / archive, optional agreement note per patient (see [security-and-privacy](security-and-privacy.md)).
+   - Offline-first, database-enforced access control, audit log, backups, bilingual UI.
+   - Sign in with Google, per-patient export / delete / archive, optional agreement note per patient (see [security-and-privacy](security-and-privacy.md)).
 
 ### Suggested first build slice
 

@@ -15,8 +15,7 @@ import javax.crypto.spec.GCMParameterSpec
  * The wrapping key is AES-256-GCM, generated on first use, non-exportable, and
  * **not** tied to user authentication: the app must be able to open the
  * database while the phone is locked so reminders and background sync keep
- * working (security-and-privacy §4). The app lock (biometrics) is a UI gate, not
- * a key gate.
+ * working (security-and-privacy §4).
  *
  * Nothing here logs key material or ciphertext.
  */

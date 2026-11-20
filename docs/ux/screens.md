@@ -78,7 +78,7 @@ Ticking an item asks "How many did you buy?" and records a refill in the stock l
 
 ## 7. More
 
-Circle members and invitations · reminder policy per patient · language · app lock · data export.
+Circle members and invitations · reminder policy per patient · language · data export.
 
 ## Walkthrough: one morning
 

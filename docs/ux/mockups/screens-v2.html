@@ -575,7 +575,7 @@ const more = phone(`
   ${[
     ['Family', [['group','Circle members','Mom, Leonardo · 2 caregivers'],['person_add','Invite someone','Send a code by WhatsApp']]],
     ['Reminders', [['notifications_active','Make reminders reliable','1 thing to fix on this phone', true],['alarm','Who gets reminded','Per patient']]],
-    ['App', [['language','Language','Português'],['lock','App lock','Fingerprint'],['info','About','Version 0.6.0']]],
+    ['App', [['language','Language','Português'],['info','About','Version 0.6.0']]],
     ['Data', [['ios_share','Export a patient','PDF for the doctor, or JSON'],['manage_history','Activity','Who changed what']]],
   ].map(([g, rows]) => `<section><div class="sh" style="font-size:14px;color:var(--on-sv)">${g}</div><div class="list">${rows.map(([i,t,s,warn]) => `
       <div class="li"><span class="tile ${warn?'':'pri'}" ${warn?'style="background:var(--attn-c);color:var(--attn)"':''}>${ic(i)}</span><div class="tx"><b>${t}</b><span>${s}</span></div>${ic('chevron_right')}</div>`).join('')}</div></section>`).join('')}

@@ -22,9 +22,6 @@ dependencies {
     // `material-icons-core` is used; `icons-extended` is not a dependency.
     implementation(libs.androidx.compose.material.icons.core)
 
-    implementation(libs.androidx.biometric)
-    implementation(libs.androidx.fragment)
-    implementation(libs.androidx.lifecycle.process)
     implementation(libs.kotlinx.serialization.json)
 
     debugApi(libs.androidx.compose.ui.tooling)

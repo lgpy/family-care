@@ -24,7 +24,7 @@ import io.github.lgpy.familycare.core.ui.R
 import org.koin.compose.koinInject
 
 /**
- * The signed-out gate (D12): app lock → this gate → the app shell.
+ * The signed-out gate (D12): this gate → the app shell.
  *
  * Content is not composed while the session is unknown or missing, so no
  * caregiver can reach a screen before signing in.

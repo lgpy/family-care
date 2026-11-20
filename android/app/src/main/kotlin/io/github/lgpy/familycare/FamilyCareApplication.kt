@@ -5,7 +5,6 @@ import io.github.lgpy.familycare.core.data.sync.SyncService
 import io.github.lgpy.familycare.core.notifications.PushHandlers
 import io.github.lgpy.familycare.core.notifications.PushSession
 import io.github.lgpy.familycare.core.ui.export.PatientExporter
-import io.github.lgpy.familycare.core.ui.lock.AppLockController
 import io.github.lgpy.familycare.di.appModule
 import io.github.lgpy.familycare.feature.appointments.push.AppointmentPush
 import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentReminderCoordinator
@@ -27,10 +26,6 @@ class FamilyCareApplication : Application() {
             androidContext(this@FamilyCareApplication)
             modules(appModule)
         }.koin
-
-        // Start observing the process lifecycle before the first activity
-        // starts, so a cold start begins locked (D12).
-        koin.get<AppLockController>().start()
 
         // Sync follows the session for the life of the process: it connects when
         // the stored session is signed in, and uploads anything queued while the

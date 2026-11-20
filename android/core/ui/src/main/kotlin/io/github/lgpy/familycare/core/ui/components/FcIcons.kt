@@ -66,7 +66,6 @@ object FcIcons {
     val PhotoCamera: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_photo_camera)
     val HorizontalRule: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_horizontal_rule)
     val Language: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_language)
-    val Lock: ImageVector @Composable get() = ImageVector.vectorResource(R.drawable.ic_sym_lock)
 
     // ---- Bottom navigation -----------------------------------------------
 
@@ -186,7 +185,6 @@ object FcIcons {
         "PhotoCamera" to PhotoCamera,
         "HorizontalRule" to HorizontalRule,
         "Language" to Language,
-        "Lock" to Lock,
         // Bottom navigation.
         "Home" to Home,
         "Menu" to Menu,

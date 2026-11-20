@@ -12,8 +12,8 @@ What we protect: medication, conditions, allergies, appointments, (later) docume
 
 | # | Threat | Likelihood | Main protections |
 |---|---|---|---|
-| T1 | **Lost or stolen phone** | High | App lock (biometric/PIN), encrypted local database, no health data in notifications, remote session revocation |
-| T2 | **Account takeover** (phishing, compromised Google account) | Medium | Google 2-Step Verification required, mandatory app lock, new-device alerts, session management |
+| T1 | **Lost or stolen phone** | High | Device screen lock, encrypted local database, no health data in notifications, remote session revocation |
+| T2 | **Account takeover** (phishing, compromised Google account) | Medium | Google 2-Step Verification required, new-device alerts, session management |
 | T3 | **Access-control bug** (data visible to the wrong user/circle) | Medium | Deny-by-default database policies, one access function, automated isolation tests, sync rules tested against the same cases |
 | T4 | **Misconfiguration / leaked secrets** (public bucket, admin key in the app) | Medium | Admin key only on the server, provider security checks, setup checklist, separate dev and prod projects |
 | T5 | **Data loss** (bad migration, accidental deletion, provider incident, compromised account deleting data) | Medium | Daily provider backups + independent encrypted backups that the app's accounts cannot delete, soft-delete, restore tests |
@@ -29,7 +29,7 @@ Out of scope: a compromised phone operating system, targeted state-level attacke
 
 - **Sign in with Google** (via Supabase Auth) is the only login method in the MVP. No app passwords to forget or reuse.
 - **The Google account becomes the key to the health data.** Every caregiver's Google account must have **2-Step Verification enabled** (checked during onboarding, by a setup checklist — the app cannot enforce it).
-- Day-to-day the app opens with **biometric/PIN app lock** (mandatory). This is the second barrier: someone with access to an unlocked phone's Google account still cannot open the app.
+- Day-to-day the app opens **straight into the signed-in view**, with no second unlock screen. The phone's own screen lock is the barrier; the local database stays encrypted and signed-out users never see content.
 - Invitations are bound to the invited email address: the caregiver must sign in with the Google account for that address.
 - Recovery: Google handles account recovery; if a caregiver loses access, the owner removes and re-invites them.
 - Notification on new device sign-in to the app; "Sign out all devices" in settings (lost phone).
@@ -170,6 +170,6 @@ Recommendation, not a requirement: simply tell each grandparent that their medic
 
 ## Open questions (security)
 
-- ~~**S1 — Login method.**~~ Resolved: Sign in with Google + mandatory app lock (D12).
+- ~~**S1 — Login method.**~~ Resolved: Sign in with Google (D12), no app-specific unlock screen.
 - **S2 — Grandparents' agreement.** Undecided how to approach it. Handled by an *optional* agreement note per patient (§7), so it does not block anything. Revisit if circumstances change (e.g. a legal representative is appointed).
 - ~~**S3 — Data-loss tolerance.**~~ Resolved: up to 24 hours accepted; no point-in-time recovery (D15).

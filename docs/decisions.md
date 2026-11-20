@@ -66,7 +66,8 @@ Each decision records what was decided and why. To change one, add a new entry t
 
 ### D12–D17 — Security and privacy
 Details and reasoning in [security-and-privacy.md](security-and-privacy.md).
-- **D12 — Authentication:** Sign in with Google only (MVP); caregivers' Google accounts must have 2-Step Verification; mandatory biometric/PIN app lock; MFA on all admin/provider accounts.
+- **D12 — Authentication:** Sign in with Google only (MVP); caregivers' Google accounts must have 2-Step Verification; MFA on all admin/provider accounts.
+  - **No app-specific unlock screen (revised 2026-11-20).** The app opens straight into the signed-in shell; the phone's own screen lock and the encrypted local database are the barriers. The mandatory biometric gate added a step to every launch, which cost more in daily use than the marginal protection it gave.
 - **D13 — Authorization:** deny-by-default Row-Level Security on every table; one access function; PowerSync sync rules and database policies tested against the same access scenarios.
 - **D14 — Audit:** all changes and security events logged by database triggers, append-only. Individual reads are not loggable offline-first; syncs and document downloads are.
 - **D15 — Backups:** provider daily backups + nightly independent encrypted backups (database incl. auth schema, later files) to a second EU provider, undeletable by app/admin accounts; quarterly restore tests. RPO 24 h (accepted), RTO 1 day; no point-in-time recovery.

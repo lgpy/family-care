@@ -36,7 +36,7 @@ import io.github.lgpy.familycare.core.ui.R
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The M2 onwards gate: after the app lock and the Supabase session, the user
+ * The M2 onwards gate: after the Supabase session, the user
  * still has to belong to a care circle before any screen shows health data.
  *
  * [CircleSetupState.NotSyncedYet] is a loading screen, never the empty one, so a

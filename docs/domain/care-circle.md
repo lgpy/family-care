@@ -76,7 +76,7 @@ Deliberately deferred; kept here so they are not lost.
 
 - **One circle per user in the app.** All queries use the user's oldest membership (tie-broken by membership id). Accepting a second invitation is not supported in the UI; the server would keep both memberships and the app would keep showing the first circle.
 - **Viewer role and role changes are not exposed in the UI.** The database and RPCs model `viewer` and `core.set_member_role`; the app only displays roles and never offers a change.
-- **Reminder-policy settings live in the patient form**, not under More. The More screen has the family circle, the user's name, account, language, app lock and About.
+- **Reminder-policy settings live in the patient form**, not under More. The More screen has the family circle, the user's name, account, language and About.
 - **No leave or delete circle.** Removing the last member is a server-side concern for a later milestone; the app has no "leave circle" action.
 - **Audit rows with no circle are not visible to the owner policy.** Profile changes and security events carry no circle id, so the owner-facing audit view cannot see them. To be resolved with the Activity screen in M7.
 - **Language is a per-account preference with a device half** (D8): More changes the phone's app language and writes `profiles.preferred_language`; without an in-app choice, the phone's language is written to the profile (never the other way round), so notifications use the language the user sees.

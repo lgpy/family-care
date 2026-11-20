@@ -20,7 +20,7 @@ family-care/
 │  │  │                           extension-point contracts, shared types
 │  │  ├─ data/                    PowerSync + Supabase setup, encrypted local DB, audit
 │  │  ├─ notifications/           alarm scheduling, push handling, notification routing
-│  │  └─ ui/                      design system, translations, app lock
+│  │  └─ ui/                      design system, translations
 │  └─ feature/
 │     ├─ medications/
 │     │  ├─ domain/               pure Kotlin: regimens, dose slots, statuses, stock maths
@@ -66,7 +66,6 @@ Dose slots are computed on the phone (to schedule reminders) **and** on the serv
 | Local database + sync | PowerSync Kotlin SDK + its Supabase connector; local encryption via its SQLite3MultipleCiphers package ([docs](https://docs.powersync.com/client-sdks/advanced/data-encryption)) |
 | Supabase client | supabase-kt (Auth, Postgrest, Functions) |
 | Google sign-in | Android Credential Manager → Supabase sign-in with the Google ID token |
-| App lock | AndroidX Biometric (fingerprint / device PIN) |
 | Encryption key storage | Android Keystore |
 | Local reminders | AlarmManager **alarm-clock alarms** directly (D19) + receivers for reboot / time change; WorkManager for periodic rescheduling |
 | Push | Firebase Cloud Messaging (no other Firebase services) |
@@ -89,7 +88,7 @@ Size: **S** small · **M** medium · **L** large (relative effort, not calendar 
 - **Done when:** the setup checklist in `ops/checklists/` is fully ticked.
 
 ### M1 — Walking skeleton (M) — *highest risk first*
-- Kotlin/Compose app with Gradle module structure, navigation shell, pt-PT/en switching, app lock.
+- Kotlin/Compose app with Gradle module structure, navigation shell, pt-PT/en switching.
 - Sign in with Google → Supabase session.
 - One test table synced through PowerSync, encrypted locally, protected by Row-Level Security.
 - Automated checks on every push (analysis, tests).

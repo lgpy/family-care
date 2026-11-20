@@ -88,7 +88,7 @@ Health measurements (blood pressure, glucose, weight, temperature…) should be 
 
 ## Cross-cutting requirements
 
-- **Security:** Row-Level Security on every table with automated isolation tests; Sign in with Google with 2-Step Verification required; mandatory app lock (biometric/PIN); encrypted local database; no health data in logs or push payloads.
+- **Security:** Row-Level Security on every table with automated isolation tests; Sign in with Google with 2-Step Verification required; encrypted local database; no health data in logs or push payloads.
 - **Time:** schedules stored as local wall-clock time with a time zone, so daylight saving changes don't shift reminders.
 - **Localisation:** pt-PT and en; per-user language.
 - **Backups:** provider daily backups, plus an independent weekly encrypted export of database *and* files to a second EU provider. Restores tested. (Detailed in [security-and-privacy.md](security-and-privacy.md).)
