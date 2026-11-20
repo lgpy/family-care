@@ -9,6 +9,8 @@ import io.github.lgpy.familycare.core.domain.circle.Patient
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.domain.circle.PatientRules
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
+import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoError
+import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoResult
 import io.github.lgpy.familycare.ui.FakeCareCircleRepository
 import io.github.lgpy.familycare.ui.FakePatientInfoRepository
 import io.github.lgpy.familycare.ui.FakePatientRepository
@@ -465,6 +467,25 @@ class PatientFormViewModelTest {
         assertEquals(patients.saved.single().id, saved.patientId)
         assertEquals(listOf("Penicillin", "ibuprofen"), saved.info.allergies)
         assertTrue(viewModel.uiState.value.saved)
+    }
+
+    @Test
+    fun retryingAfterTheAllergiesFailUpdatesTheSamePatient() {
+        val viewModel = viewModel()
+        viewModel.onNameChanged("Avó")
+        viewModel.onPrimaryCaregiverChanged(ownerMember.userId)
+        viewModel.onAllergiesChanged("Penicillin")
+        info.saveResult = PatientInfoResult.Failure(PatientInfoError.Unknown)
+
+        viewModel.save()
+        assertFalse(viewModel.uiState.value.saved)
+
+        info.saveResult = PatientInfoResult.Success(Unit)
+        viewModel.save()
+
+        assertTrue(viewModel.uiState.value.saved)
+        assertEquals("one patient, saved twice", 1, patients.saved.map { it.id }.distinct().size)
+        assertEquals(2, info.saves.size)
     }
 
     @Test

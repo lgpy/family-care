@@ -319,6 +319,9 @@ class PatientFormViewModel(
         viewModelScope.launch {
             when (val result = patientRepository.save(patient)) {
                 is CoreResult.Success -> {
+                    // From here on a retry updates this patient instead of
+                    // adding a second one when only the allergies failed.
+                    if (loadedPatient == null) loadedPatient = patient.copy(id = result.value)
                     val allergyError = allergies?.let { info ->
                         when (val saved = patientInfoRepository.save(result.value, info)) {
                             is PatientInfoResult.Success -> null
