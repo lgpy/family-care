@@ -141,9 +141,8 @@ fun DoseSlotScreen(
                 )
             }
             Text(
-                text = uiState.patientName?.let {
-                    stringResource(R.string.meds_give_title, it, time)
-                } ?: time,
+                // The patient's name is on the line below, beside the avatar.
+                text = stringResource(R.string.meds_slot_title, time),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 4.dp),
@@ -209,7 +208,12 @@ fun DoseSlotScreen(
                             } else {
                                 null
                             },
-                            onToggle = { viewModel.onToggle(item.slot.regimenId.value) },
+                            onToggle = {
+                                // Unticking asks why at once, so the reason is
+                                // never a silent default.
+                                if (item.outcome == DoseOutcome.TAKEN) skipTarget = item
+                                viewModel.onToggle(item.slot.regimenId.value)
+                            },
                             onOpenSkipReason = { skipTarget = item },
                         )
                     }

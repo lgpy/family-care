@@ -76,9 +76,10 @@ data class SlotMedicationUi(
  * The dose-slot screen (docs/ux/screens.md §2, screens v2 "Give"): one patient's
  * doses at one wall-clock time, with an exception per medication.
  *
- * Every pill starts checked. Unchecking one marks it skipped (default reason
- * [SkipReason.REFUSED]) and the row opens the reason list on tap; checking it
- * again clears the reason. Saving is the group confirmation the card does in one
+ * Every pill starts checked. Unchecking one marks it skipped with no reason
+ * yet: the screen asks for one, and a pill saved without an answer is recorded
+ * as [SkipReason.OTHER], never as a guessed "refused". Checking it again clears
+ * the reason. Saving is the group confirmation the card does in one
  * tap: the not-yet-confirmed slots go in **one** [DoseLogRepository.confirm]
  * call, and a slot that already has an entry is **corrected**
  * ([DoseLogRepository.correct]) rather than confirmed again — a second entry for
@@ -139,8 +140,8 @@ class DoseSlotViewModel(
     )
 
     /**
-     * Checks or unchecks one pill: a checked pill becomes skipped (with the row's
-     * existing reason, or refused) and an unchecked one becomes given again.
+     * Checks or unchecks one pill: a checked pill becomes skipped (keeping a
+     * reason already chosen, else none) and an unchecked one becomes given again.
      */
     fun onToggle(regimenIdValue: String) {
         val current = uiState.value.items.firstOrNull { it.slot.regimenId.value == regimenIdValue }
@@ -150,7 +151,7 @@ class DoseSlotViewModel(
             val toggled = if (current.outcome == DoseOutcome.TAKEN) {
                 edit.copy(
                     outcome = DoseOutcome.SKIPPED,
-                    skipReason = edit.skipReason ?: SkipReason.REFUSED,
+                    skipReason = edit.skipReason,
                 )
             } else {
                 edit.copy(outcome = DoseOutcome.TAKEN, skipReason = null)
@@ -166,7 +167,7 @@ class DoseSlotViewModel(
             current + (regimenIdValue to edit.copy(
                 outcome = outcome,
                 skipReason = if (outcome == DoseOutcome.SKIPPED) {
-                    edit.skipReason ?: SkipReason.REFUSED
+                    edit.skipReason
                 } else {
                     null
                 },
@@ -256,7 +257,11 @@ class DoseSlotViewModel(
                     val result = doseLogRepository.correct(
                         entry = entry,
                         outcome = item.outcome,
-                        skipReason = item.skipReason,
+                        skipReason = if (item.outcome == DoseOutcome.SKIPPED) {
+                            item.skipReason ?: SkipReason.OTHER
+                        } else {
+                            null
+                        },
                         actualQuantity = if (item.outcome == DoseOutcome.TAKEN) item.slot.quantity else null,
                         givenBy = givenBy,
                         note = note,
@@ -350,7 +355,7 @@ private fun TodayDoseGroup.toItems(
         pillLook = medication?.pillLook,
         outcome = outcome,
         skipReason = when (outcome) {
-            DoseOutcome.SKIPPED -> edit?.skipReason ?: existing?.skipReason ?: SkipReason.REFUSED
+            DoseOutcome.SKIPPED -> edit?.skipReason ?: existing?.skipReason
             DoseOutcome.TAKEN -> null
         },
         existing = existing,

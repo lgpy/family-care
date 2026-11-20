@@ -232,7 +232,7 @@ class DoseSlotViewModelTest {
             val state = awaitWhere { it.items[1].outcome == DoseOutcome.SKIPPED }
 
             assertEquals(DoseOutcome.TAKEN, state.items[0].outcome)
-            assertEquals(SkipReason.REFUSED, state.items[1].skipReason)
+            assertEquals("no reason is guessed", null, state.items[1].skipReason)
             assertEquals(1, state.givenCount)
             assertEquals(1, state.skippedCount)
             assertEquals(GiveSummary.GiveSome(given = 1, skipped = 1), state.giveSummary)
@@ -281,7 +281,7 @@ class DoseSlotViewModelTest {
                 listOf(firstSlot.slotId, secondSlot.slotId),
                 call.group.slots.map { it.slotId },
             )
-            assertEquals(mapOf(secondSlot.slotId to SkipReason.REFUSED), call.skipped)
+            assertEquals(mapOf(secondSlot.slotId to SkipReason.OTHER), call.skipped)
             assertTrue(viewModel.uiState.value.saved)
             cancelAndIgnoreRemainingEvents()
         }
