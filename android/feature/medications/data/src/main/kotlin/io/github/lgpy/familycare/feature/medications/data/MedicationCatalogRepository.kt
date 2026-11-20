@@ -38,11 +38,14 @@ interface MedicationCatalogRepository {
  *
  * [openAsset] returns the asset stream and is the only Android-shaped thing
  * here (the app supplies `context.assets.open(...)`), which keeps this file
- * compilable in the module's JVM test project.
+ * compilable in the module's JVM test project. [onLoadFailure] lets the app
+ * log a catalogue that will not load (the form shows no suggestions rather
+ * than an error, so without it the failure is silent); the error is rethrown.
  */
 class AssetMedicationCatalogRepository(
     private val openAsset: () -> InputStream,
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    private val onLoadFailure: (Throwable) -> Unit = {},
 ) : MedicationCatalogRepository {
 
     private val mutex = Mutex()
@@ -60,14 +63,17 @@ class AssetMedicationCatalogRepository(
         cached?.let { return it }
         return mutex.withLock {
             cached ?: withContext(io) {
-                CatalogTsv.read(openAsset()).also { cached = it }
+                runCatching { CatalogTsv.read(openAsset()) }
+                    .onFailure(onLoadFailure)
+                    .getOrThrow()
+                    .also { cached = it }
             }
         }
     }
 }
 
 /**
- * Reads `meds_catalog.tsv.gz`: gzipped UTF-8 with a header row.
+ * Reads `meds_catalog.tsv.gzip`: gzipped UTF-8 with a header row.
  *
  * The columns are the builder's (`registo name dci strength form pack
  * pack_units otc holder`). Parsing is strict about the header — a mismatched
@@ -76,7 +82,12 @@ class AssetMedicationCatalogRepository(
  */
 object CatalogTsv {
 
-    const val ASSET_NAME: String = "meds_catalog.tsv.gz"
+    /**
+     * Not `.gz`: the Android build strips that extension and stores the asset
+     * decompressed, so `assets.open("….tsv.gz")` fails on a phone while every
+     * JVM test passes. `.gzip` is packaged byte for byte.
+     */
+    const val ASSET_NAME: String = "meds_catalog.tsv.gzip"
 
     val HEADER: List<String> =
         listOf("registo", "name", "dci", "strength", "form", "pack", "pack_units", "otc", "holder")

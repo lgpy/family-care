@@ -6,7 +6,7 @@ family takes is health data (D4, D10).
 
 ```
 ops/meds-catalog/build.py             the builder (Python 3, stdlib only)
-android/feature/medications/data/src/main/assets/meds_catalog.tsv.gz
+android/feature/medications/data/src/main/assets/meds_catalog.tsv.gzip
 android/feature/medications/data/src/main/assets/meds_catalog.meta.json
 ```
 
@@ -64,7 +64,7 @@ ends the run with a non-zero exit and no asset change.
 
 ## Asset format
 
-`meds_catalog.tsv.gz` is gzipped UTF-8 TSV (no quoting; tabs and newlines are
+`meds_catalog.tsv.gzip` is gzipped UTF-8 TSV (no quoting; tabs and newlines are
 replaced by spaces). Header:
 
 ```

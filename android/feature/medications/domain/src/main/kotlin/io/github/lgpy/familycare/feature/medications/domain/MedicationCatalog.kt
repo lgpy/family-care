@@ -8,7 +8,7 @@ import java.util.Locale
  * Medication-name search over the catalogue bundled in the app (D31).
  *
  * The catalogue is INFARMED's public lists, joined by registration number and
- * shipped as an asset (`meds_catalog.tsv.gz`); this class is the pure part: it
+ * shipped as an asset (`meds_catalog.tsv.gzip`); this class is the pure part: it
  * holds [CatalogEntry] rows and answers [search]. Loading the asset, and uniting
  * the result with the circle's own medications, live in the data layer and the
  * form's view model.

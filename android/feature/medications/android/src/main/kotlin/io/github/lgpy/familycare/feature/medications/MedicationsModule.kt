@@ -1,5 +1,6 @@
 package io.github.lgpy.familycare.feature.medications
 
+import android.util.Log
 import io.github.lgpy.familycare.feature.medications.dashboard.DosesTodayViewModel
 import io.github.lgpy.familycare.feature.medications.dashboard.LowStockViewModel
 import io.github.lgpy.familycare.feature.medications.dashboard.NeedsAttentionViewModel
@@ -36,6 +37,7 @@ val medicationsModule: Module = module {
     single<MedicationCatalogRepository> {
         AssetMedicationCatalogRepository(
             openAsset = { androidContext().assets.open(CatalogTsv.ASSET_NAME) },
+            onLoadFailure = { error -> Log.e("MedicationCatalog", "Cannot load ${CatalogTsv.ASSET_NAME}", error) },
         )
     }
 

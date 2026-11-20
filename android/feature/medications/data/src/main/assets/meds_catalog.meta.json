@@ -12,7 +12,7 @@
     "mnsrm": 2474,
     "products": 7916
   },
-  "asset": "meds_catalog.tsv.gz",
+  "asset": "meds_catalog.tsv.gzip",
   "asset_bytes_gz": 128540,
   "asset_bytes_tsv": 1068849
 }

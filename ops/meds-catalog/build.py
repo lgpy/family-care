@@ -3,7 +3,7 @@
 
 Downloads INFARMED's public lists, joins them by registration number and writes
 
-    android/feature/medications/data/src/main/assets/meds_catalog.tsv.gz
+    android/feature/medications/data/src/main/assets/meds_catalog.tsv.gzip
     android/feature/medications/data/src/main/assets/meds_catalog.meta.json
 
 Sources (public, no key, no login):
@@ -75,7 +75,7 @@ HEADER = ["registo", "name", "dci", "strength", "form", "pack", "pack_units", "o
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ASSET_DIR = REPO_ROOT / "android/feature/medications/data/src/main/assets"
-ASSET_TSV = ASSET_DIR / "meds_catalog.tsv.gz"
+ASSET_TSV = ASSET_DIR / "meds_catalog.tsv.gzip"
 ASSET_META = ASSET_DIR / "meds_catalog.meta.json"
 
 
