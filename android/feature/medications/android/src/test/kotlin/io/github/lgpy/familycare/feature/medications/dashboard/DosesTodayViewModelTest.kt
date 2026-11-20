@@ -8,6 +8,7 @@ import io.github.lgpy.familycare.core.domain.medication.PillShape
 import io.github.lgpy.familycare.feature.medications.FakeCareCircleRepository
 import io.github.lgpy.familycare.feature.medications.FakeDoseLogRepository
 import io.github.lgpy.familycare.feature.medications.FakeMedicationRepository
+import io.github.lgpy.familycare.feature.medications.FakePatientRepository
 import io.github.lgpy.familycare.feature.medications.awaitWhere
 import io.github.lgpy.familycare.feature.medications.data.GivenBy
 import io.github.lgpy.familycare.feature.medications.domain.DoseState
@@ -44,6 +45,7 @@ class DosesTodayViewModelTest {
     private lateinit var doses: FakeDoseLogRepository
     private lateinit var meds: FakeMedicationRepository
     private lateinit var circles: FakeCareCircleRepository
+    private lateinit var patients: FakePatientRepository
 
     private val scheduled: LocalDateTime = LocalDateTime.of(2026, 11, 16, 8, 0)
     private val firstRegimen = regimen(id = "reg-1", medicationId = "med-1")
@@ -57,6 +59,7 @@ class DosesTodayViewModelTest {
         doses = FakeDoseLogRepository()
         meds = FakeMedicationRepository()
         circles = FakeCareCircleRepository()
+        patients = FakePatientRepository()
         meds.activeFlow.value = listOf(
             withRegimens(medication(id = "med-1", name = "Metformin"), listOf(firstRegimen)),
             withRegimens(medication(id = "med-2", name = "Amlodipine"), listOf(secondRegimen)),
@@ -68,7 +71,7 @@ class DosesTodayViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = DosesTodayViewModel(doses, meds, circles)
+    private fun viewModel() = DosesTodayViewModel(doses, meds, circles, patients)
 
     @Test
     fun `shows a patient's slot with its count and the derived state`() = runTest {
@@ -82,6 +85,26 @@ class DosesTodayViewModelTest {
             assertEquals(DoseGroupState.DUE, row.state)
             assertEquals(8, row.time.hour)
             assertTrue(state.canWrite)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `reports an empty circle so the card can offer Add patient`() = runTest {
+        patients.patientsFlow.value = emptyList()
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && !it.hasPatients }
+            assertTrue(state.groups.isEmpty())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `reports a patient even when no dose is due`() = runTest {
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && it.hasPatients }
+            assertTrue(state.groups.isEmpty())
             cancelAndIgnoreRemainingEvents()
         }
     }

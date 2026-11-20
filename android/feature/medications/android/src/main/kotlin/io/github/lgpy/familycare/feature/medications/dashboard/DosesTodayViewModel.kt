@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.lgpy.familycare.core.domain.circle.CareCircleRepository
 import io.github.lgpy.familycare.core.domain.circle.PatientId
+import io.github.lgpy.familycare.core.domain.circle.PatientRepository
 import io.github.lgpy.familycare.core.domain.circle.canWrite
 import io.github.lgpy.familycare.core.domain.medication.PillLook
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
@@ -88,11 +89,16 @@ data class DoseGroupUi(
  *
  * A viewer sees the same rows without the button, and the repository refuses the
  * write anyway.
+ *
+ * [DosesTodayUiState.hasPatients] lets the card tell "no doses today" from the
+ * first-run case where the circle has nobody in it yet: only then does the card
+ * offer the Add patient call to action.
  */
 class DosesTodayViewModel(
     private val doseLogRepository: DoseLogRepository,
     medicationRepository: MedicationRepository,
     careCircleRepository: CareCircleRepository,
+    patientRepository: PatientRepository,
 ) : ViewModel() {
 
     private val local = MutableStateFlow(DosesTodayUiState())
@@ -101,9 +107,13 @@ class DosesTodayViewModel(
         local,
         doseLogRepository.dosesToday,
         medicationRepository.activeMedications,
-        careCircleRepository.myRole,
-        careCircleRepository.members,
-    ) { state, groups, medications, role, members ->
+        combine(
+            careCircleRepository.myRole,
+            careCircleRepository.members,
+        ) { role, members -> role to members },
+        patientRepository.patients,
+    ) { state, groups, medications, circle, patients ->
+        val (role, members) = circle
         val patientNames = medications.associate { it.patient.patientId to it.patient.displayName }
         val memberNames = members.associate { it.userId to it.displayName }
         val myUserId = members.firstOrNull { it.isMe }?.userId
@@ -111,6 +121,7 @@ class DosesTodayViewModel(
         state.copy(
             loaded = true,
             canWrite = role.canWrite,
+            hasPatients = patients.isNotEmpty(),
             groups = groups.map { group ->
                 group.toUi(
                     patientName = patientNames[group.patientId].orEmpty(),
@@ -168,6 +179,8 @@ data class DosesTodayUiState(
     val groups: List<DoseGroupUi> = emptyList(),
     val canWrite: Boolean = false,
     val loaded: Boolean = false,
+    /** Whether the circle has any active patient, so the card can offer Add patient. */
+    val hasPatients: Boolean = false,
     val saving: Boolean = false,
     /** A group whose doses were already confirmed; the dialog is showing. */
     val warning: DoseGroupUi? = null,

@@ -14,6 +14,10 @@
 
     <string name="today_title">Hoje</string>
 
+    <!-- Primeira utilização (auditoria, ponto 3): o cartão de Hoje sem pessoas. -->
+    <string name="today_empty_add_patient_title">Adicione a primeira pessoa de quem cuida</string>
+    <string name="today_empty_add_patient_body">Depois adicione os medicamentos e a Family Care avisa quando houver tomas.</string>
+
     <!-- M2: ecrã de configuração do círculo. -->
     <string name="circle_gate_loading_title">A carregar a sua família…</string>
     <string name="circle_gate_loading_offline">Ligue-se à internet para concluir a configuração da aplicação Family Care.</string>
@@ -385,6 +389,7 @@
     <string name="meds_list_title">Medicação</string>
     <string name="meds_tab_title">Medicamentos</string>
     <string name="meds_list_empty">Ainda não há medicação. Adicione a primeira.</string>
+    <string name="meds_list_add_first">Adicionar o primeiro medicamento</string>
     <string name="meds_list_stopped">Suspensa (%1$d)</string>
     <string name="meds_list_add">Adicionar medicação</string>
     <string name="meds_list_open">Abrir %1$s</string>
@@ -709,6 +714,16 @@
     <string name="reminders_refresh">Verificar novamente</string>
     <string name="reminders_fix">Corrigir</string>
     <string name="reminders_settings_unavailable">Este telemóvel não tem esse ecrã de definições. A abrir as definições da aplicação.</string>
+
+    <!-- O pedido de configuração após o primeiro medicamento (auditoria, ponto 4). -->
+    <string name="reminders_permission_title">Ativar os lembretes de tomas</string>
+    <string name="reminders_permission_body">A Family Care precisa de autorização para mostrar lembretes. Sem ela, os lembretes ficam agendados mas não aparecem.</string>
+    <string name="reminders_permission_allow">Permitir</string>
+    <string name="reminders_permission_not_now">Agora não</string>
+    <string name="reminders_battery_title">Manter os lembretes a horas</string>
+    <string name="reminders_battery_body">Alguns telemóveis interrompem os lembretes para poupar bateria. Abra a lista de verificação para resolver isto.</string>
+    <string name="reminders_battery_open">Abrir lista de verificação</string>
+    <string name="reminders_battery_later">Mais tarde</string>
 
     <!-- M6 consultas (docs/domain/appointments.md, D29). -->
     <string name="nav_agenda">Agenda</string>

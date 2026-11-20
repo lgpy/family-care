@@ -158,6 +158,9 @@ fun FamilyCareApp(
             composable(Destination.Today.route) {
                 TodayScreen(
                     onOpenRoute = { route -> navController.navigate(route) },
+                    // The first-run card on Today starts the same Add patient
+                    // flow as the Patients tab (D5: the shell wires the route).
+                    onAddPatient = { navController.navigate(Destination.PatientNew.route) },
                 )
             }
             composable(Destination.Patients.route) {
@@ -283,6 +286,12 @@ fun FamilyCareApp(
                     patientId = entry.arguments?.getString(PATIENT_ID_ARG).orEmpty(),
                     medicationId = null,
                     onBack = { navController.popBackStack() },
+                    // The first-medicine prompt offers the reliability screen;
+                    // leave the form first so Back from it returns to the profile.
+                    onOpenReminderSetup = {
+                        navController.popBackStack()
+                        navController.navigate(Destination.Reminders.route)
+                    },
                 )
             }
             composable(
@@ -320,6 +329,10 @@ fun FamilyCareApp(
                     patientId = entry.arguments?.getString(PATIENT_ID_ARG).orEmpty(),
                     medicationId = entry.arguments?.getString(MEDICATION_ID_ARG).orEmpty(),
                     onBack = { navController.popBackStack() },
+                    onOpenReminderSetup = {
+                        navController.popBackStack()
+                        navController.navigate(Destination.Reminders.route)
+                    },
                 )
             }
             composable(

@@ -36,6 +36,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.EmptyStateAction
+import io.github.lgpy.familycare.core.ui.components.EmptyStateCard
 import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PillTile
@@ -56,7 +58,9 @@ import org.koin.core.parameter.parametersOf
  *
  * "Add medicine" exists for owners and caregivers only, the same rule the
  * repository enforces: an extended floating button here, and the tonal button
- * on the profile tab, which has no Scaffold of its own.
+ * on the profile tab, which has no Scaffold of its own. On an empty profile the
+ * tonal button becomes the empty state's own "Add their first medicine" action,
+ * so the first step is where the user is already looking.
  *
  * The list itself ([PatientMedicationsSection]) is also the content of the
  * Medications tab of the patient profile (D29).
@@ -162,10 +166,13 @@ private fun PatientMedicationsList(
             item { header() }
         }
 
-        if (onAdd != null) {
+        // While the list is empty the tonal button would repeat the empty
+        // state's own action; the empty state carries it instead.
+        val showAddButton = onAdd != null && (!uiState.loaded || !uiState.isEmpty)
+        if (showAddButton) {
             item {
                 FilledTonalButton(
-                    onClick = onAdd,
+                    onClick = { onAdd?.invoke() },
                     modifier = Modifier.heightIn(min = 48.dp),
                 ) {
                     Icon(
@@ -191,9 +198,14 @@ private fun PatientMedicationsList(
         } else {
             if (uiState.isEmpty) {
                 item {
-                    Text(
-                        text = stringResource(R.string.meds_list_empty),
-                        style = MaterialTheme.typography.bodyLarge,
+                    EmptyStateCard(
+                        title = stringResource(R.string.meds_list_empty),
+                        action = onAdd?.let { add ->
+                            EmptyStateAction(
+                                label = stringResource(R.string.meds_list_add_first),
+                                onClick = add,
+                            )
+                        },
                     )
                 }
             }

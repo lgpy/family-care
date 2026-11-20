@@ -14,6 +14,10 @@
 
     <string name="today_title">Today</string>
 
+    <!-- First run (first-use audit, finding 3): the Today card while there is no patient. -->
+    <string name="today_empty_add_patient_title">Add the first person you care for</string>
+    <string name="today_empty_add_patient_body">Then add their medicines and Family Care will remind you when doses are due.</string>
+
     <!-- M2: care circle setup gate. -->
     <string name="circle_gate_loading_title">Loading your family…</string>
     <string name="circle_gate_loading_offline">Connect to the internet to finish setting up Family Care.</string>
@@ -379,6 +383,7 @@
     <string name="meds_list_title">Medications</string>
     <string name="meds_tab_title">Medications</string>
     <string name="meds_list_empty">No medications yet. Add the first one.</string>
+    <string name="meds_list_add_first">Add their first medicine</string>
     <string name="meds_list_stopped">Stopped (%1$d)</string>
     <string name="meds_list_add">Add medication</string>
     <string name="meds_list_open">Open %1$s</string>
@@ -704,6 +709,16 @@
     <string name="reminders_refresh">Check again</string>
     <string name="reminders_fix">Fix</string>
     <string name="reminders_settings_unavailable">This phone does not offer that settings screen. Opening app settings instead.</string>
+
+    <!-- The first-medicine setup prompt (first-use audit, finding 4). -->
+    <string name="reminders_permission_title">Turn on dose reminders</string>
+    <string name="reminders_permission_body">Family Care needs permission to show reminders. Without it, reminders are scheduled but you will not see them.</string>
+    <string name="reminders_permission_allow">Allow</string>
+    <string name="reminders_permission_not_now">Not now</string>
+    <string name="reminders_battery_title">Keep reminders on time</string>
+    <string name="reminders_battery_body">Some phones stop reminders to save battery. Open the checklist to fix this.</string>
+    <string name="reminders_battery_open">Open checklist</string>
+    <string name="reminders_battery_later">Later</string>
 
     <!-- M6 appointments (docs/domain/appointments.md, D29). -->
     <string name="nav_agenda">Agenda</string>

@@ -48,6 +48,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +78,7 @@ import io.github.lgpy.familycare.feature.medications.domain.MedicationField
 import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
 import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestion
 import io.github.lgpy.familycare.feature.medications.domain.QuantityRules
+import io.github.lgpy.familycare.feature.medications.reminders.FirstMedicineReminderPrompt
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
 import io.github.lgpy.familycare.feature.medications.ui.PillLookSheet
 import io.github.lgpy.familycare.feature.medications.ui.QuantityField
@@ -105,6 +107,13 @@ import org.koin.core.parameter.parametersOf
  * The bottom bar always holds the single save action; the validation message
  * sits next to it so a refusal is visible even when the offending field is above
  * the fold.
+ *
+ * The circle's first save does not leave straight away: it shows
+ * [FirstMedicineReminderPrompt] so notifications and the battery exemption are
+ * offered at the moment reminders start to matter (first-use audit, finding 4).
+ *
+ * @param onOpenReminderSetup Opens the shell's "Make reminders reliable"
+ *   screen. The prompt calls it only when the phone still optimises the app.
  */
 @Composable
 fun MedicationFormScreen(
@@ -112,14 +121,30 @@ fun MedicationFormScreen(
     medicationId: String?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenReminderSetup: () -> Unit = {},
 ) {
     val viewModel = koinViewModel<MedicationFormViewModel>(
         parameters = { parametersOf(patientId, medicationId ?: "") },
     )
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(uiState.saved) {
-        if (uiState.saved) onBack()
+    var reminderPromptHandled by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.saved, uiState.firstMedicineSaved) {
+        if (uiState.saved && !uiState.firstMedicineSaved) onBack()
+    }
+
+    if (uiState.saved && uiState.firstMedicineSaved && !reminderPromptHandled) {
+        FirstMedicineReminderPrompt(
+            onFinished = {
+                reminderPromptHandled = true
+                onBack()
+            },
+            onOpenReminderSetup = {
+                reminderPromptHandled = true
+                onOpenReminderSetup()
+            },
+        )
     }
 
     var showPillSheet by remember { mutableStateOf(false) }

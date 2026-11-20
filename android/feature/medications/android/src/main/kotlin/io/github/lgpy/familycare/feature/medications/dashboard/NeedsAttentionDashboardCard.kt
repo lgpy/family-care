@@ -15,6 +15,7 @@ import io.github.lgpy.familycare.core.ui.components.AttentionAction
 import io.github.lgpy.familycare.core.ui.components.AttentionCard
 import io.github.lgpy.familycare.core.ui.components.AttentionItem
 import io.github.lgpy.familycare.core.ui.components.FcIcons
+import io.github.lgpy.familycare.core.ui.dashboard.DashboardActions
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
 import io.github.lgpy.familycare.feature.medications.MedicationsRoutes
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealth
@@ -50,7 +51,7 @@ class NeedsAttentionDashboardCard : DashboardCard {
     override val order: Int = ORDER
 
     @Composable
-    override fun Content(onNavigate: (String) -> Unit) {
+    override fun Content(actions: DashboardActions) {
         val dosesViewModel = koinViewModel<NeedsAttentionViewModel>()
         val stockViewModel = koinViewModel<LowStockViewModel>()
         val reminderViewModel = koinViewModel<ReminderHealthViewModel>()
@@ -70,7 +71,7 @@ class NeedsAttentionDashboardCard : DashboardCard {
                             onGive = { group ->
                                 dosesViewModel.give(group.patientId, group.scheduledLocal)
                             },
-                            onNavigate = onNavigate,
+                            onNavigate = actions.onNavigate,
                         )
                     },
                 )

@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.ScreenHeader
+import io.github.lgpy.familycare.core.ui.dashboard.DashboardActions
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCards
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -27,15 +28,19 @@ import org.koin.compose.koinInject
  * lines were removed in phase 2 because the date is the one thing the user
  * needs at a glance. Every card below comes from a feature module through the
  * dashboard extension point ([DashboardCards]); Today imports no module: it
- * draws what was registered and passes [onOpenRoute] so a card can open its own
- * screens.
+ * draws what was registered and passes the shell's own actions ([DashboardActions])
+ * so a card can open its own screens and start the Add patient flow.
  */
 @Composable
 fun TodayScreen(
     modifier: Modifier = Modifier,
     onOpenRoute: (String) -> Unit = {},
+    onAddPatient: () -> Unit = {},
 ) {
     val dashboard = koinInject<DashboardCards>()
+    val actions = remember(onOpenRoute, onAddPatient) {
+        DashboardActions(onNavigate = onOpenRoute, onAddPatient = onAddPatient)
+    }
 
     Column(
         modifier = modifier
@@ -47,7 +52,7 @@ fun TodayScreen(
         TodayHeader()
 
         dashboard.ordered.forEach { card ->
-            card.Content(onNavigate = onOpenRoute)
+            card.Content(actions = actions)
         }
     }
 }

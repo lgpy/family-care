@@ -111,6 +111,14 @@ class MedicationFormViewModel(
     /** The circle's own medications, the first suggestions (D31). */
     private var circleMedications: List<Medication> = emptyList()
 
+    /**
+     * Whether this form is about to add the circle's first active medicine.
+     * Fixed at load time, like [circleMedications], so the reminder prompt
+     * describes the state the user found, not one a background sync changed
+     * while the form was open.
+     */
+    private var firstMedicine = false
+
     init {
         viewModelScope.launch { load() }
     }
@@ -120,6 +128,7 @@ class MedicationFormViewModel(
         val members = careCircleRepository.members.first().sortedWith(MemberOrder)
         val patient = patientRepository.observe(PatientId(patientId)).first()
         circleMedications = medicationRepository.activeMedications.first().map { it.medication }
+        firstMedicine = medicationId == null && circleMedications.isEmpty()
 
         val loaded = medicationId?.let { medicationRepository.observeMedication(MedicationId(it)).first() }
         val medication = loaded?.medication
@@ -444,7 +453,9 @@ class MedicationFormViewModel(
                 _uiState.update { it.copy(errors = fields) }
                 return
             }
-            submit { medicationRepository.create(medication, regimen, openingQuantity = quantity) }
+            submit(firstMedicine = firstMedicine) {
+                medicationRepository.create(medication, regimen, openingQuantity = quantity)
+            }
             return
         }
 
@@ -471,12 +482,22 @@ class MedicationFormViewModel(
         }
     }
 
-    private fun submit(call: suspend () -> MedsResult<*>) {
+    /**
+     * Runs the write and reports success. [firstMedicine] marks the one case
+     * that also opens the reminder-setup prompt: the circle had no active
+     * medicine before this save, so reminders have just started mattering.
+     */
+    private fun submit(
+        firstMedicine: Boolean = false,
+        call: suspend () -> MedsResult<*>,
+    ) {
         _uiState.update { it.copy(errors = emptySet(), saving = true, error = null) }
         viewModelScope.launch {
             when (val result = call()) {
                 is MedsResult.Success ->
-                    _uiState.update { it.copy(saving = false, saved = true) }
+                    _uiState.update {
+                        it.copy(saving = false, saved = true, firstMedicineSaved = firstMedicine)
+                    }
 
                 is MedsResult.Failure ->
                     _uiState.update {
@@ -598,6 +619,12 @@ data class MedicationFormUiState(
     val errors: Set<MedicationField> = emptySet(),
     val saving: Boolean = false,
     val saved: Boolean = false,
+    /**
+     * The save just added the circle's first medicine, so the screen offers the
+     * notification and battery-exemption prompts (finding 4 of the first-use
+     * audit) before leaving.
+     */
+    val firstMedicineSaved: Boolean = false,
     val error: MedsUiError? = null,
 ) {
 

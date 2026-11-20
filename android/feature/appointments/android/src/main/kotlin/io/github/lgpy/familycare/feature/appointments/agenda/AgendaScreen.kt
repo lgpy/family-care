@@ -28,6 +28,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.PatientId
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.EmptyStateAction
+import io.github.lgpy.familycare.core.ui.components.EmptyStateCard
 import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
@@ -166,10 +168,19 @@ fun AgendaScreen(
             } else {
                 if (uiState.isEmpty) {
                     item {
-                        Text(
-                            text = stringResource(R.string.appointments_empty),
-                            style = MaterialTheme.typography.bodyLarge,
+                        // The same New action as the floating button, inside the
+                        // empty state, so an empty Agenda says how to fill it.
+                        EmptyStateCard(
+                            title = stringResource(R.string.appointments_empty),
                             modifier = Modifier.padding(horizontal = 16.dp),
+                            action = if (uiState.canWrite) {
+                                EmptyStateAction(
+                                    label = stringResource(R.string.appointments_agenda_new),
+                                    onClick = onNewAppointment,
+                                )
+                            } else {
+                                null
+                            },
                         )
                     }
                 }

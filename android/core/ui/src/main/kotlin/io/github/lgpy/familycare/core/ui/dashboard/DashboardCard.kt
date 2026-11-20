@@ -3,6 +3,21 @@ package io.github.lgpy.familycare.core.ui.dashboard
 import androidx.compose.runtime.Composable
 
 /**
+ * What the shell lets a card do besides drawing itself. Every action is a
+ * callback the shell owns, so a card can start a flow without naming another
+ * module's screen (D5).
+ *
+ * @param onNavigate Opens a route the card's module owns (a dose slot, an
+ *   appointment's detail, a setup screen).
+ * @param onAddPatient Opens the shell's Add patient form. A card uses it only
+ *   when its own empty state needs the one action that starts a new circle.
+ */
+class DashboardActions(
+    val onNavigate: (String) -> Unit,
+    val onAddPatient: () -> Unit,
+)
+
+/**
  * One card of the Today dashboard, contributed by a feature module
  * (docs/architecture.md §5 "Shared screens are filled through extension
  * points").
@@ -22,12 +37,13 @@ interface DashboardCard {
     val order: Int
 
     /**
-     * The card's content. The card owns its view model; [onNavigate] asks the
-     * shell to open a route the module owns, so a card can push its own detail
-     * screen without the shell importing the module's screens.
+     * The card's content. The card owns its view model and asks the shell for
+     * anything outside itself through [actions], so it can push its own detail
+     * screen or open the shared Add patient form without the shell importing
+     * the module's screens.
      */
     @Composable
-    fun Content(onNavigate: (String) -> Unit)
+    fun Content(actions: DashboardActions)
 }
 
 /**

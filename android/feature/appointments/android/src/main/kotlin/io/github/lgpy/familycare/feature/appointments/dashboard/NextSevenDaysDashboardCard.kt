@@ -35,6 +35,7 @@ import io.github.lgpy.familycare.core.ui.components.inlineIconSize
 import io.github.lgpy.familycare.core.ui.components.PatientAvatar
 import io.github.lgpy.familycare.core.ui.components.ReflowRow
 import io.github.lgpy.familycare.core.ui.components.SectionHeader
+import io.github.lgpy.familycare.core.ui.dashboard.DashboardActions
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
 import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.feature.appointments.AppointmentsRoutes
@@ -70,7 +71,7 @@ class NextSevenDaysDashboardCard : DashboardCard {
     override val order: Int = ORDER
 
     @Composable
-    override fun Content(onNavigate: (String) -> Unit) {
+    override fun Content(actions: DashboardActions) {
         val viewModel = koinViewModel<NextSevenDaysViewModel>()
         val uiState by viewModel.uiState.collectAsState()
 
@@ -81,7 +82,7 @@ class NextSevenDaysDashboardCard : DashboardCard {
                 title = stringResource(R.string.appointments_card_title),
                 icon = FcIcons.Event,
                 trailing = {
-                    TextButton(onClick = { onNavigate(AppointmentsRoutes.AGENDA) }) {
+                    TextButton(onClick = { actions.onNavigate(AppointmentsRoutes.AGENDA) }) {
                         Text(
                             text = stringResource(R.string.appointments_card_agenda),
                             style = MaterialTheme.typography.labelLarge,
@@ -102,7 +103,9 @@ class NextSevenDaysDashboardCard : DashboardCard {
                     UpcomingRow(
                         line = line,
                         onClick = {
-                            onNavigate(AppointmentsRoutes.appointmentDetail(line.appointmentId))
+                            actions.onNavigate(
+                                AppointmentsRoutes.appointmentDetail(line.appointmentId),
+                            )
                         },
                     )
                 }

@@ -14,9 +14,12 @@ import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.DoseSlotState
 import io.github.lgpy.familycare.core.ui.components.DoseSlotUi
 import io.github.lgpy.familycare.core.ui.components.DoseTimeGroup
+import io.github.lgpy.familycare.core.ui.components.EmptyStateAction
+import io.github.lgpy.familycare.core.ui.components.EmptyStateCard
 import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.SectionHeader
 import io.github.lgpy.familycare.core.ui.components.TimeRail
+import io.github.lgpy.familycare.core.ui.dashboard.DashboardActions
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
 import io.github.lgpy.familycare.feature.medications.MedicationsRoutes
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
@@ -40,13 +43,19 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * The section header carries the medicines icon, like every other section title
  * on Today (docs/ux/design-system.md §3, §6).
+ *
+ * An empty card means one of two very different things. If the circle has no
+ * patients yet, the card is the first-run guide: one call to action that opens
+ * the shell's Add patient form, because nothing can be due before there is
+ * someone to care for. Once a patient exists, an empty card is simply a quiet
+ * day and keeps the passive "No doses are due today." line.
  */
 class MedicationsDashboardCard : DashboardCard {
 
     override val order: Int = ORDER
 
     @Composable
-    override fun Content(onNavigate: (String) -> Unit) {
+    override fun Content(actions: DashboardActions) {
         val viewModel = koinViewModel<DosesTodayViewModel>()
         val uiState by viewModel.uiState.collectAsState()
         val now = LocalDateTime.now()
@@ -58,13 +67,35 @@ class MedicationsDashboardCard : DashboardCard {
             )
 
             if (uiState.groups.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.meds_doses_today_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                when {
+                    // Nothing is known yet: no empty message, so the card never
+                    // flashes "no doses" before the patients have loaded.
+                    !uiState.loaded -> Unit
+
+                    !uiState.hasPatients && uiState.canWrite -> EmptyStateCard(
+                        title = stringResource(R.string.today_empty_add_patient_title),
+                        body = stringResource(R.string.today_empty_add_patient_body),
+                        action = EmptyStateAction(
+                            label = stringResource(R.string.patients_add),
+                            onClick = actions.onAddPatient,
+                        ),
+                    )
+
+                    else -> Text(
+                        text = stringResource(R.string.meds_doses_today_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             } else {
-                TimeRail(groups = uiState.toTimeGroups(now, uiState.canWrite, viewModel, onNavigate))
+                TimeRail(
+                    groups = uiState.toTimeGroups(
+                        now = now,
+                        canWrite = uiState.canWrite,
+                        viewModel = viewModel,
+                        onNavigate = actions.onNavigate,
+                    ),
+                )
             }
 
             uiState.error?.let { error ->

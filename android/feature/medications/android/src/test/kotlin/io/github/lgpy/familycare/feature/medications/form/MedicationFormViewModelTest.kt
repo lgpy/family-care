@@ -109,6 +109,52 @@ class MedicationFormViewModelTest {
     }
 
     @Test
+    fun `marks the circle's first medicine after a successful create`() = runTest {
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.onNameChanged("Metformin")
+            viewModel.save()
+
+            assertEquals(1, meds.created.size)
+            assertTrue(viewModel.uiState.value.firstMedicineSaved)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `does not mark a first medicine when the circle already has one`() = runTest {
+        meds.activeFlow.value = listOf(withRegimens())
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.onNameChanged("Amlodipine")
+            viewModel.save()
+
+            assertEquals(1, meds.created.size)
+            assertFalse(viewModel.uiState.value.firstMedicineSaved)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `an edit never marks a first medicine`() = runTest {
+        meds.setMedication(withRegimens())
+        // The existing medicine is loaded for the edit, but the circle's active
+        // list is read separately: an edit is never the first medicine.
+        meds.activeFlow.value = emptyList()
+        val viewModel = viewModel(medicationId = "med-1")
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.save()
+
+            assertEquals(1, meds.updated.size)
+            assertFalse(viewModel.uiState.value.firstMedicineSaved)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `a blank name marks the field and writes nothing`() = runTest {
         val viewModel = viewModel()
         viewModel.uiState.test {
