@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.ScreenHeader
+import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import io.github.lgpy.familycare.feature.medications.reminders.DoseReminderScheduler
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealth
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealthChecker
@@ -296,7 +297,8 @@ private fun CheckRow(
             color = if (ok) {
                 MaterialTheme.colorScheme.primary
             } else {
-                MaterialTheme.colorScheme.error
+                // Amber, not red: red means allergies only (design-system.md).
+                FamilyCareTheme.colors.attentionAccent
             },
         )
         Text(
@@ -305,7 +307,8 @@ private fun CheckRow(
             color = if (ok) {
                 MaterialTheme.colorScheme.onSurface
             } else {
-                MaterialTheme.colorScheme.error
+                // Amber, not red: red means allergies only (design-system.md).
+                FamilyCareTheme.colors.attentionAccent
             },
             modifier = Modifier.weight(1f),
         )
