@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Today v3</title>
+<style>
+  :root{
+    --primary:#FFB5A0; --on-primary:#561F11; --pc:#723526; --on-pc:#FFDBD1; --sc:#5D3F38; --on-sc:#FFDBD1;
+    --surface:#1A110F; --sc-low:#231917; --sc-high:#322825; --on-surface:#F1DFDA; --on-sv:#D8C2BC; --outline-v:#53433F;
+    --attn-c:#4A2C00; --on-attn-c:#FFDDB3; --attn:#FFB95C;
+    color-scheme:dark;
+  }
+  body{color:var(--on-surface);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0}
+  h1{font-size:20px;margin:0 0 4px} .lede{color:var(--on-sv);margin:0 0 24px;max-width:70ch}
+  .frames{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+  .col{flex:1 1 300px;max-width:390px;min-width:0}
+  .label{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--on-sv);margin:0 0 8px}
+  .phone{background:var(--surface);border-radius:28px;padding:20px 16px;border:1px solid #2c201d}
+  .title{font-size:28px;font-weight:700;margin:0} .date{color:var(--on-sv);margin:2px 0 18px}
+  .attn{background:var(--attn-c);color:var(--on-attn-c);border-radius:22px;overflow:hidden;margin-bottom:20px}
+  .arow{display:flex;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid #5c3d12}
+  .arow:first-child{border-top:0}
+  .aicon{width:34px;height:34px;border-radius:10px;background:#5c3a10;display:grid;place-items:center;flex:none;font-size:16px}
+  .atitle{font-weight:700} .asub{opacity:.8;font-size:13px}
+  .chev{margin-left:auto;opacity:.9}
+  .sec{display:flex;gap:10px;align-items:center;font-weight:700;font-size:17px;margin:4px 0 12px}
+  .group{display:grid;grid-template-columns:62px 1fr;gap:10px;margin-bottom:16px}
+  .time{font-size:22px;font-weight:700;padding-top:12px} .time.dim{color:#7d6a65}
+  .late{color:var(--attn);font-size:12px;font-weight:600;margin-top:4px}
+  .slots{display:flex;flex-direction:column;gap:8px;min-width:0}
+  .slot{border-radius:20px;padding:12px 14px}
+  .done{border:1px dashed var(--outline-v);color:var(--on-sv)}
+  .up{background:var(--surface)} .next{background:var(--pc);color:var(--on-pc)}
+  .who{display:flex;gap:10px;align-items:center}
+  .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#1a110f;flex:none;font-size:14px}
+  .a{background:#F2B482}.f{background:#7DD3EC}.h{background:#D4BBFF}
+  .name{font-weight:700}
+  .pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+  .pill{width:14px;height:14px;border-radius:50%;background:#eee}
+  .pill.y{background:#E8C34A}.pill.o{background:#D98A4B;border-radius:40%}.pill.b{background:#7FA6D9}
+  .meta{font-size:12px;opacity:.8;margin-top:2px}
+  .given{font-size:12px;margin-top:6px}
+  .btn{margin-top:10px;border-radius:999px;padding:10px;text-align:center;font-weight:700}
+  .btn.fill{background:var(--primary);color:var(--on-primary)}
+  .btn.tonal{background:var(--sc);color:var(--on-sc)}
+  .btn.outline{border:1px solid #a08c87;color:var(--primary)}
+  .fold{border:1px dashed var(--outline-v);border-radius:20px;padding:10px 14px;display:flex;align-items:center;gap:8px;color:var(--on-sv)}
+  .fold .stack{display:flex;margin-left:auto}
+  .fold .stack .av{width:24px;height:24px;font-size:11px;margin-left:-6px;border:2px solid var(--surface)}
+  .new{outline:2px solid #FFB95C;outline-offset:3px}
+  .notes{margin-top:28px;max-width:80ch} .notes li{margin:6px 0;color:var(--on-sv)} .notes b{color:var(--on-surface)}
+</style>
+</head><body>
+
+<h1>Today: tidy-up proposal</h1>
+<p class="lede">Left: the screen as it looks now (from your screenshots, 19:15). Right: the proposal. Orange outlines mark what changes.</p>
+
+<div class="frames">
+  <div class="col">
+    <p class="label">Now</p>
+    <div class="phone">
+      <p class="title">Hoje</p><p class="date">sexta-feira, 20 de novembro</p>
+      <div class="attn">
+        <div class="arow"><span class="aicon">▤</span><div><div class="atitle">acido acetilsalicilico 150 está a acabar</div><div class="asub">Altina, restam 0 dias</div></div><span class="chev">›</span></div>
+        <div class="arow"><span class="aicon">▤</span><div><div class="atitle">acido acetisalicilico 100 está a acabar</div><div class="asub">Fernando Campos, restam 0 dias</div></div><span class="chev">›</span></div>
+        <div class="arow"><span class="aicon">▤</span><div><div class="atitle">activsil 1621.3 está a acabar</div><div class="asub">Altina, restam 0 dias</div></div><span class="chev">›</span></div>
+        <div class="arow"><span class="aicon">▤</span><div><div class="atitle">atorvastatina 20 está a acabar</div><div class="asub">Altina, restam 0 dias</div></div><span class="chev">›</span></div>
+        <div class="arow"><span class="aicon">▤</span><div><div class="atitle">clamed 10 está a acabar</div><div class="asub">Altina, restam 0 dias</div></div><span class="chev">›</span></div>
+        <div class="arow"><span class="aicon">▤</span><div class="atitle">+16 mais</div><span class="chev">›</span></div>
+      </div>
+      <div class="sec">✚ Tomas de hoje</div>
+      <div class="group"><div class="time dim">08:00</div><div class="slots">
+        <div class="slot done"><div class="who"><span class="av a">A</span><div><div class="name">Altina</div><div class="pills"><i class="pill"></i><i class="pill"></i><i class="pill"></i><i class="pill"></i><i class="pill"></i><i class="pill"></i></div><div class="meta">6 comprimidos</div></div></div><div class="given">✓ Dada por Helena Campos às 14:46</div></div>
+        <div class="slot done"><div class="who"><span class="av f">F</span><div><div class="name">Fernando Campos</div><div class="pills"><i class="pill"></i><i class="pill"></i> <span class="meta">2 comprimidos</span></div></div></div><div class="given">✓ Dada por Helena Campos às 14:46</div></div>
+        <div class="slot done"><div class="who"><span class="av h">H</span><div><div class="name">Helena Campos</div><div class="pills"><i class="pill y"></i><i class="pill y"></i><i class="pill"></i><i class="pill"></i><i class="pill o"></i></div><div class="meta">5 comprimidos</div></div></div><div class="given">✓ Dada por Helena Campos às 14:46</div></div>
+      </div></div>
+      <div class="group"><div class="time dim">13:00</div><div class="slots">
+        <div class="slot done"><div class="who"><span class="av a">A</span><div><div class="name">Altina</div><div class="pills"><i class="pill"></i><i class="pill"></i><i class="pill"></i> <span class="meta">3 comprimidos</span></div></div></div><div class="given">✓ Dada por Helena Campos às 14:46</div></div>
+        <div class="slot done"><div class="who"><span class="av f">F</span><div><div class="name">Fernando Campos</div><div class="pills"><i class="pill"></i><i class="pill"></i><i class="pill"></i> <span class="meta">3 comprimidos</span></div></div></div><div class="given">✓ Dada por Helena Campos às 14:46</div></div>
+      </div></div>
+      <div class="group"><div class="time">20:00</div><div class="slots">
+        <div class="slot done"><div class="who"><span class="av f">F</span><div><div class="name">Fernando Campos</div><div class="pills"><i class="pill"></i><i class="pill"></i> <span class="meta">2 comprimidos</span></div></div></div><div class="given">✓ Dada por si às 18:21</div></div>
+        <div class="slot up"><div class="who"><span class="av h">H</span><div><div class="name">Helena Campos</div><div class="pills"><i class="pill"></i><i class="pill y"></i><i class="pill"></i><i class="pill y"></i><i class="pill"></i></div><div class="meta">5 comprimidos</div></div></div><div class="btn tonal">Dar todos 5</div></div>
+      </div></div>
+      <div class="group"><div class="time">22:00</div><div class="slots">
+        <div class="slot done"><div class="who"><span class="av a">A</span><div><div class="name">Altina</div><div class="pills"><i class="pill"></i><i class="pill"></i><i class="pill"></i><i class="pill"></i><i class="pill"></i></div><div class="meta">5 comprimidos</div></div></div><div class="given">✓ Dada por si às 18:21</div></div>
+        <div class="slot up"><div class="who"><span class="av h">H</span><div><div class="name">Helena Campos</div><div class="pills"><i class="pill"></i><i class="pill b"></i> <span class="meta">2 comprimidos</span></div></div></div><div class="btn tonal">Dar todos 2</div></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="label">Proposal</p>
+    <div class="phone">
+      <p class="title">Hoje</p><p class="date">sexta-feira, 20 de novembro</p>
+      <div class="attn new">
+        <div class="arow"><span class="aicon">▤</span><div><div class="atitle">3 medicamentos estão a acabar</div><div class="asub">Altina e Fernando Campos</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="sec">✚ Tomas de hoje</div>
+      <div class="group"><div class="time dim">08:00</div><div class="slots">
+        <div class="fold new">✓ Todas dadas <span class="stack"><span class="av a">A</span><span class="av f">F</span><span class="av h">H</span></span> ⌄</div>
+      </div></div>
+      <div class="group"><div class="time dim">13:00</div><div class="slots">
+        <div class="fold new">✓ Todas dadas <span class="stack"><span class="av a">A</span><span class="av f">F</span></span> ⌄</div>
+      </div></div>
+      <div class="group"><div class="time">20:00</div><div class="slots">
+        <div class="slot done new"><div class="who"><span class="av f">F</span><div><div class="name">Fernando Campos</div><div class="given" style="margin-top:2px">✓ Dada por si às 18:21</div></div></div></div>
+        <div class="slot up"><div class="who"><span class="av h">H</span><div><div class="name">Helena Campos</div><div class="pills"><i class="pill"></i><i class="pill y"></i><i class="pill"></i><i class="pill y"></i><i class="pill"></i></div><div class="meta">5 comprimidos</div></div></div><div class="btn outline new">Dar todos 5</div></div>
+      </div></div>
+      <div class="group"><div class="time">22:00</div><div class="slots">
+        <div class="slot done new"><div class="who"><span class="av a">A</span><div><div class="name">Altina</div><div class="given" style="margin-top:2px">✓ Dada por si às 18:21</div></div></div></div>
+        <div class="slot up"><div class="who"><span class="av h">H</span><div><div class="name">Helena Campos</div><div class="pills"><i class="pill"></i><i class="pill b"></i></div><div class="meta new">2 comprimidos</div></div></div><div class="btn outline new">Dar todos 2</div></div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<ol class="notes">
+  <li><b>Amber card.</b> Medicines nobody has ever counted no longer count as "0 days left" (that's where the 21 came from). With 2 or more low, there's one row with the count and the patients' names, and it opens Compras. "3" is an example: the real number depends on which medicines have counts.</li>
+  <li><b>Finished times fold up.</b> A time where every dose is given becomes one line, "Todas dadas", with avatars. Tap it to see who gave each dose.</li>
+  <li><b>Given doses are compact.</b> Just the name and "Dada por … às …", without the pills.</li>
+  <li><b>The count is always on its own line</b> under the pills, instead of sometimes beside them.</li>
+  <li><b>Only due or overdue doses get the filled button.</b> Later ones get an outlined button, so the one strong button on screen is the dose that's due now.</li>
+</ol>
+</body></html>
