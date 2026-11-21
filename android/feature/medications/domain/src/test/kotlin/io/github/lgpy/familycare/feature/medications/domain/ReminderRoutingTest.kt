@@ -52,6 +52,35 @@ class ReminderRoutingTest {
     }
 
     @Test
+    fun `primary-only reminds only the primary caregiver`() {
+        val patient = patient(policy = ReminderPolicy.PRIMARY_ONLY)
+        val medication = Fixtures.medication()
+
+        assertTrue(
+            ReminderRouting.shouldRemindOnThisDevice(
+                patient, medication, primary, MemberRole.CAREGIVER,
+            ),
+        )
+        assertFalse(
+            ReminderRouting.shouldRemindOnThisDevice(
+                patient, medication, other, MemberRole.OWNER,
+            ),
+        )
+    }
+
+    @Test
+    fun `primary-only without a primary reminds nobody locally`() {
+        val patient = patient(policy = ReminderPolicy.PRIMARY_ONLY, primaryCaregiverId = null)
+        val medication = Fixtures.medication()
+
+        assertFalse(
+            ReminderRouting.shouldRemindOnThisDevice(
+                patient, medication, primary, MemberRole.OWNER,
+            ),
+        )
+    }
+
+    @Test
     fun `a medication override replaces the patient policy`() {
         val patient = patient()
         val medication = Fixtures.medication(

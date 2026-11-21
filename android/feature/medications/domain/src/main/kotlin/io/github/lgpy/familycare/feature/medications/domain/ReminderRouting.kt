@@ -19,6 +19,9 @@ import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
  *   is no one to remind, and the escalation safety net is the only path left.
  *   The app flags such a patient elsewhere (D24); the scheduler must not send a
  *   reminder to every caregiver instead.
+ * - [ReminderPolicy.PRIMARY_ONLY]: only the effective primary caregiver's phone
+ *   reminds, and a null primary means nobody — there is no server escalation to
+ *   catch it, so the app flags the patient elsewhere (D24).
  * - [ReminderPolicy.ALL_CAREGIVERS]: every owner or caregiver is reminded; the
  *   first confirmation wins and clears the others (`DoseLogRepository`).
  * - [ReminderPolicy.ROTA]: not built; treat it as "nobody locally" so a future
@@ -58,6 +61,9 @@ object ReminderRouting {
 
         return when (effectivePolicy(patient, medication)) {
             ReminderPolicy.PRIMARY_WITH_ESCALATION ->
+                effectivePrimaryCaregiverId(patient, medication) == myUserId
+
+            ReminderPolicy.PRIMARY_ONLY ->
                 effectivePrimaryCaregiverId(patient, medication) == myUserId
 
             ReminderPolicy.ALL_CAREGIVERS -> true

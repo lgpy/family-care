@@ -322,6 +322,7 @@ internal fun patientAge(
 @StringRes
 internal fun ReminderPolicy.labelRes(): Int = when (this) {
     ReminderPolicy.PRIMARY_WITH_ESCALATION -> R.string.patients_policy_primary_with_escalation_short
+    ReminderPolicy.PRIMARY_ONLY -> R.string.patients_policy_primary_only
     ReminderPolicy.ALL_CAREGIVERS -> R.string.patients_policy_all_caregivers
     // Not offered, but the database enum has it: never show a raw server value.
     ReminderPolicy.ROTA -> R.string.patients_policy_unavailable

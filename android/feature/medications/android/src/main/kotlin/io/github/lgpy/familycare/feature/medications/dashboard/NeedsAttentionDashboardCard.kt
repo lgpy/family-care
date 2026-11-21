@@ -36,8 +36,10 @@ import org.koin.compose.viewmodel.koinViewModel
  *    groups, most urgent first. The row's small button is the existing one-tap
  *    group confirmation ("Give" / "Give all 4"); tapping the row opens the
  *    dose-slot screen, where a dose can still be recorded or skipped.
- * 2. **Low stock** ([LowStockViewModel]) — up to five medications, fewest days
- *    left first, then "+N more". The row opens the Shopping tab.
+ * 2. **Low stock** ([LowStockViewModel]) — one row naming the medication when
+ *    a single one is low, otherwise one summary row ("21 medicines are running
+ *    low", with whose they are). Either opens the Shopping tab, which holds
+ *    the full list; the card stays a digest, not a second shopping list.
  * 3. **Reminder health** ([ReminderHealthViewModel]) — only while the phone's
  *    reminder setup is broken; the detail names what to turn on and the row
  *    opens More → Reminders.
@@ -116,8 +118,8 @@ internal sealed interface AttentionRow {
     /** One medication of [LowStockViewModel] about to run out. */
     data class LowStock(val line: LowStockLine) : AttentionRow
 
-    /** The "+N more" line of the low-stock digest. */
-    data class LowStockMore(val count: Int) : AttentionRow
+    /** Several low medications as one row: how many, and whose (most urgent first). */
+    data class LowStockSummary(val count: Int, val patientNames: List<String>) : AttentionRow
 
     /** The phone's reminder setup, when the check found something wrong. */
     data class Reminders(val problems: List<ReminderProblem>) : AttentionRow
@@ -125,7 +127,7 @@ internal sealed interface AttentionRow {
 
 /**
  * The merged card's rows, in the mockup's order: doses first (most urgent),
- * then low stock with its "+N more", then the reminder health row last.
+ * then low stock (one row, whatever the count), then the reminder health row.
  *
  * A healthy reminder setup and an empty stock digest contribute nothing, so an
  * empty result means the card is hidden.
@@ -136,8 +138,16 @@ internal fun attentionRows(
     health: ReminderHealth?,
 ): List<AttentionRow> = buildList {
     doses.groups.forEach { group -> add(AttentionRow.DoseGroup(group)) }
-    stock.lines.forEach { line -> add(AttentionRow.LowStock(line)) }
-    if (stock.more > 0) add(AttentionRow.LowStockMore(stock.more))
+    when (stock.lines.size) {
+        0 -> Unit
+        1 -> add(AttentionRow.LowStock(stock.lines.single()))
+        else -> add(
+            AttentionRow.LowStockSummary(
+                count = stock.lines.size,
+                patientNames = stock.lines.map { it.patientName }.distinct(),
+            ),
+        )
+    }
     if (health != null && !health.isHealthy) add(AttentionRow.Reminders(health.problems))
 }
 
@@ -153,7 +163,8 @@ internal fun showsGiveAction(canWrite: Boolean, allConfirmed: Boolean): Boolean 
     canWrite && !allConfirmed
 
 @Composable
-private fun AttentionRow.toItem(    canWrite: Boolean,
+private fun AttentionRow.toItem(
+    canWrite: Boolean,
     onGive: (DoseGroupUi) -> Unit,
     onNavigate: (String) -> Unit,
 ): AttentionItem = when (this) {
@@ -201,9 +212,10 @@ private fun AttentionRow.toItem(    canWrite: Boolean,
         onClick = { onNavigate(MedicationsRoutes.SHOPPING) },
     )
 
-    is AttentionRow.LowStockMore -> AttentionItem(
+    is AttentionRow.LowStockSummary -> AttentionItem(
         icon = FcIcons.Inventory2,
-        title = stringResource(R.string.meds_low_stock_more, count),
+        title = pluralStringResource(R.plurals.meds_attention_low_stock_summary, count, count),
+        supportingText = joinNames(patientNames),
         onClick = { onNavigate(MedicationsRoutes.SHOPPING) },
     )
 
@@ -223,9 +235,20 @@ private fun AttentionRow.toItem(    canWrite: Boolean,
 private fun medicationLabel(line: LowStockLine): String =
     listOfNotNull(line.medicationName, line.strength).joinToString(" ")
 
-/** "António, 5 days left · needs prescription", or without the prescription note. */
+/**
+ * "António, 5 days left · needs prescription", or without the prescription
+ * note; "António, out of stock" when nothing is left.
+ */
 @Composable
 private fun lowStockSupporting(line: LowStockLine): String {
+    if (line.daysRemaining <= 0) {
+        val out = if (line.needsPrescription) {
+            R.string.meds_attention_out_of_stock_prescription
+        } else {
+            R.string.meds_attention_out_of_stock
+        }
+        return stringResource(out, line.patientName)
+    }
     val resource = if (line.needsPrescription) {
         R.plurals.meds_attention_low_stock_prescription
     } else {
@@ -241,8 +264,12 @@ private fun lowStockSupporting(line: LowStockLine): String {
  * something that is fine.
  */
 @Composable
-private fun problemList(problems: List<ReminderProblem>): String {
-    val labels = problems.map { problemLabel(it) }
+private fun problemList(problems: List<ReminderProblem>): String =
+    joinNames(problems.map { problemLabel(it) })
+
+/** "A", "A and B", "A, B and C" in the app's language. */
+@Composable
+private fun joinNames(labels: List<String>): String {
     if (labels.size <= 1) return labels.joinToString("")
     val separator = stringResource(R.string.meds_list_comma)
     return labels.dropLast(1).joinToString(separator) +

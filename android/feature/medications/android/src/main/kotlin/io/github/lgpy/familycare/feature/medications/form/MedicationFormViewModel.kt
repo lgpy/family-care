@@ -38,6 +38,7 @@ import io.github.lgpy.familycare.feature.medications.ui.parseDoseQuantity
 import io.github.lgpy.familycare.feature.medications.ui.parseStockQuantity
 import io.github.lgpy.familycare.feature.medications.ui.parseThresholdDays
 import io.github.lgpy.familycare.feature.medications.ui.steppedQuantity
+import io.github.lgpy.familycare.feature.medications.ui.toggleFastingInstructions
 import io.github.lgpy.familycare.feature.medications.ui.stockErrors
 import io.github.lgpy.familycare.feature.medications.ui.uiError
 import java.math.BigDecimal
@@ -238,6 +239,14 @@ class MedicationFormViewModel(
         updateDetails { it.copy(prescriptionValidUntil = value) }
 
     fun onInstructionsChanged(value: String) = updateDetails { it.copy(instructions = value) }
+
+    /**
+     * The "Fasting" chip: adds [phrase] (the phone's wording) to the instructions
+     * or removes every fasting phrase from them (see [toggleFastingInstructions]).
+     */
+    fun onFastingToggled(fasting: Boolean, phrase: String) = updateDetails {
+        it.copy(instructions = toggleFastingInstructions(it.instructions, fasting, phrase))
+    }
 
     /** The pill-look sheet's "Done": stores the chosen look, normalised to the domain rules. */
     fun onPillLookChanged(look: PillLook) =
@@ -810,6 +819,18 @@ private fun MedicationFormUiState.toMedication(
     ).normalized()
 
     fields += medication.validate().errors
+
+    // A policy that reminds only the primary needs one; with no primary nothing
+    // would ever fire, so refuse to save the override (the same rule as the
+    // patient form).
+    if (!inheritReminders &&
+        (reminderPolicy == ReminderPolicy.PRIMARY_WITH_ESCALATION ||
+            reminderPolicy == ReminderPolicy.PRIMARY_ONLY) &&
+        primaryCaregiverId == null
+    ) {
+        fields += MedicationField.MEDICATION_PRIMARY_CAREGIVER
+    }
+
     return medication to fields
 }
 

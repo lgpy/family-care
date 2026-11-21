@@ -54,10 +54,11 @@ Reminder policy is a per-patient setting (D7, D11), optionally overridden per me
 |---|---|---|
 | `primary_with_escalation` | Primary caregiver is reminded. If unconfirmed after the escalation delay, other caregivers get an alert (server push). | Grandparents (primary = chosen caregiver); me and my mother (primary = ourselves — "self-managed", D11) |
 | `all_caregivers` | Every caregiver is reminded. First confirmation wins; other notifications are cleared. | Available, not used by default |
+| `primary_only` | Only the primary caregiver is reminded; nothing escalates, and low-stock pushes go to the primary alone. | A self-managed patient in a shared family circle, so the rest of the family is not pinged |
 | `rota` | Who is on duty depends on day/time. | Not built |
 
 Defaults when creating a patient:
-- Patient with a `linked_user` → `primary_with_escalation`, primary = the linked user (self-managed).
+- Patient with a `linked_user` → `primary_with_escalation` or `primary_only`, primary = the linked user (self-managed).
 - Patient without a linked user → `primary_with_escalation`, primary = chosen when creating the patient.
 
 Settings per patient (defaults to validate, Q3):

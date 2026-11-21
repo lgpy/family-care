@@ -66,7 +66,9 @@ import io.github.lgpy.familycare.core.ui.patient.NoPatientAlerts
 import io.github.lgpy.familycare.core.ui.patient.PatientAlerts
 import io.github.lgpy.familycare.feature.medications.domain.DoseOutcome
 import io.github.lgpy.familycare.feature.medications.domain.SkipReason
+import io.github.lgpy.familycare.feature.medications.ui.FastingTag
 import io.github.lgpy.familycare.feature.medications.ui.formatQuantity
+import io.github.lgpy.familycare.feature.medications.ui.instructionsMentionFasting
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
 import io.github.lgpy.familycare.feature.medications.ui.labelRes
 import io.github.lgpy.familycare.feature.medications.ui.messageRes
@@ -452,6 +454,9 @@ private fun MedicationRow(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (instructionsMentionFasting(item.instructions)) {
+                    FastingTag()
+                }
             }
 
             if (givenLine != null) {

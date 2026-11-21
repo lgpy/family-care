@@ -65,15 +65,24 @@ class AttentionDashboardCardTest {
     }
 
     @Test
-    fun `low stock beyond the five lines becomes one more row`() {
+    fun `several low medicines become one summary row naming whose they are`() {
         val rows = attentionRows(
             doses = NeedsAttentionUiState(),
-            stock = LowStockUiState(loaded = true, lines = listOf(lowStockLine), more = 3),
+            stock = LowStockUiState(
+                loaded = true,
+                lines = listOf(
+                    lowStockLine,
+                    lowStockLine.copy(medicationId = "med-2", patientName = "Grandma"),
+                    lowStockLine.copy(medicationId = "med-3"),
+                ),
+            ),
             health = null,
         )
 
-        assertEquals(2, rows.size)
-        assertEquals(AttentionRow.LowStockMore(3), rows.last())
+        assertEquals(
+            listOf(AttentionRow.LowStockSummary(count = 3, patientNames = listOf("Grandpa", "Grandma"))),
+            rows,
+        )
     }
 
     @Test

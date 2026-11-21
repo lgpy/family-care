@@ -71,10 +71,13 @@
     <string name="patients_policy_primary_with_escalation">Primeiro uma pessoa; todos após %1$d min</string>
     <string name="patients_policy_primary_with_escalation_short">Primeiro uma pessoa, depois todos</string>
     <string name="patients_policy_all_caregivers">Todos recebem lembretes</string>
+    <string name="patients_policy_primary_only">Só o cuidador principal</string>
     <string name="patients_policy_unavailable">Política de lembretes indisponível</string>
     <string name="patients_reminder_primary_first">Primeiro %1$s; todos após %2$d min</string>
     <string name="patients_reminder_you_first">Primeiro você; todos após %1$d min</string>
     <string name="patients_reminder_everyone">Todos recebem lembretes</string>
+    <string name="patients_reminder_only_primary">Só %1$s recebe lembretes</string>
+    <string name="patients_reminder_only_you">Só você recebe lembretes</string>
     <string name="patients_tag_allergies">Alergias</string>
     <string name="patients_summary_low_stock">%1$s a acabar</string>
     <string name="patients_summary_next_appointment">%1$s · %2$s</string>
@@ -459,6 +462,10 @@
     <string name="meds_prescription_valid_label">Receita válida até (opcional)</string>
     <string name="meds_date_helper">AAAA-MM-DD</string>
     <string name="meds_instructions_label">Instruções (opcional)</string>
+    <!-- O chip do formulário que marca um medicamento para tomar em jejum, e a etiqueta nas tomas. -->
+    <string name="meds_fasting">Em jejum</string>
+    <!-- Escrito nas instruções quando o chip Em jejum é ligado. -->
+    <string name="meds_fasting_phrase">Em jejum</string>
     <string name="meds_schedule_label">Esquema</string>
     <string name="meds_schedule_daily">Todos os dias</string>
     <string name="meds_schedule_weekdays">Dias específicos</string>
@@ -652,7 +659,15 @@
 
     <!-- M5: o cartão "Stock baixo" de Hoje (D28). É um cartão de atenção cujos
          itens indicam a medicação e a pessoa, mais um item "+N mais". -->
-    <string name="meds_low_stock_more">+%1$d mais</string>
+    <plurals name="meds_attention_low_stock_summary" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d medicamento está a acabar</item>
+        <item quantity="other">%1$d medicamentos estão a acabar</item>
+    </plurals>
+    <string name="meds_attention_out_of_stock">%1$s, sem stock</string>
+    <string name="meds_attention_out_of_stock_prescription">%1$s, sem stock · precisa de receita</string>
+    <string name="dose_group_all_given">Todas dadas</string>
+    <string name="dose_group_show">Ver quem deu</string>
+    <string name="dose_group_hide">Ocultar</string>
 
     <!-- M5: shopping list (D28). As duas secções, as respetivas linhas e diálogos. -->
     <string name="shopping_title">Compras</string>
@@ -939,11 +954,11 @@
     <string name="pill_shape_capsule">cápsula</string>
     <string name="pill_shape_diamond">comprimido losangular</string>
     <string name="pill_shape_triangle">comprimido triangular</string>
+    <string name="pill_shape_pentagon">comprimido pentagonal</string>
     <string name="pill_shape_drops">Gotas</string>
 
     <string name="pill_color_white">branco</string>
     <string name="pill_color_white_fem">branca</string>
-    <string name="pill_shape_pentagon">comprimido pentagonal</string>
     <string name="pill_color_cream">creme</string>
     <string name="pill_color_cream_fem">creme</string>
     <string name="pill_color_yellow">amarelo</string>

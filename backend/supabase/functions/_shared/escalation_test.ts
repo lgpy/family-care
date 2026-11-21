@@ -143,6 +143,15 @@ Deno.test('escalation: all_caregivers is local reminders only', () => {
   assertEquals(plan.escalations, []);
 });
 
+Deno.test('escalation: primary_only never escalates to the other caregivers', () => {
+  const input = baseInput();
+  input.reminders[0].reminder_policy = 'primary_only';
+  const plan = planEscalations(input);
+  assertEquals(plan.notifications, []);
+  assertEquals(plan.escalations, []);
+  assertEquals(plan.overdue, []);
+});
+
 Deno.test('escalation: a medication override routes only that medication', () => {
   const overrideMedication = '50000000-0000-4000-8000-000000000009';
   const input = baseInput();

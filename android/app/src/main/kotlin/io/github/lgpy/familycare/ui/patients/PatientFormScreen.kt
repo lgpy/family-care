@@ -293,7 +293,9 @@ private fun PatientFormFields(
         ErrorText(stringResource(R.string.patient_error_policy))
     }
 
-    if (uiState.reminderPolicy == ReminderPolicy.PRIMARY_WITH_ESCALATION) {
+    if (uiState.reminderPolicy == ReminderPolicy.PRIMARY_WITH_ESCALATION ||
+        uiState.reminderPolicy == ReminderPolicy.PRIMARY_ONLY
+    ) {
         Spacer(modifier = Modifier.height(8.dp))
         SectionHeader(
             title = stringResource(R.string.patient_primary_label),
@@ -391,17 +393,20 @@ private fun PatientMoreOptions(
 
     if (!expanded) return
 
-    MinuteField(
-        label = R.string.patient_escalation_label,
-        icon = FcIcons.Schedule,
-        helper = R.string.patient_escalation_helper,
-        value = uiState.escalationDelay,
-        enabled = uiState.canWrite,
-        hasError = CoreField.PATIENT_ESCALATION_DELAY in uiState.errors,
-        errorMessage = R.string.patient_error_escalation,
-        presets = listOf(15, 30, 60),
-        onValueChange = viewModel::onEscalationDelayChanged,
-    )
+    // The delay only means something when the server escalates.
+    if (uiState.reminderPolicy == ReminderPolicy.PRIMARY_WITH_ESCALATION) {
+        MinuteField(
+            label = R.string.patient_escalation_label,
+            icon = FcIcons.Schedule,
+            helper = R.string.patient_escalation_helper,
+            value = uiState.escalationDelay,
+            enabled = uiState.canWrite,
+            hasError = CoreField.PATIENT_ESCALATION_DELAY in uiState.errors,
+            errorMessage = R.string.patient_error_escalation,
+            presets = listOf(15, 30, 60),
+            onValueChange = viewModel::onEscalationDelayChanged,
+        )
+    }
 
     MinuteField(
         label = R.string.patient_missed_label,

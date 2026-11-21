@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -91,13 +91,13 @@ data class DoseSlotUi(
  * drops below the name instead of squeezing it. Corner radius 20 dp, padding
  * 12×14 dp.
  *
- * Under the name comes a wrapping row of 22 dp [PillImage]s, one per medicine
- * of the dose, followed by "N pills" when there is more than one to count. With
- * no pill looks it falls back to [DoseSlotUi.meta], so a slot never loses its
- * count. Names and pill rows are never truncated; they wrap.
- * [DoseSlotState.DONE] draws a transparent slot with a 1 dp dashed
- * outlineVariant border and neutral text, plus a check-circle line with
- * [DoseSlotUi.givenText].
+ * Under the name of an open slot comes a wrapping row of 22 dp [PillImage]s,
+ * one per medicine of the dose, and "N pills" on the line below. With no pill
+ * looks it falls back to [DoseSlotUi.meta], so a slot never loses its count.
+ * Names and pill rows are never truncated; they wrap.
+ * [DoseSlotState.DONE] is compact: a transparent slot with a 1 dp dashed
+ * outlineVariant border, the name and one check-circle line with
+ * [DoseSlotUi.givenText] (or [DoseSlotUi.meta] when nobody is recorded).
  *
  * Stateless.
  */
@@ -162,22 +162,6 @@ fun DoseSlot(
                     }
                 },
             )
-            if (done && slot.givenText != null) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Icon(
-                        imageVector = FcIcons.CheckCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodySmall)),
-                    )
-                    Text(
-                        text = slot.givenText,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
         }
     }
 }
@@ -196,28 +180,48 @@ private fun WhoRow(slot: DoseSlotUi) {
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
             )
-            if (slot.pills.isEmpty()) {
-                Text(
+            when {
+                // A given dose is history: who gave it and when is all it needs.
+                // The pill pictures stay on the dose-slot screen.
+                slot.state == DoseSlotState.DONE && slot.givenText != null -> Row(
+                    modifier = Modifier.padding(top = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = FcIcons.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.bodySmall)),
+                    )
+                    Text(
+                        text = slot.givenText,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                slot.state == DoseSlotState.DONE || slot.pills.isEmpty() -> Text(
                     text = slot.meta,
                     style = MaterialTheme.typography.bodyMedium,
                     color = LocalContentColor.current.copy(alpha = 0.8f),
                 )
-            } else {
-                FlowRow(
-                    modifier = Modifier.padding(top = 3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    slot.pills.forEach { look ->
-                        PillImage(
-                            look = look,
-                            size = 22.dp,
-                            contentDescription = null,
-                        )
+
+                else -> {
+                    FlowRow(
+                        modifier = Modifier.padding(top = 3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        slot.pills.forEach { look ->
+                            PillImage(
+                                look = look,
+                                size = 22.dp,
+                                contentDescription = null,
+                            )
+                        }
                     }
-                    // The amount is part of every row, even when it is one pill:
-                    // a slot without a count made the single-dose rows look
-                    // different from the rest (UX audit finding 17).
+                    // The amount is part of every row (UX audit finding 17), on
+                    // its own line so it sits in the same place whether the
+                    // pictures fit on one line or wrap.
                     Text(
                         text = pluralStringResource(
                             R.plurals.meds_slot_pills,
@@ -226,7 +230,7 @@ private fun WhoRow(slot: DoseSlotUi) {
                         ),
                         style = MaterialTheme.typography.bodySmall,
                         color = LocalContentColor.current.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(start = 4.dp),
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
             }
@@ -240,30 +244,26 @@ private fun SlotActionButton(
     next: Boolean,
     onClick: () -> Unit,
 ) {
-    val scheme = MaterialTheme.colorScheme
-    Button(
-        onClick = onClick,
-        modifier = Modifier.heightIn(min = FamilyCareDimens.MinTouchTarget),
-        shape = RoundedCornerShape(percent = 50),
-        colors = if (next) {
-            ButtonDefaults.buttonColors()
-        } else {
-            ButtonDefaults.buttonColors(
-                containerColor = scheme.secondaryContainer,
-                contentColor = scheme.onSecondaryContainer,
-            )
-        },
-    ) {
+    val text: @Composable () -> Unit = {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
         )
     }
+    val modifier = Modifier.heightIn(min = FamilyCareDimens.MinTouchTarget)
+    val shape = RoundedCornerShape(percent = 50)
+    // Only a due or overdue slot gets the filled button; a later one is an
+    // outline, so the timeline's one strong action is the one that matters now.
+    if (next) {
+        Button(onClick = onClick, modifier = modifier, shape = shape) { text() }
+    } else {
+        OutlinedButton(onClick = onClick, modifier = modifier, shape = shape) { text() }
+    }
 }
 
 /** A 1 dp dashed rounded outline, drawn inside the bounds. */
-private fun Modifier.dashedOutline(color: Color, radius: Dp): Modifier = drawBehind {
+internal fun Modifier.dashedOutline(color: Color, radius: Dp): Modifier = drawBehind {
     val stroke = 1.dp.toPx()
     drawRoundRect(
         color = color,

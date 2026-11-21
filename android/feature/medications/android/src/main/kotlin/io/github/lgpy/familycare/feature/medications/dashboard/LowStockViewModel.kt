@@ -28,18 +28,16 @@ data class LowStockLine(
 )
 
 /**
- * What the "Low stock" card shows: the most urgent low medications and how many
- * did not fit.
+ * Every low medication of the circle, fewest days left first.
  *
- * [lines] is already capped at [LowStockViewModel.MAX_LINES] and ordered by days
- * left; [more] is the rest, drawn as "+N more". An empty list means the card is
- * hidden — nothing is low, or the ledger has not emitted yet ([loaded] tells the
+ * The attention card draws one row for a single medication and one summary row
+ * for several, so the list is not capped here. An empty list means nothing is
+ * shown — nothing is low, or the ledger has not emitted yet ([loaded] tells the
  * two apart, as on the shopping list).
  */
 data class LowStockUiState(
     val loaded: Boolean = false,
     val lines: List<LowStockLine> = emptyList(),
-    val more: Int = 0,
 ) {
 
     /** Whether the card has anything to show. */
@@ -53,9 +51,7 @@ data class LowStockUiState(
  * with its derived stock summary — and keeps the low ones. The list re-emits on
  * every dose, refill or recount, so a medication disappears from the card as
  * soon as it is no longer low; there is no dismissal state to keep in step.
- *
- * The card is a digest, not the list: the five with the fewest days left, then
- * "+N more", and tapping it opens the Shopping tab for the full list.
+ * A medication whose stock was never recorded is not low ([StockOverview.low]).
  */
 class LowStockViewModel(stockRepository: StockRepository) : ViewModel() {
 
@@ -66,19 +62,13 @@ class LowStockViewModel(stockRepository: StockRepository) : ViewModel() {
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = LowStockUiState(),
         )
-
-    companion object {
-
-        /** How many medications the card lists before "+N more". */
-        const val MAX_LINES: Int = 5
-    }
 }
 
-/** The low overviews, most urgent first, capped for the card. */
+/** The low overviews, most urgent first. */
 private fun toUiState(overviews: List<StockOverview>): LowStockUiState {
     val lines = overviews
         .asSequence()
-        .filter { it.summary.low }
+        .filter { it.low }
         // A low medication always has a number of days left (the domain's
         // isLow() requires one); the null case is dropped rather than invented.
         .mapNotNull { overview ->
@@ -102,9 +92,5 @@ private fun toUiState(overviews: List<StockOverview>): LowStockUiState {
         )
         .toList()
 
-    return LowStockUiState(
-        loaded = true,
-        lines = lines.take(LowStockViewModel.MAX_LINES),
-        more = (lines.size - LowStockViewModel.MAX_LINES).coerceAtLeast(0),
-    )
+    return LowStockUiState(loaded = true, lines = lines)
 }

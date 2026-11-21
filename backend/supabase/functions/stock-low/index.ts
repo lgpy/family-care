@@ -33,7 +33,7 @@ import {
 import { latestCount } from '../_shared/stock.ts';
 import type { DoseLogEntry } from '../_shared/doseStatus.ts';
 import type { Regimen } from '../_shared/doseSlots.ts';
-import type { Membership, Profile, PushDevice } from '../_shared/escalation.ts';
+import type { Membership, Profile, PushDevice, ReminderPolicy } from '../_shared/escalation.ts';
 import { createFcmSender, parseServiceAccount } from '../_shared/fcm.ts';
 import { errorText } from '../_shared/log.ts';
 
@@ -133,7 +133,7 @@ Deno.serve(async (request) => {
       .from('medications')
       .select(
         'id, patient_id, requires_prescription, prescription_valid_until, ' +
-          'low_stock_threshold_days',
+          'low_stock_threshold_days, reminder_policy, primary_caregiver_id',
       )
       .is('stopped_at', null);
     if (medicationError) throw medicationError;
@@ -144,6 +144,8 @@ Deno.serve(async (request) => {
       requires_prescription: boolean;
       prescription_valid_until: string | null;
       low_stock_threshold_days: number;
+      reminder_policy: ReminderPolicy | null;
+      primary_caregiver_id: string | null;
     }>;
 
     // 1b. The alert ledger, unfiltered: rows for stopped or deleted medications
@@ -182,19 +184,25 @@ Deno.serve(async (request) => {
     const medicationIds = medicationData.map((row) => row.id);
     const patientIds = [...new Set(medicationData.map((row) => row.patient_id))];
 
-    // 2. The circle each patient belongs to, so recipients can be resolved.
+    // 2. The circle each patient belongs to, so recipients can be resolved,
+    //    plus the patient's reminder settings (the medication's override wins).
     const { data: patientRows, error: patientError } = await supabase
       .schema('core')
       .from('patients')
-      .select('id, circle_id, archived_at')
+      .select(
+        'id, circle_id, archived_at, reminder_policy, primary_caregiver_id',
+      )
       .in('id', patientIds);
     if (patientError) throw patientError;
 
-    const circleByPatient = new Map(
-      (patientRows ?? []).map((row: { id: string; circle_id: string }) => [
-        row.id,
-        row.circle_id,
-      ]),
+    const patientById = new Map(
+      (patientRows ?? []).map((row: {
+        id: string;
+        circle_id: string;
+        archived_at: string | null;
+        reminder_policy: ReminderPolicy;
+        primary_caregiver_id: string | null;
+      }) => [row.id, row]),
     );
 
     const archivedPatients = new Set(
@@ -204,16 +212,23 @@ Deno.serve(async (request) => {
     );
 
     const medications: ActiveStockMedication[] = medicationData
-      .filter((row) => circleByPatient.has(row.patient_id))
-      .map((row) => ({
-        id: row.id,
-        patient_id: row.patient_id,
-        circle_id: circleByPatient.get(row.patient_id) as string,
-        patient_archived: archivedPatients.has(row.patient_id),
-        low_stock_threshold_days: row.low_stock_threshold_days,
-        requires_prescription: row.requires_prescription,
-        prescription_valid_until: row.prescription_valid_until,
-      }));
+      .filter((row) => patientById.has(row.patient_id))
+      .map((row) => {
+        const patient = patientById.get(row.patient_id)!;
+        return {
+          id: row.id,
+          patient_id: row.patient_id,
+          circle_id: patient.circle_id,
+          patient_archived: archivedPatients.has(row.patient_id),
+          low_stock_threshold_days: row.low_stock_threshold_days,
+          requires_prescription: row.requires_prescription,
+          prescription_valid_until: row.prescription_valid_until,
+          // The same coalesce as meds.effective_reminder (D7/D11).
+          reminder_policy: row.reminder_policy ?? patient.reminder_policy,
+          primary_caregiver_id:
+            row.primary_caregiver_id ?? patient.primary_caregiver_id,
+        };
+      });
 
     const circleIds = [...new Set(medications.map((row) => row.circle_id))];
 

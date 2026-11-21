@@ -6,8 +6,8 @@
  *
  * Rules:
  * - Only `primary_with_escalation` escalates; `all_caregivers` is local-only
- *   reminders (the first confirmation clears the others) and `rota` is not
- *   built.
+ *   reminders (the first confirmation clears the others), `primary_only` stays
+ *   with the primary and never escalates, and `rota` is not built.
  * - A slot escalates when its status is `overdue` - past the escalation delay,
  *   before the missed window, no effective entry (the same derivation the
  *   phones use, D22).
@@ -28,12 +28,19 @@ import {
 } from './doseSlots.ts';
 import { doseStatus, type DoseLogEntry } from './doseStatus.ts';
 
+/** The database's `core.reminder_policy` values. */
+export type ReminderPolicy =
+  | 'primary_with_escalation'
+  | 'all_caregivers'
+  | 'primary_only'
+  | 'rota';
+
 /** `meds.effective_reminder`: a medication with its effective settings. */
 export interface EffectiveReminder {
   medication_id: string;
   patient_id: string;
   circle_id: string;
-  reminder_policy: 'primary_with_escalation' | 'all_caregivers' | 'rota';
+  reminder_policy: ReminderPolicy;
   primary_caregiver_id: string | null;
   escalation_delay_minutes: number;
   missed_window_minutes: number;

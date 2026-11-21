@@ -71,10 +71,13 @@
     <string name="patients_policy_primary_with_escalation">One person first; everyone after %1$d min</string>
     <string name="patients_policy_primary_with_escalation_short">One person first, then everyone</string>
     <string name="patients_policy_all_caregivers">Everyone is reminded</string>
+    <string name="patients_policy_primary_only">Only the primary caregiver</string>
     <string name="patients_policy_unavailable">Reminder policy not available</string>
     <string name="patients_reminder_primary_first">%1$s first; everyone after %2$d min</string>
     <string name="patients_reminder_you_first">You first; everyone after %1$d min</string>
     <string name="patients_reminder_everyone">Everyone is reminded</string>
+    <string name="patients_reminder_only_primary">Only %1$s is reminded</string>
+    <string name="patients_reminder_only_you">Only you are reminded</string>
     <string name="patients_tag_allergies">Allergies</string>
     <string name="patients_summary_low_stock">%1$s low</string>
     <string name="patients_summary_next_appointment">%1$s · %2$s</string>
@@ -453,6 +456,10 @@
     <string name="meds_prescription_valid_label">Prescription valid until (optional)</string>
     <string name="meds_date_helper">YYYY-MM-DD</string>
     <string name="meds_instructions_label">Instructions (optional)</string>
+    <!-- The form chip that marks a medicine as taken on an empty stomach, and the tag on its dose rows. -->
+    <string name="meds_fasting">Fasting</string>
+    <!-- Written into the instructions when the Fasting chip is turned on. -->
+    <string name="meds_fasting_phrase">Fasting</string>
     <string name="meds_schedule_label">Schedule</string>
     <string name="meds_schedule_daily">Every day</string>
     <string name="meds_schedule_weekdays">Specific weekdays</string>
@@ -646,7 +653,15 @@
 
     <!-- M5: the Today "Low stock" card (D28). It is an attention card whose
          items name the medication and its patient, plus a "+N more" item. -->
-    <string name="meds_low_stock_more">+%1$d more</string>
+    <plurals name="meds_attention_low_stock_summary">
+        <item quantity="one">%1$d medicine is running low</item>
+        <item quantity="other">%1$d medicines are running low</item>
+    </plurals>
+    <string name="meds_attention_out_of_stock">%1$s, out of stock</string>
+    <string name="meds_attention_out_of_stock_prescription">%1$s, out of stock · needs prescription</string>
+    <string name="dose_group_all_given">All given</string>
+    <string name="dose_group_show">Show who gave them</string>
+    <string name="dose_group_hide">Hide</string>
 
     <!-- M5: shopping list (D28). The two groups, their lines and their dialogs. -->
     <string name="shopping_title">Shopping</string>
@@ -935,11 +950,11 @@
     <string name="pill_shape_capsule">capsule</string>
     <string name="pill_shape_diamond">diamond tablet</string>
     <string name="pill_shape_triangle">triangular tablet</string>
+    <string name="pill_shape_pentagon">five-sided tablet</string>
     <string name="pill_shape_drops">Drops</string>
 
     <string name="pill_color_white">white</string>
     <string name="pill_color_white_fem">white</string>
-    <string name="pill_shape_pentagon">five-sided tablet</string>
     <string name="pill_color_cream">cream</string>
     <string name="pill_color_cream_fem">cream</string>
     <string name="pill_color_yellow">yellow</string>

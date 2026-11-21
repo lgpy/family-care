@@ -255,8 +255,12 @@ class PatientFormViewModel(
             linkedUserId = state.linkedUserId,
             chosenPrimaryCaregiverId = state.primaryCaregiverId,
         )
-        if (state.reminderPolicy == ReminderPolicy.PRIMARY_WITH_ESCALATION && primary == null) {
-            errors += CoreField.PATIENT_PRIMARY_CAREGIVER
+        if (state.reminderPolicy == ReminderPolicy.PRIMARY_WITH_ESCALATION ||
+            state.reminderPolicy == ReminderPolicy.PRIMARY_ONLY
+        ) {
+            if (primary == null) {
+                errors += CoreField.PATIENT_PRIMARY_CAREGIVER
+            }
         }
 
         val circle = circleId

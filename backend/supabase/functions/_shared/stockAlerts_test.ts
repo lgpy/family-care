@@ -31,6 +31,8 @@ const MEDICATION: ActiveStockMedication = {
   low_stock_threshold_days: 7,
   requires_prescription: false,
   prescription_valid_until: null,
+  reminder_policy: 'all_caregivers',
+  primary_caregiver_id: null,
 };
 
 const REGIMEN: Regimen = {
@@ -101,6 +103,46 @@ Deno.test('stock-alerts: a new low episode pushes once to owners and caregivers'
   assertEquals(bob.language, 'en');
   assertEquals(bob.body, 'A medication is running low');
   assertEquals(bob.tokens, ['token-bob-1', 'token-bob-2']);
+});
+
+Deno.test('stock-alerts: primary_only pushes go to the primary caregiver alone', () => {
+  const plan = planStockAlerts(baseInput({
+    medications: [{
+      ...MEDICATION,
+      reminder_policy: 'primary_only',
+      primary_caregiver_id: ALICE,
+    }],
+  }));
+
+  assertEquals(plan.alerts, [{ medication_id: MED, recipients: 1 }]);
+  assertEquals(plan.notifications.map((n) => n.user_id), [ALICE]);
+});
+
+Deno.test('stock-alerts: primary_only without a primary falls back to everyone', () => {
+  const plan = planStockAlerts(baseInput({
+    medications: [{
+      ...MEDICATION,
+      reminder_policy: 'primary_only',
+      primary_caregiver_id: null,
+    }],
+  }));
+
+  assertEquals(plan.alerts, [{ medication_id: MED, recipients: 2 }]);
+  assertEquals(plan.notifications.map((n) => n.user_id), [ALICE, BOB]);
+});
+
+Deno.test('stock-alerts: primary_only ignores a primary who is not a caregiver', () => {
+  const plan = planStockAlerts(baseInput({
+    medications: [{
+      ...MEDICATION,
+      reminder_policy: 'primary_only',
+      primary_caregiver_id: CAROL, // a viewer
+    }],
+  }));
+
+  // The row is still written, with 0 recipients, so the episode is not retried.
+  assertEquals(plan.alerts, [{ medication_id: MED, recipients: 0 }]);
+  assertEquals(plan.notifications, []);
 });
 
 Deno.test('stock-alerts: an already alerted medication is not pushed again', () => {

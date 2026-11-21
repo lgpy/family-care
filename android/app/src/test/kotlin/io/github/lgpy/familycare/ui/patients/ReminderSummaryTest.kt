@@ -49,6 +49,42 @@ class ReminderSummaryTest {
     }
 
     @Test
+    fun `primary only names the primary caregiver`() {
+        assertEquals(
+            ReminderSummaryKind.ONLY_PRIMARY,
+            reminderSummaryKind(
+                policy = ReminderPolicy.PRIMARY_ONLY,
+                primaryFirstName = "Leonardo",
+                primaryIsMe = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `primary only says you when the primary is the signed-in user`() {
+        assertEquals(
+            ReminderSummaryKind.ONLY_YOU,
+            reminderSummaryKind(
+                policy = ReminderPolicy.PRIMARY_ONLY,
+                primaryFirstName = "Leonardo",
+                primaryIsMe = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `primary only without a name keeps the policy label`() {
+        assertEquals(
+            ReminderSummaryKind.POLICY,
+            reminderSummaryKind(
+                policy = ReminderPolicy.PRIMARY_ONLY,
+                primaryFirstName = null,
+                primaryIsMe = false,
+            ),
+        )
+    }
+
+    @Test
     fun `all caregivers says everyone is reminded`() {
         assertEquals(
             ReminderSummaryKind.EVERYONE,
@@ -135,6 +171,21 @@ class ReminderSummaryTest {
         assertEquals(
             ReminderSummaryText(R.string.patients_reminder_everyone),
             reminderSummaryText(ReminderPolicy.ALL_CAREGIVERS, null, false),
+        )
+        assertEquals(
+            ReminderSummaryText(
+                R.string.patients_reminder_only_primary,
+                listOf("Leonardo"),
+            ),
+            reminderSummaryText(ReminderPolicy.PRIMARY_ONLY, "Leonardo", false),
+        )
+        assertEquals(
+            ReminderSummaryText(R.string.patients_reminder_only_you),
+            reminderSummaryText(ReminderPolicy.PRIMARY_ONLY, "Leonardo", true),
+        )
+        assertEquals(
+            ReminderSummaryText(R.string.patients_policy_primary_only),
+            reminderSummaryText(ReminderPolicy.PRIMARY_ONLY, null, false),
         )
         assertEquals(
             ReminderSummaryText(R.string.patients_policy_unavailable),

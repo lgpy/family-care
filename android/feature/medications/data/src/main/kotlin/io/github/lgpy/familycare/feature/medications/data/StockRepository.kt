@@ -28,12 +28,20 @@ data class StockOverview(
     /** The patient's name, so a shopping line needs no second query. */
     val patientName: String get() = item.patient.displayName
 
+    /**
+     * Whether anyone has ever recorded stock for this medication (a count, a
+     * refill or a discard). The domain starts an uncounted ledger at 0, which
+     * reads as "0 days left"; the app does not know the box is empty, it only
+     * was never told, so an untracked medication is never low.
+     */
+    val tracked: Boolean get() = movements.isNotEmpty()
+
     /** Whether the medication is low enough to be on the shopping list. */
-    val low: Boolean get() = summary.low
+    val low: Boolean get() = tracked && summary.low
 
     /** Whether the shopping list must ask for a prescription first. */
     val needsPrescription: Boolean
-        get() = summary.shoppingStatus == ShoppingStatus.NEEDS_PRESCRIPTION
+        get() = low && summary.shoppingStatus == ShoppingStatus.NEEDS_PRESCRIPTION
 }
 
 /**

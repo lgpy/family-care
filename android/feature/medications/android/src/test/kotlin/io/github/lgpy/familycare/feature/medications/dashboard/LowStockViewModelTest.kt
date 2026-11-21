@@ -23,8 +23,8 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * The Today "Low stock" card (M5; D28): only low medications, fewest days first,
- * five lines then "+N more", and nothing at all when none is low.
+ * The Today low-stock rows (M5; D28): only low, counted medications, fewest days
+ * first, and nothing at all when none is low.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class LowStockViewModelTest {
@@ -70,7 +70,6 @@ class LowStockViewModelTest {
             val state = awaitWhere { it.loaded }
             assertFalse(state.isVisible)
             assertEquals(emptyList<LowStockLine>(), state.lines)
-            assertEquals(0, state.more)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -105,13 +104,12 @@ class LowStockViewModelTest {
             assertEquals(listOf(2, 2, 5), state.lines.map { it.daysRemaining })
             assertEquals("Grandma", state.lines[1].patientName)
             assertEquals(testPatientId.value, state.lines[1].patientId)
-            assertEquals(0, state.more)
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun `caps the list at five and reports the rest as more`() = runTest {
+    fun `lists every low medication, uncapped`() = runTest {
         stock.overviewsFlow.value = (1..8).map { index ->
             overview(
                 id = "med-$index",
@@ -123,12 +121,27 @@ class LowStockViewModelTest {
 
         viewModel().uiState.test {
             val state = awaitWhere { it.loaded }
-            assertEquals(LowStockViewModel.MAX_LINES, state.lines.size)
-            assertEquals(
-                listOf(1, 2, 3, 4, 5),
-                state.lines.map { it.daysRemaining },
-            )
-            assertEquals(3, state.more)
+            assertEquals((1..8).toList(), state.lines.map { it.daysRemaining })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a medication whose stock was never recorded is not low`() = runTest {
+        stock.overviewsFlow.value = listOf(
+            stockOverview(
+                item = withRegimens(
+                    med = medication(id = "med-1", name = "Metformin"),
+                    regimens = listOf(regimen(medicationId = "med-1")),
+                ),
+                summary = stockSummary(daysRemaining = 0, low = true),
+                movements = emptyList(),
+            ),
+        )
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded }
+            assertFalse(state.isVisible)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -148,7 +161,6 @@ class LowStockViewModelTest {
             )
             val state = awaitWhere { !it.isVisible }
             assertFalse(state.isVisible)
-            assertEquals(0, state.more)
             cancelAndIgnoreRemainingEvents()
         }
     }

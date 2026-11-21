@@ -19,7 +19,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(43);
+select plan(45);
 
 -- --- Fixtures ---------------------------------------------------------------
 -- Alice owns circle A; Bob is a caregiver, Carol a viewer and Erin a caregiver
@@ -112,6 +112,14 @@ select lives_ok(
 
 select lives_ok(
   $$ insert into core.patients
+       (id, circle_id, display_name, linked_user_id, reminder_policy)
+     values ('40000000-0000-4000-8000-000000000009',
+             '20000000-0000-4000-8000-00000000000a', 'Only primary',
+             '10000000-0000-4000-8000-000000000002', 'primary_only') $$,
+  'a linked patient may use the primary_only policy');
+
+select lives_ok(
+  $$ insert into core.patients
        (id, circle_id, display_name, linked_user_id, primary_caregiver_id)
      values ('40000000-0000-4000-8000-000000000008',
              '20000000-0000-4000-8000-00000000000a', 'Explicit primary',
@@ -137,7 +145,13 @@ select is(
   (select primary_caregiver_id from core.patients
     where id = '40000000-0000-4000-8000-000000000007'),
   null::uuid,
-  'D11: the self-managed default only applies to primary_with_escalation');
+  'D11: an all_caregivers patient is not made their own primary');
+
+select is(
+  (select primary_caregiver_id from core.patients
+    where id = '40000000-0000-4000-8000-000000000009'),
+  '10000000-0000-4000-8000-000000000002'::uuid,
+  'D11: the self-managed default also applies to primary_only');
 
 select is(
   (select primary_caregiver_id from core.patients

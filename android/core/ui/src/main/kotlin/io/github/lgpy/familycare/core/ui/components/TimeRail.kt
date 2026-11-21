@@ -1,6 +1,22 @@
 package io.github.lgpy.familycare.core.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.res.stringResource
+import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.theme.FamilyCareDimens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -105,7 +121,7 @@ fun TimeRail(
                 }
             }
             val slotColumns = groups.mapIndexed { index, group ->
-                subcompose(RailSlotsKey(index)) { SlotColumn(group.slots) }.map {
+                subcompose(RailSlotsKey(index)) { GroupSlots(group, doneGroups[index]) }.map {
                     it.measure(
                         Constraints(
                             minWidth = slotsWidth,
@@ -149,7 +165,7 @@ fun TimeRail(
                 Constraints(maxWidth = Constraints.Infinity, maxHeight = maxHeight)
             }
             val slotPlaceables = groups.mapIndexed { index, group ->
-                subcompose(StackedSlotsKey(index)) { SlotColumn(group.slots) }
+                subcompose(StackedSlotsKey(index)) { GroupSlots(group, doneGroups[index]) }
                     .map { it.measure(slotConstraints) }
             }
 
@@ -177,6 +193,82 @@ fun TimeRail(
                     y += groupHeights[index] + groupGap
                 }
             }
+        }
+    }
+}
+
+/**
+ * A time's slots. A time whose every dose was given folds into one quiet
+ * "All given" line with the patients' avatars, so the morning's history does
+ * not push what is still to do off the screen; tapping it shows the slots.
+ */
+@Composable
+private fun GroupSlots(group: DoseTimeGroup, done: Boolean) {
+    if (!done) {
+        SlotColumn(group.slots)
+        return
+    }
+    var expanded by rememberSaveable(group.time) { mutableStateOf(false) }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        DoneGroupSummary(
+            slots = group.slots,
+            expanded = expanded,
+            onToggle = { expanded = !expanded },
+        )
+        if (expanded) SlotColumn(group.slots)
+    }
+}
+
+@Composable
+private fun DoneGroupSummary(
+    slots: List<DoseSlotUi>,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val toggleLabel = stringResource(if (expanded) R.string.dose_group_hide else R.string.dose_group_show)
+    CompositionLocalProvider(LocalContentColor provides scheme.onSurfaceVariant) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = FamilyCareDimens.MinTouchTarget)
+                .clip(RoundedCornerShape(FamilyCareDimens.CardRadius))
+                .dashedOutline(scheme.outlineVariant, FamilyCareDimens.CardRadius)
+                .clickable(onClickLabel = toggleLabel, onClick = onToggle)
+                .padding(horizontal = FamilyCareDimens.SlotHorizontalPadding, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = FcIcons.CheckCircle,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = stringResource(R.string.dose_group_all_given),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+                slots.forEach { slot ->
+                    PatientAvatar(
+                        patientId = slot.patientId,
+                        name = slot.patientName,
+                        size = 26.dp,
+                    )
+                }
+            }
+            Icon(
+                imageVector = FcIcons.ExpandMore,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(20.dp)
+                    .rotate(if (expanded) 180f else 0f),
+            )
         }
     }
 }

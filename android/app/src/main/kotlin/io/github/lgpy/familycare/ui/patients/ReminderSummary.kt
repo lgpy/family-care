@@ -23,6 +23,12 @@ internal enum class ReminderSummaryKind {
     /** "You first, then everyone" — the primary caregiver is the signed-in user. */
     YOU_FIRST,
 
+    /** "Only Leonardo is reminded" — only the primary caregiver gets it. */
+    ONLY_PRIMARY,
+
+    /** "Only you are reminded" — the signed-in user is the only one reminded. */
+    ONLY_YOU,
+
     /** "Everyone is reminded" — every caregiver gets the reminder. */
     EVERYONE,
 
@@ -38,9 +44,10 @@ internal enum class ReminderSummaryKind {
  * Pure, so the mapping is unit-tested without a device: the choice must not
  * depend on anything the composable measures or on `fontScale`.
  *
- * A `primary_with_escalation` patient whose primary is neither named nor the
- * user keeps the policy label — there is no name to put in the sentence.
- * `null` means there is nothing to say (the patient is not loaded).
+ * A `primary_with_escalation` or `primary_only` patient whose primary is
+ * neither named nor the user keeps the policy label — there is no name to put
+ * in the sentence. `null` means there is nothing to say (the patient is not
+ * loaded).
  */
 internal fun reminderSummaryKind(
     policy: ReminderPolicy?,
@@ -51,6 +58,12 @@ internal fun reminderSummaryKind(
     ReminderPolicy.PRIMARY_WITH_ESCALATION -> when {
         primaryIsMe -> ReminderSummaryKind.YOU_FIRST
         primaryFirstName != null -> ReminderSummaryKind.PRIMARY_FIRST
+        else -> ReminderSummaryKind.POLICY
+    }
+
+    ReminderPolicy.PRIMARY_ONLY -> when {
+        primaryIsMe -> ReminderSummaryKind.ONLY_YOU
+        primaryFirstName != null -> ReminderSummaryKind.ONLY_PRIMARY
         else -> ReminderSummaryKind.POLICY
     }
 
@@ -101,6 +114,15 @@ internal fun reminderSummaryText(
         args = listOf(escalationDelayMinutes),
     )
 
+    ReminderSummaryKind.ONLY_PRIMARY -> ReminderSummaryText(
+        resource = R.string.patients_reminder_only_primary,
+        args = listOf(primaryFirstName.orEmpty()),
+    )
+
+    ReminderSummaryKind.ONLY_YOU -> ReminderSummaryText(
+        resource = R.string.patients_reminder_only_you,
+    )
+
     ReminderSummaryKind.EVERYONE -> ReminderSummaryText(
         resource = R.string.patients_reminder_everyone,
     )
@@ -148,5 +170,6 @@ internal fun reminderPolicyOption(policy: ReminderPolicy, escalationDelayMinutes
         )
 
         ReminderPolicy.ALL_CAREGIVERS -> stringResource(R.string.patients_policy_all_caregivers)
+        ReminderPolicy.PRIMARY_ONLY -> stringResource(R.string.patients_policy_primary_only)
         ReminderPolicy.ROTA -> stringResource(R.string.patients_policy_unavailable)
     }

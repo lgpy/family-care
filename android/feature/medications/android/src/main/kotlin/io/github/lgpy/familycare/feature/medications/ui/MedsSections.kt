@@ -18,7 +18,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.ui.R
+import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.components.inlineIconSize
+import io.github.lgpy.familycare.core.ui.theme.FamilyCareTheme
 import java.math.BigDecimal
 import java.time.LocalTime
 
@@ -122,6 +124,54 @@ fun MedsTimeChip(
                 modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
             )
             Text(text = label, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+/**
+ * The medicine's instructions beside their icon. A note that says to take it
+ * fasting gets the no-food icon in amber, so it stands out from an ordinary
+ * note; the words themselves are shown as written.
+ */
+@Composable
+fun MedsInstructionsItem(instructions: String, modifier: Modifier = Modifier) {
+    if (instructionsMentionFasting(instructions)) {
+        MedsMetaItem(
+            icon = FcIcons.NoFood,
+            text = instructions,
+            modifier = modifier,
+            tint = FamilyCareTheme.colors.attentionAccent,
+        )
+    } else {
+        MedsMetaItem(icon = FcIcons.Restaurant, text = instructions, modifier = modifier)
+    }
+}
+
+/** The amber "Fasting" tag on a dose row, for a medicine taken on an empty stomach. */
+@Composable
+fun FastingTag(modifier: Modifier = Modifier) {
+    val colors = FamilyCareTheme.colors
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = colors.attentionContainer,
+        contentColor = colors.onAttentionContainer,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = FcIcons.NoFood,
+                contentDescription = null,
+                modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
+            )
+            Text(
+                text = stringResource(R.string.meds_fasting),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }

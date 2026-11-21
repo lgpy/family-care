@@ -87,6 +87,7 @@ import io.github.lgpy.familycare.feature.medications.ui.DoseStepper
 import io.github.lgpy.familycare.feature.medications.ui.QuantityField
 import io.github.lgpy.familycare.feature.medications.ui.ScheduleFields
 import io.github.lgpy.familycare.feature.medications.ui.formatQuantity
+import io.github.lgpy.familycare.feature.medications.ui.instructionsMentionFasting
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
 import io.github.lgpy.familycare.feature.medications.ui.labelRes
 import io.github.lgpy.familycare.feature.medications.ui.localizedDate
@@ -211,6 +212,7 @@ fun MedicationFormScreen(
                         HowManySection(viewModel, uiState)
                     }
 
+                    FastingChip(state = uiState, onToggle = viewModel::onFastingToggled)
                     MoreOptionsSection(viewModel, uiState)
                 }
             }
@@ -538,6 +540,30 @@ private fun LookSection(state: MedicationFormUiState, onChange: () -> Unit) {
 }
 
 // --- When, each time, how many ----------------------------------------------
+
+/**
+ * "Fasting": one tap marks the medicine as taken on an empty stomach. It writes
+ * the phrase into the instructions (shown under "More options"), so the chip
+ * is on whenever the note mentions fasting, however it got there.
+ */
+@Composable
+private fun FastingChip(state: MedicationFormUiState, onToggle: (Boolean, String) -> Unit) {
+    val fasting = instructionsMentionFasting(state.instructions)
+    val phrase = stringResource(R.string.meds_fasting_phrase)
+    FilterChip(
+        selected = fasting,
+        onClick = { onToggle(!fasting, phrase) },
+        enabled = state.canWrite,
+        label = { Text(text = stringResource(R.string.meds_fasting)) },
+        leadingIcon = {
+            Icon(
+                imageVector = FcIcons.NoFood,
+                contentDescription = null,
+                modifier = Modifier.size(inlineIconSize(MaterialTheme.typography.labelLarge)),
+            )
+        },
+    )
+}
 
 private data class TimePreset(
     val labelRes: Int,
@@ -1121,6 +1147,7 @@ private fun ReminderFields(viewModel: MedicationFormViewModel, state: Medication
 @Composable
 private fun ReminderPolicy.labelRes(): Int = when (this) {
     ReminderPolicy.PRIMARY_WITH_ESCALATION -> R.string.patients_policy_primary_with_escalation_short
+    ReminderPolicy.PRIMARY_ONLY -> R.string.patients_policy_primary_only
     ReminderPolicy.ALL_CAREGIVERS -> R.string.patients_policy_all_caregivers
     ReminderPolicy.ROTA -> R.string.patients_policy_unavailable
 }

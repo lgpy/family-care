@@ -21,6 +21,9 @@ enum class ReminderPolicy(val serverValue: String) {
     /** Primary caregiver is reminded; the server escalates to the others. */
     PRIMARY_WITH_ESCALATION("primary_with_escalation"),
 
+    /** Only the primary caregiver is reminded; nothing escalates. */
+    PRIMARY_ONLY("primary_only"),
+
     /** Every caregiver is reminded; the first confirmation wins. */
     ALL_CAREGIVERS("all_caregivers"),
 
@@ -57,9 +60,10 @@ enum class ReminderPolicy(val serverValue: String) {
  *   Optional: the profile shows the age it implies, and nothing else depends on
  *   it. 1900..2100, mirroring the `patients_birth_year_range` check.
  * @param primaryCaregiverId Who is reminded first for
- *   [ReminderPolicy.PRIMARY_WITH_ESCALATION]. Must be an owner or caregiver of
- *   the circle (the server enforces it; [PatientRules.validate] checks it too
- *   when it has the member list).
+ *   [ReminderPolicy.PRIMARY_WITH_ESCALATION] and who alone is reminded for
+ *   [ReminderPolicy.PRIMARY_ONLY]. Must be an owner or caregiver of the circle
+ *   (the server enforces it; [PatientRules.validate] checks it too when it has
+ *   the member list).
  * @param escalationDelayMinutes Minutes after the reminder before the server
  *   alerts the other caregivers. 0..1440, default 30.
  * @param missedWindowMinutes After this many minutes an unconfirmed dose shows as
@@ -87,11 +91,11 @@ data class Patient(
     val isArchived: Boolean get() = archivedAt != null
 
     /**
-     * Whether the patient is set to primary-with-escalation but has nobody to
-     * remind. Possible since D24: removing a member clears them as primary
-     * caregiver and linked user of the circle's patients. The UI flags such a
-     * patient (Patients list, patient form) and the form refuses to save one
-     * until a primary is chosen.
+     * Whether the patient is set to a policy that needs a primary caregiver but
+     * has nobody to remind. Possible since D24: removing a member clears them as
+     * primary caregiver and linked user of the circle's patients. The UI flags
+     * such a patient (Patients list, patient form) and the form refuses to save
+     * one until a primary is chosen.
      */
     val needsPrimaryCaregiver: Boolean
         get() = PatientRules.needsPrimaryCaregiver(reminderPolicy, primaryCaregiverId)
@@ -166,11 +170,12 @@ object PatientRules {
 
     /**
      * Whether a patient with [policy] and [primaryCaregiverId] has nobody to
-     * remind: primary-with-escalation needs a primary caregiver; the other
-     * policies route to everyone and therefore need none.
+     * remind: primary-with-escalation and primary-only need a primary caregiver;
+     * the other policies route to everyone and therefore need none.
      */
     fun needsPrimaryCaregiver(policy: ReminderPolicy, primaryCaregiverId: String?): Boolean =
-        policy == ReminderPolicy.PRIMARY_WITH_ESCALATION && primaryCaregiverId == null
+        (policy == ReminderPolicy.PRIMARY_WITH_ESCALATION ||
+            policy == ReminderPolicy.PRIMARY_ONLY) && primaryCaregiverId == null
 
     /**
      * A patient that has never been stored, with the documented defaults.

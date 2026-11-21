@@ -91,6 +91,20 @@ class PatientRulesTest {
     }
 
     @Test
+    fun `a self-managed primary-only patient is their own primary caregiver`() {
+        val newPatient = PatientRules.newPatient(
+            id = PatientId("patient-1"),
+            circleId = circle,
+            displayName = "Mom",
+            linkedUserId = "user-caregiver",
+            reminderPolicy = ReminderPolicy.PRIMARY_ONLY,
+        )
+
+        assertEquals(ReminderPolicy.PRIMARY_ONLY, newPatient.reminderPolicy)
+        assertEquals("user-caregiver", newPatient.primaryCaregiverId)
+    }
+
+    @Test
     fun `the linked user wins over a chosen caregiver`() {
         val newPatient = PatientRules.newPatient(
             id = PatientId("patient-1"),
@@ -248,9 +262,14 @@ class PatientRulesTest {
     fun `rota is modelled but never offered or saved`() {
         assertFalse(ReminderPolicy.ROTA.isOffered)
         assertTrue(ReminderPolicy.PRIMARY_WITH_ESCALATION.isOffered)
+        assertTrue(ReminderPolicy.PRIMARY_ONLY.isOffered)
         assertTrue(ReminderPolicy.ALL_CAREGIVERS.isOffered)
         assertEquals(
-            listOf(ReminderPolicy.PRIMARY_WITH_ESCALATION, ReminderPolicy.ALL_CAREGIVERS),
+            listOf(
+                ReminderPolicy.PRIMARY_WITH_ESCALATION,
+                ReminderPolicy.PRIMARY_ONLY,
+                ReminderPolicy.ALL_CAREGIVERS,
+            ),
             ReminderPolicy.offered,
         )
 
@@ -267,6 +286,7 @@ class PatientRulesTest {
             ReminderPolicy.fromServer("primary_with_escalation"),
         )
         assertEquals(ReminderPolicy.ALL_CAREGIVERS, ReminderPolicy.fromServer("all_caregivers"))
+        assertEquals(ReminderPolicy.PRIMARY_ONLY, ReminderPolicy.fromServer("primary_only"))
         assertEquals(ReminderPolicy.ROTA, ReminderPolicy.fromServer("rota"))
         assertNull(ReminderPolicy.fromServer("weekly"))
         assertNull(ReminderPolicy.fromServer(null))
@@ -342,6 +362,19 @@ class PatientRulesTest {
     @Test
     fun `a patient with a primary caregiver does not need one`() {
         assertFalse(patient(primaryCaregiverId = caregiver.userId).needsPrimaryCaregiver)
+    }
+
+    @Test
+    fun `primary only and no primary caregiver needs one`() {
+        assertTrue(
+            patient(reminderPolicy = ReminderPolicy.PRIMARY_ONLY).needsPrimaryCaregiver,
+        )
+        assertFalse(
+            patient(
+                reminderPolicy = ReminderPolicy.PRIMARY_ONLY,
+                primaryCaregiverId = caregiver.userId,
+            ).needsPrimaryCaregiver,
+        )
     }
 
     @Test

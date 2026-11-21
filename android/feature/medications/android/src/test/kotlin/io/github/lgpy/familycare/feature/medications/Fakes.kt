@@ -47,6 +47,7 @@ import io.github.lgpy.familycare.feature.medications.domain.ShoppingStatus
 import io.github.lgpy.familycare.feature.medications.domain.SkipReason
 import io.github.lgpy.familycare.feature.medications.domain.StockMovement
 import io.github.lgpy.familycare.feature.medications.domain.StockMovementId
+import io.github.lgpy.familycare.feature.medications.domain.StockMovementKind
 import io.github.lgpy.familycare.feature.medications.domain.StockSummary
 import io.github.lgpy.familycare.feature.medications.domain.TimeSlotGroup
 import java.math.BigDecimal
@@ -394,7 +395,16 @@ fun stockSummary(
 fun stockOverview(
     item: MedicationWithRegimens = withRegimens(),
     summary: StockSummary = stockSummary(),
-    movements: List<StockMovement> = emptyList(),
+    // A counted ledger by default: an untracked medication is never low.
+    movements: List<StockMovement> = listOf(
+        StockMovement(
+            id = StockMovementId("count-${item.medication.id.value}"),
+            medicationId = item.medication.id,
+            kind = StockMovementKind.COUNT,
+            quantity = BigDecimal.TEN,
+            occurredAt = Instant.EPOCH,
+        ),
+    ),
 ): StockOverview = StockOverview(item = item, movements = movements, summary = summary)
 
 /** One recorded [StockRepository.recordCount] call. */

@@ -66,6 +66,7 @@ import io.github.lgpy.familycare.feature.medications.domain.Regimen
 import io.github.lgpy.familycare.feature.medications.domain.StockSummary
 import io.github.lgpy.familycare.feature.medications.ui.PrescriptionState
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
+import io.github.lgpy.familycare.feature.medications.ui.MedsInstructionsItem
 import io.github.lgpy.familycare.feature.medications.ui.MedsMetaItem
 import io.github.lgpy.familycare.feature.medications.ui.MedsSectionTitle
 import io.github.lgpy.familycare.feature.medications.ui.MedsTimeChip
@@ -470,9 +471,7 @@ private fun WhenSection(
                         }
                     }
                 }
-                foodNote?.let { note ->
-                    MedsMetaItem(icon = FcIcons.Restaurant, text = note)
-                }
+                foodNote?.let { note -> MedsInstructionsItem(note) }
             }
             if (canEdit) {
                 Icon(

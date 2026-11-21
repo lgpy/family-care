@@ -14,8 +14,10 @@
  *   retried every day; it carries the number of users actually notified.
  * - A medication that is no longer low (or is stopped/deleted) has its row
  *   removed, which re-arms the alert.
- * - Recipients are the circle's owners and caregivers, never viewers, and not
- *   routed by reminder policy: stock is everyone's errand.
+ * - Recipients are the circle's owners and caregivers, never viewers, with one
+ *   exception: a `primary_only` medication (effective policy and primary) goes
+ *   to the primary alone, and to everyone when that primary is null (the safe
+ *   direction, D24). Stock is otherwise everyone's errand.
  * - Text is generic and localized per recipient (D8): no medication, patient or
  *   quantity in the payload, only `type=stock_low` (D4).
  */
@@ -33,6 +35,7 @@ import {
   type Membership,
   type Profile,
   type PushDevice,
+  type ReminderPolicy,
 } from './escalation.ts';
 
 /** An active medication with the circle its recipients come from. */
@@ -40,6 +43,10 @@ export interface ActiveStockMedication extends StockMedication {
   id: string;
   patient_id: string;
   circle_id: string;
+  /** Effective policy: the medication override else the patient's (D7/D11). */
+  reminder_policy: ReminderPolicy;
+  /** Effective primary caregiver: the medication override else the patient's. */
+  primary_caregiver_id: string | null;
   /**
    * The patient is archived (D30): the medication is hidden from the job, so
    * it is never low here and its alert row is cleared like a stopped one.
@@ -145,15 +152,29 @@ export function medicationTimeZone(regimens: Regimen[]): string {
   return latest.time_zone;
 }
 
-/** Owners and caregivers of the circle; viewers never receive stock pushes. */
+/**
+ * The users who receive a stock push for a medication: owners and caregivers of
+ * the circle, except a `primary_only` medication, which goes to its primary
+ * caregiver alone. A null primary falls back to everyone - the safe direction
+ * when D24 removed the member. Viewers never receive stock pushes.
+ */
 export function stockRecipients(
   memberships: Membership[],
   circleId: string,
+  reminderPolicy: ReminderPolicy,
+  primaryCaregiverId: string | null,
 ): string[] {
   const recipients = new Set<string>();
   for (const membership of memberships) {
     if (membership.circle_id !== circleId) continue;
     if (membership.role !== 'owner' && membership.role !== 'caregiver') continue;
+    if (
+      reminderPolicy === 'primary_only' &&
+      primaryCaregiverId !== null &&
+      membership.user_id !== primaryCaregiverId
+    ) {
+      continue;
+    }
     recipients.add(membership.user_id);
   }
   return [...recipients].sort();
@@ -220,7 +241,12 @@ export function planStockAlerts(input: StockAlertInput): StockAlertPlan {
 
     const tag = stockAlertTag(medication.id);
     let notified = 0;
-    for (const userId of stockRecipients(input.memberships, medication.circle_id)) {
+    for (const userId of stockRecipients(
+      input.memberships,
+      medication.circle_id,
+      medication.reminder_policy,
+      medication.primary_caregiver_id,
+    )) {
       const tokens = tokensByUser.get(userId);
       if (!tokens || tokens.length === 0) continue;
       const language = languageOf(profilesByUser.get(userId));
