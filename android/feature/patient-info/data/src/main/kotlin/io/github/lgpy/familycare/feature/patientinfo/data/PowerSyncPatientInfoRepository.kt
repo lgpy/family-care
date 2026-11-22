@@ -55,7 +55,67 @@ internal class PowerSyncPatientInfoRepository(
 
     override suspend fun save(patientId: PatientId, info: PatientInfo): PatientInfoResult<Unit> {
         val normalized = info.normalized()
+        validateAndAuthorize(patientId, normalized)?.let { return it }
 
+        return writeInOneTransaction { transaction ->
+            if (transaction.currentRow(patientId) != null) {
+                val values = patientInfoColumnValues(normalized)
+                transaction.execute(
+                    updatePatientInfoSql(values.keys.toList()),
+                    patientInfoUpdateParameters(values, patientId.value),
+                )
+            } else {
+                transaction.execute(INSERT_PATIENT_INFO, patientInfoInsertParameters(patientId.value, normalized))
+            }
+            null
+        }
+    }
+
+    override suspend fun saveChanges(
+        patientId: PatientId,
+        loaded: PatientInfo?,
+        edited: PatientInfo,
+    ): PatientInfoResult<Unit> {
+        val normalized = edited.normalized()
+        validateAndAuthorize(patientId, normalized)?.let { return it }
+        val snapshot = (loaded ?: PatientInfo()).normalized()
+
+        return writeInOneTransaction { transaction ->
+            // Read in the same transaction as the write: what another caregiver
+            // synced since the form opened is merged, never overwritten.
+            val current = transaction.currentRow(patientId)
+            if (current == null) {
+                transaction.execute(INSERT_PATIENT_INFO, patientInfoInsertParameters(patientId.value, normalized))
+                return@writeInOneTransaction null
+            }
+
+            val plan = planPatientInfoUpdate(snapshot, normalized, current.normalized())
+            when {
+                !plan.validation.isValid -> PatientInfoError.Invalid(plan.validation)
+
+                plan.columns.isEmpty() -> null
+
+                else -> {
+                    transaction.execute(
+                        updatePatientInfoSql(plan.columns.keys.toList()),
+                        patientInfoUpdateParameters(plan.columns, patientId.value),
+                    )
+                    null
+                }
+            }
+        }
+    }
+
+    // --- Helpers -------------------------------------------------------------
+
+    /**
+     * The checks every save starts with: the domain rules, then the signed-in
+     * writer's role and the patient's circle. A failure result, or null to go on.
+     */
+    private suspend fun validateAndAuthorize(
+        patientId: PatientId,
+        normalized: PatientInfo,
+    ): PatientInfoResult.Failure? {
         val validation = normalized.validate()
         if (!validation.isValid) {
             return PatientInfoResult.Failure(PatientInfoError.Invalid(validation))
@@ -65,22 +125,16 @@ internal class PowerSyncPatientInfoRepository(
         if (!database.patientInCircle(patientId, access)) {
             return PatientInfoResult.Failure(PatientInfoError.NotAllowed)
         }
-
-        val exists = database.getOptional(
-            SELECT_PATIENT_INFO_PRESENT,
-            listOf(patientId.value),
-        ) { it.getString("id") } != null
-
-        return writeInOneTransaction {
-            if (exists) {
-                it.execute(UPDATE_PATIENT_INFO, patientInfoUpdateParameters(normalized, patientId.value))
-            } else {
-                it.execute(INSERT_PATIENT_INFO, patientInfoInsertParameters(patientId.value, normalized))
-            }
-        }
+        return null
     }
 
-    // --- Helpers -------------------------------------------------------------
+    /** The patient's row as it is inside this transaction, or null when there is none. */
+    private fun com.powersync.db.internal.PowerSyncTransaction.currentRow(
+        patientId: PatientId,
+    ): PatientInfo? = getOptional(
+        SELECT_PATIENT_INFO_BY_ID,
+        listOf(patientId.value),
+    ) { cursor -> cursor.toPatientInfoRow() }?.toPatientInfo()
 
     /** The signed-in writer's circle access, or null when nobody may write. */
     private suspend fun writerAccess(): CircleAccess? {
@@ -113,14 +167,15 @@ internal class PowerSyncPatientInfoRepository(
     /**
      * Runs [block] in one write transaction, or reports [PatientInfoError.Unknown].
      *
-     * One transaction means one upload transaction. A local database error
-     * becomes [PatientInfoError.Unknown]; cancellation is never swallowed.
+     * One transaction means one upload transaction. [block] returns the error
+     * to report, or null once it has written; a local database error becomes
+     * [PatientInfoError.Unknown]; cancellation is never swallowed.
      */
     private suspend fun writeInOneTransaction(
-        block: (com.powersync.db.internal.PowerSyncTransaction) -> Unit,
+        block: (com.powersync.db.internal.PowerSyncTransaction) -> PatientInfoError?,
     ): PatientInfoResult<Unit> = try {
-        database.writeTransaction { transaction -> block(transaction) }
-        PatientInfoResult.Success(Unit)
+        val error = database.writeTransaction { transaction -> block(transaction) }
+        if (error == null) PatientInfoResult.Success(Unit) else PatientInfoResult.Failure(error)
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (_: Exception) {
