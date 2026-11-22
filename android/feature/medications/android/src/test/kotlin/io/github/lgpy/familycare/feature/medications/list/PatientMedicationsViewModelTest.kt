@@ -14,6 +14,7 @@ import io.github.lgpy.familycare.feature.medications.regimen
 import io.github.lgpy.familycare.feature.medications.testPatientId
 import io.github.lgpy.familycare.feature.medications.withRegimens
 import java.time.Instant
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -57,7 +58,10 @@ class PatientMedicationsViewModelTest {
         patientRepository = patients,
         stockRepository = stock,
         careCircleRepository = circles,
+        now = { now },
     )
+
+    private val now = Instant.parse("2026-11-16T10:00:00Z")
 
     @Test
     fun `splits active from stopped and resolves the patient name`() = runTest {
@@ -83,6 +87,39 @@ class PatientMedicationsViewModelTest {
             assertEquals(listOf("Amlodipine"), state.stopped.map { it.medication.name })
             assertFalse(state.stoppedExpanded)
             assertTrue(state.canWrite)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a medication stopped with a future last day stays active until the stop takes effect`() = runTest {
+        patients.setPatient(patient())
+        meds.now = now
+        val item = withRegimens(medication(id = "med-1", name = "Metformin"))
+        meds.setPatientMedications(testPatientId, listOf(item))
+
+        meds.stop(item.medication, item.regimens.single(), LocalDate.of(2026, 11, 20))
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && it.active.isNotEmpty() }
+            assertEquals(listOf("Metformin"), state.active.map { it.medication.name })
+            assertTrue(state.stopped.isEmpty())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a medication stopped with a past last day moves to the stopped section`() = runTest {
+        patients.setPatient(patient())
+        meds.now = now
+        val item = withRegimens(medication(id = "med-1", name = "Metformin"))
+        meds.setPatientMedications(testPatientId, listOf(item))
+
+        meds.stop(item.medication, item.regimens.single(), LocalDate.of(2026, 11, 10))
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && it.stopped.isNotEmpty() }
+            assertTrue(state.active.isEmpty())
             cancelAndIgnoreRemainingEvents()
         }
     }

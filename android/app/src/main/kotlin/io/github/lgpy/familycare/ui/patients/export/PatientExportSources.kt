@@ -18,6 +18,7 @@ import io.github.lgpy.familycare.feature.medications.domain.Medication
 import io.github.lgpy.familycare.feature.medications.domain.Regimen
 import io.github.lgpy.familycare.feature.patientinfo.data.PatientInfoRepository
 import io.github.lgpy.familycare.feature.patientinfo.domain.PatientInfo
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.flow.first
@@ -42,6 +43,7 @@ class MedicationsExportSource(
     private val medicationRepository: MedicationRepository,
     private val stockRepository: StockRepository,
     private val resources: Resources,
+    private val now: () -> Instant = { Instant.now() },
 ) : PatientExportSource {
 
     override val key: String = "medications"
@@ -100,8 +102,9 @@ class MedicationsExportSource(
 
     override suspend fun pdfSections(patient: Patient): List<ExportSection> {
         val items = medicationRepository.observe(patient.id).first()
-        val active = items.filter { !it.medication.isStopped }
-        val stopped = items.filter { it.medication.isStopped }
+        val at = now()
+        val active = items.filter { !it.medication.isStoppedAt(at) }
+        val stopped = items.filter { it.medication.isStoppedAt(at) }
         return listOf(
             ExportSection(
                 order = 10,

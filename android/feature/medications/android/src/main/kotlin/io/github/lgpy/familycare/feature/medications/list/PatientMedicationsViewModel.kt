@@ -10,6 +10,7 @@ import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.MedicationWithRegimens
 import io.github.lgpy.familycare.feature.medications.data.StockRepository
 import io.github.lgpy.familycare.feature.medications.domain.Medication
+import java.time.Instant
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +53,7 @@ class PatientMedicationsViewModel(
     patientRepository: PatientRepository,
     stockRepository: StockRepository,
     careCircleRepository: CareCircleRepository,
+    now: () -> Instant = { Instant.now() },
 ) : ViewModel() {
 
     private val local = MutableStateFlow(PatientMedicationsUiState())
@@ -71,12 +73,13 @@ class PatientMedicationsViewModel(
             low = stock[item.medication.id.value]?.low == true,
         )
 
+        val at = now()
         val active = medications
-            .filterNot { it.medication.isStopped }
+            .filterNot { it.medication.isStoppedAt(at) }
             .sortedBy { it.medication.name.lowercase() }
             .map(::row)
         val stopped = medications
-            .filter { it.medication.isStopped }
+            .filter { it.medication.isStoppedAt(at) }
             .sortedByDescending { it.medication.stoppedAt }
             .map(::row)
         state.copy(

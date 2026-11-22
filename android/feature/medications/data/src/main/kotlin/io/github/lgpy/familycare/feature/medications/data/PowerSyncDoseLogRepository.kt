@@ -93,7 +93,7 @@ internal class PowerSyncDoseLogRepository(
         if (userId == null) {
             flowOf(emptyList())
         } else {
-            database.watch(SELECT_ACTIVE_MEDICATIONS, listOf(userId)) { cursor ->
+            database.watch(SELECT_ACTIVE_MEDICATIONS, listOf(now().toString(), userId)) { cursor ->
                 cursor.toMedicationRow()
             }.map { rows -> rows.toMedicationWithRegimens() }
                 .distinctUntilChanged()
@@ -105,7 +105,7 @@ internal class PowerSyncDoseLogRepository(
         if (userId == null) {
             flowOf(emptyList())
         } else {
-            database.watch(SELECT_ACTIVE_MEDICATIONS, listOf(userId)) { cursor ->
+            database.watch(SELECT_ACTIVE_MEDICATIONS, listOf(now().toString(), userId)) { cursor ->
                 cursor.toMedicationRow()
             }.map { rows -> rows.toMedicationWithRegimens() }
                 .distinctUntilChanged()

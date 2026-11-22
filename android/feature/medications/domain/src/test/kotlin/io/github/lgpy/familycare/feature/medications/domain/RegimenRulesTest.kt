@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -411,6 +412,36 @@ class RegimenRulesTest {
         assertThrows(IllegalArgumentException::class.java) {
             RegimenRules.changeRegimen(current, day("2026-11-10"), current.id)
         }
+    }
+
+    @Test
+    fun `a stop takes effect at the start of the day after the last day in the regimen zone`() {
+        val lisbon = ZoneId.of("Europe/Lisbon")
+        val saoPaulo = ZoneId.of("America/Sao_Paulo")
+        val now = Instant.parse("2026-11-16T10:00:00Z")
+
+        assertEquals(
+            Instant.parse("2026-11-21T00:00:00Z"),
+            RegimenRules.stopEffectiveAt(day("2026-11-20"), lisbon, now),
+        )
+        assertEquals(
+            Instant.parse("2026-11-21T03:00:00Z"),
+            RegimenRules.stopEffectiveAt(day("2026-11-20"), saoPaulo, now),
+        )
+    }
+
+    @Test
+    fun `a stop whose last day is already over takes effect now`() {
+        val lisbon = ZoneId.of("Europe/Lisbon")
+        val now = Instant.parse("2026-11-16T10:00:00Z")
+
+        assertEquals(now, RegimenRules.stopEffectiveAt(day("2026-11-15"), lisbon, now))
+        assertEquals(now, RegimenRules.stopEffectiveAt(day("2026-11-10"), lisbon, now))
+        // Last day today: the rest of today's doses stay, the stop is at midnight.
+        assertEquals(
+            Instant.parse("2026-11-17T00:00:00Z"),
+            RegimenRules.stopEffectiveAt(day("2026-11-16"), lisbon, now),
+        )
     }
 
     @Test

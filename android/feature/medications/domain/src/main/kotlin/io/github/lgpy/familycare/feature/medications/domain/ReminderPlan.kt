@@ -94,7 +94,7 @@ object ReminderPlanning {
 
         sources.forEach { source ->
             val medication = source.medication
-            if (medication.isStopped) return@forEach
+            if (medication.isStoppedAt(now)) return@forEach
             val patient = patients[medication.patientId] ?: return@forEach
             if (patient.isArchived) return@forEach
             if (!ReminderRouting.shouldRemindOnThisDevice(

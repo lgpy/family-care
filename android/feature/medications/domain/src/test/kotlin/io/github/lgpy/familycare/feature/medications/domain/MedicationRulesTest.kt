@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.time.Instant
 import java.time.LocalDate
 
 /**
@@ -31,7 +32,18 @@ class MedicationRulesTest {
         assertTrue(medication.requiresPrescription)
         assertNull(medication.reminderPolicy, "null inherits the patient's policy")
         assertNull(medication.primaryCaregiverId)
-        assertFalse(medication.isStopped)
+        assertFalse(medication.isStoppedAt(Instant.parse("2026-11-16T07:00:00Z")))
+    }
+
+    @Test
+    fun `a medication is stopped only from the instant its stop takes effect`() {
+        val effective = Instant.parse("2026-11-20T00:00:00Z")
+        val medication = Fixtures.medication(stoppedAt = effective)
+
+        assertFalse(medication.isStoppedAt(effective.minusSeconds(1)), "pending stop")
+        assertTrue(medication.isStoppedAt(effective), "stopped_at <= now")
+        assertTrue(medication.isStoppedAt(effective.plusSeconds(1)))
+        assertFalse(Fixtures.medication(stoppedAt = null).isStoppedAt(effective))
     }
 
     @Test

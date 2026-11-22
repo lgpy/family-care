@@ -42,6 +42,7 @@ import io.github.lgpy.familycare.feature.medications.domain.MedicationId
 import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestion
 import io.github.lgpy.familycare.feature.medications.domain.Regimen
 import io.github.lgpy.familycare.feature.medications.domain.RegimenId
+import io.github.lgpy.familycare.feature.medications.domain.RegimenRules
 import io.github.lgpy.familycare.feature.medications.domain.ScheduleType
 import io.github.lgpy.familycare.feature.medications.domain.ShoppingStatus
 import io.github.lgpy.familycare.feature.medications.domain.SkipReason
@@ -245,6 +246,9 @@ class FakeMedicationRepository : MedicationRepository {
     val stops = mutableListOf<StopCall>()
     var stopResult: MedsResult<Unit> = MedsResult.Success(Unit)
 
+    /** The clock [stop] uses for the instant the stop takes effect. */
+    var now: Instant = Instant.parse("2026-11-16T10:00:00Z")
+
     override fun observe(patientId: PatientId): Flow<List<MedicationWithRegimens>> =
         patientFlows.getOrPut(patientId.value) { MutableStateFlow(emptyList()) }
 
@@ -293,7 +297,31 @@ class FakeMedicationRepository : MedicationRepository {
         lastDay: LocalDate,
     ): MedsResult<Unit> {
         stops += StopCall(medication, regimen, lastDay)
+        if (stopResult is MedsResult.Success<*>) applyStop(medication.id, regimen, lastDay)
         return stopResult
+    }
+
+    /**
+     * What the real repository does on a successful stop: the regimen ends on
+     * [lastDay] and `stopped_at` becomes the instant the stop takes effect
+     * (start of the day after, or now). The active list drops the medication
+     * only once that instant has passed.
+     */
+    private fun applyStop(id: MedicationId, regimen: Regimen, lastDay: LocalDate) {
+        val stoppedAt = RegimenRules.stopEffectiveAt(lastDay, regimen.timeZone, now)
+        fun stopped(item: MedicationWithRegimens) = item.copy(
+            medication = item.medication.copy(stoppedAt = stoppedAt),
+            regimens = item.regimens.map {
+                if (it.id == regimen.id) it.copy(endDate = lastDay) else it
+            },
+        )
+        observed[id.value]?.let { flow -> flow.value = flow.value?.let(::stopped) }
+        patientFlows.values.forEach { flow ->
+            flow.value = flow.value.map { if (it.id == id) stopped(it) else it }
+        }
+        activeFlow.value = activeFlow.value
+            .map { if (it.id == id) stopped(it) else it }
+            .filterNot { it.medication.isStoppedAt(now) }
     }
 }
 

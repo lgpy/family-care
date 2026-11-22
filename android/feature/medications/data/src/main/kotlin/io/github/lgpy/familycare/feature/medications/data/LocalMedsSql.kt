@@ -75,9 +75,13 @@ internal const val SELECT_PATIENT_MEDICATIONS = MEDICATION_SELECT + """
 /**
  * Every active medication of the current circle: not stopped, patient not
  * archived. Used by the medication list and by the doses-today query.
+ *
+ * Parameters: the current instant as ISO text (`Instant.toString`), then the
+ * user id. `stopped_at` is the instant a stop takes effect, so a medication
+ * with a stop still in the future is active.
  */
 internal const val SELECT_ACTIVE_MEDICATIONS = MEDICATION_SELECT + """
-    WHERE m.stopped_at IS NULL
+    WHERE (m.stopped_at IS NULL OR m.stopped_at > ?)
       AND p.archived_at IS NULL
       AND p.circle_id = (
           SELECT circle_id FROM memberships WHERE user_id = ? ORDER BY created_at ASC, id ASC LIMIT 1

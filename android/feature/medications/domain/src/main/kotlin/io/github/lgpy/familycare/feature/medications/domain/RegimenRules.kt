@@ -1,5 +1,6 @@
 package io.github.lgpy.familycare.feature.medications.domain
 
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -182,6 +183,17 @@ object RegimenRules {
         } else {
             RegimenStop.Rejected(errors)
         }
+    }
+
+    /**
+     * The instant a stop with [lastDay] takes effect: the start of the day
+     * after [lastDay] in [timeZone] (the regimen's zone), or [now] when that
+     * instant is already past. This is what `meds.medications.stopped_at`
+     * stores; a medication counts as stopped once `stopped_at <= now`.
+     */
+    fun stopEffectiveAt(lastDay: LocalDate, timeZone: ZoneId, now: Instant): Instant {
+        val dayAfter = lastDay.plusDays(1).atStartOfDay(timeZone).toInstant()
+        return if (dayAfter.isBefore(now)) now else dayAfter
     }
 
     /**

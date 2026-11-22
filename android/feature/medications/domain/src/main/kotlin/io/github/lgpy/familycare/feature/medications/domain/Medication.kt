@@ -57,8 +57,10 @@ enum class MedicationForm(val serverValue: String) {
  *   it (docs/domain/care-circle.md).
  * @param primaryCaregiverId Overrides the patient's primary caregiver when set;
  *   null inherits.
- * @param stoppedAt Set when the medication is stopped; the regimen is ended
- *   separately ([RegimenRules.stop]). Null while active.
+ * @param stoppedAt The instant the stop takes effect, set when the medication
+ *   is stopped; the regimen is ended separately ([RegimenRules.stop]). Null
+ *   while active. A medication is stopped only when this is not null and not
+ *   after "now" ([isStoppedAt]); a later instant is a pending stop.
  */
 data class Medication(
     val id: MedicationId,
@@ -78,8 +80,13 @@ data class Medication(
     val stoppedAt: Instant? = null,
 ) {
 
-    /** Whether the medication is stopped (hidden from Today, no new doses). */
-    val isStopped: Boolean get() = stoppedAt != null
+    /**
+     * Whether the medication is stopped at [now] (hidden from Today, no new
+     * doses): [stoppedAt] is set and not in the future. A stop with a future
+     * last day writes a future [stoppedAt] ([RegimenRules.stopEffectiveAt]);
+     * until then the medication is still active.
+     */
+    fun isStoppedAt(now: Instant): Boolean = stoppedAt != null && !stoppedAt.isAfter(now)
 
     /**
      * The values as they should be stored: the name and stock unit trimmed, a
