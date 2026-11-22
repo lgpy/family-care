@@ -75,6 +75,17 @@ data class DoseGroupUi(
     /** The group confirmation target, from the data layer's view. */
     val timeSlotGroup: io.github.lgpy.familycare.feature.medications.domain.TimeSlotGroup
         get() = group.group
+
+    /**
+     * The group reduced to the slots with no effective entry (neither taken nor
+     * skipped), or null when every slot already has one. This is what a tap may
+     * write: confirming a slot that already has an entry would record the dose
+     * twice.
+     */
+    fun pendingGroup(): io.github.lgpy.familycare.feature.medications.domain.TimeSlotGroup? {
+        val pending = group.slots.filter { slot -> group.statusOf(slot)?.isConfirmed != true }
+        return if (pending.isEmpty()) null else group.group.copy(slots = pending)
+    }
 }
 
 /**
@@ -150,11 +161,22 @@ class DosesTodayViewModel(
         save(group)
     }
 
-    /** The second tap of the double-confirmation dialog: writes another entry. */
+    /**
+     * The second tap of the double-confirmation dialog: writes the slots that
+     * still have no effective entry. A slot that already has a taken or skipped
+     * entry is never written again (that would be a recorded double dose and a
+     * second stock deduction); with none left, nothing is written.
+     *
+     * The slots are read from the card as it is now, not from the group the
+     * dialog opened with: another phone may have confirmed more of them since.
+     */
     fun giveAnyway() {
-        val group = uiState.value.warning ?: return
+        val warned = uiState.value.warning ?: return
         local.update { it.copy(warning = null) }
-        save(group)
+        val current = uiState.value.groups.firstOrNull {
+            it.patientId == warned.patientId && it.scheduledLocal == warned.scheduledLocal
+        } ?: return
+        save(current)
     }
 
     fun dismissWarning() {
@@ -166,9 +188,10 @@ class DosesTodayViewModel(
     }
 
     private fun save(group: DoseGroupUi) {
+        val pending = group.pendingGroup() ?: return
         local.update { it.copy(saving = true, error = null) }
         viewModelScope.launch {
-            val result = doseLogRepository.confirm(group.timeSlotGroup, givenBy = GivenBy.Me)
+            val result = doseLogRepository.confirm(pending, givenBy = GivenBy.Me)
             local.update { it.copy(saving = false, error = result.uiError()) }
         }
     }

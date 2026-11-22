@@ -111,10 +111,18 @@ class NeedsAttentionViewModel(
         save(group)
     }
 
+    /**
+     * Writes the slots that still have no effective entry, read from the card as
+     * it is now; a group that has meanwhile been fully confirmed has left the
+     * card and nothing is written (see [DosesTodayViewModel.giveAnyway]).
+     */
     fun giveAnyway() {
-        val group = uiState.value.warning ?: return
+        val warned = uiState.value.warning ?: return
         local.update { it.copy(warning = null) }
-        save(group)
+        val current = uiState.value.groups.firstOrNull {
+            it.patientId == warned.patientId && it.scheduledLocal == warned.scheduledLocal
+        } ?: return
+        save(current)
     }
 
     fun dismissWarning() {
@@ -126,9 +134,10 @@ class NeedsAttentionViewModel(
     }
 
     private fun save(group: DoseGroupUi) {
+        val pending = group.pendingGroup() ?: return
         local.update { it.copy(saving = true, error = null) }
         viewModelScope.launch {
-            val result = doseLogRepository.confirm(group.timeSlotGroup, givenBy = GivenBy.Me)
+            val result = doseLogRepository.confirm(pending, givenBy = GivenBy.Me)
             local.update { it.copy(saving = false, error = result.uiError()) }
         }
     }

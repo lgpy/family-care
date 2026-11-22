@@ -323,4 +323,70 @@ class NeedsAttentionViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `give anyway writes only the slots without an entry`() = runTest {
+        val taken = entry(firstSlot, givenByUserId = "u2")
+        doses.todayFlow.value = listOf(
+            todayGroup(
+                slots = listOf(firstSlot, secondSlot),
+                statuses = listOf(
+                    status(firstSlot, DoseState.TAKEN, listOf(taken)),
+                    status(secondSlot, DoseState.OVERDUE),
+                ),
+            ),
+        )
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            viewModel.give(testPatientId, scheduled)
+            assertEquals(0, doses.confirmations.size)
+
+            viewModel.giveAnyway()
+
+            val call = doses.confirmations.single()
+            assertEquals(listOf(secondSlot.slotId), call.group.slots.map { it.slotId })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `give anyway writes nothing once every slot has an entry`() = runTest {
+        val taken = entry(firstSlot, givenByUserId = "u2")
+        doses.todayFlow.value = listOf(
+            todayGroup(
+                slots = listOf(firstSlot, secondSlot),
+                statuses = listOf(
+                    status(firstSlot, DoseState.TAKEN, listOf(taken)),
+                    status(secondSlot, DoseState.OVERDUE),
+                ),
+            ),
+        )
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            viewModel.give(testPatientId, scheduled)
+
+            // Another phone confirms the rest while the dialog is open: the group
+            // leaves the card and "Give anyway" has nothing to write.
+            val other = entry(secondSlot, id = "entry-2", givenByUserId = "u2")
+            doses.todayFlow.value = listOf(
+                todayGroup(
+                    slots = listOf(firstSlot, secondSlot),
+                    statuses = listOf(
+                        status(firstSlot, DoseState.TAKEN, listOf(taken)),
+                        status(secondSlot, DoseState.TAKEN, listOf(other)),
+                    ),
+                ),
+            )
+            awaitWhere { it.groups.isEmpty() }
+
+            viewModel.giveAnyway()
+            assertEquals(0, doses.confirmations.size)
+            assertNull(viewModel.uiState.value.warning)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }
