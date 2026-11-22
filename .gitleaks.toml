@@ -11,12 +11,11 @@ title = "Family Care"
 useDefault = true
 
 [[allowlists]]
-description = "Design docs quote placeholder credentials; build output and caches are never committed."
+description = "Build output and caches are never committed; placeholder credentials are allowed by pattern only."
 
+# docs/ and ops/ are scanned like everything else: ops/backup is where the age
+# identity, the database URL and the B2 key are handled during a restore.
 paths = [
-  # Documentation describes security posture and may show placeholder tokens.
-  '''^docs/''',
-  '''^ops/''',
   # Build output and tooling caches.
   '''(^|/)build/''',
   '''(^|/)\.gradle/''',

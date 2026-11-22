@@ -78,10 +78,13 @@ internal const val SELECT_PATIENT_MEDICATIONS = MEDICATION_SELECT + """
  *
  * Parameters: the current instant as ISO text (`Instant.toString`), then the
  * user id. `stopped_at` is the instant a stop takes effect, so a medication
- * with a stop still in the future is active.
+ * with a stop still in the future is active. The comparison is on text, and a
+ * synced `timestamptz` may use a space where the parameter has `T`
+ * (`parseServerInstant`), so the separator is normalised first: a space sorts
+ * before `T` and would make a stop later the same UTC day look already past.
  */
 internal const val SELECT_ACTIVE_MEDICATIONS = MEDICATION_SELECT + """
-    WHERE (m.stopped_at IS NULL OR m.stopped_at > ?)
+    WHERE (m.stopped_at IS NULL OR replace(m.stopped_at, ' ', 'T') > ?)
       AND p.archived_at IS NULL
       AND p.circle_id = (
           SELECT circle_id FROM memberships WHERE user_id = ? ORDER BY created_at ASC, id ASC LIMIT 1

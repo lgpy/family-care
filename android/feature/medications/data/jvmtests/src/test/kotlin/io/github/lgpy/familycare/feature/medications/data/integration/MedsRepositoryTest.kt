@@ -329,6 +329,31 @@ class MedsRepositoryTest {
     }
 
     @Test
+    fun `a pending stop in the server's timestamp format is still active on its last day`() = runBlocking {
+        seedCircleAndPatient()
+        local.database.execute(
+            INSERT_MEDICATION,
+            listOf(MED_1, PATIENT_1, "Metformin", "tablet", "tablet", 0L, 7L),
+        )
+        local.database.execute(
+            INSERT_REGIMEN,
+            listOf(REGIMEN_1, MED_1, "daily", "2026-11-01", "Europe/Lisbon",
+                """[{"time":"19:00","quantity":1}]"""),
+        )
+        // A synced timestamptz may arrive with a space and a short offset
+        // (parseServerInstant); the stop is later on the same UTC day as NOW.
+        local.database.execute(
+            "UPDATE medications SET stopped_at = ? WHERE id = ?",
+            listOf("2026-11-19 23:00:00+00", MED_1),
+        )
+        local.database.drainUploadQueue()
+
+        val active = withTimeout(TIMEOUT_MS) { medicationRepository().activeMedications.first() }
+
+        assertEquals(listOf(MedicationId(MED_1)), active.map { it.medication.id })
+    }
+
+    @Test
     fun `stopping before the start day is refused`() = runBlocking {
         seedCircleAndPatient()
         val repository = medicationRepository()

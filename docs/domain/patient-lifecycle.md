@@ -4,7 +4,7 @@ Decision: D30. Core feature (patients, audit) — no feature module owns it, but
 
 ## Archive
 - **Who:** owners only (`core.can(patient, 'manage')`). Unarchive likewise.
-- **Effect:** `core.patients.archived_at` set. The patient becomes **read-only for everyone**: the database refuses insert/update/delete on that patient's rows in `meds.*`, `appointments.appointments`, `info.patient_info` and `core.patient_access_overrides` (one trigger per table calling `core.assert_patient_writable(patient_id)`, error `42501`, message `patient is archived`). The only allowed write to an archived patient is the owner clearing `archived_at` (and a full erase).
+- **Effect:** `core.patients.archived_at` set. The patient becomes **read-only for everyone**: the database refuses insert/update/delete on that patient's rows in `meds.*`, `appointments.appointments`, `info.patient_info` and `core.patient_access_overrides` (one trigger per table calling `core.assert_patient_writable(patient_id)`, error `42501`, message `patient is archived`). The only allowed client write to an archived patient is the owner clearing `archived_at` (and a full erase). One server-side exception: `core.remove_member` clears the removed member's `primary_caregiver_id` and `linked_user_id` on archived patients too, so removing a member never fails because of an archived patient.
 - **Hidden:** from Today (all cards), the Agenda, Shopping, dose and appointment reminders, the server's escalation, low-stock and appointment-change pushes. Still synced (so it can be unarchived and viewed). The Patients list shows archived patients in a collapsed "Archived" section; the profile opens read-only with an "Archived" banner.
 
 ## Erase (delete a patient)
