@@ -8,6 +8,7 @@ import io.github.lgpy.familycare.feature.medications.FakeMedicationRepository
 import io.github.lgpy.familycare.feature.medications.awaitWhere
 import io.github.lgpy.familycare.feature.medications.data.GivenBy
 import io.github.lgpy.familycare.feature.medications.domain.DoseState
+import io.github.lgpy.familycare.feature.medications.domain.DoseStatusRules
 import io.github.lgpy.familycare.feature.medications.entry
 import io.github.lgpy.familycare.feature.medications.medication
 import io.github.lgpy.familycare.feature.medications.regimen
@@ -16,6 +17,7 @@ import io.github.lgpy.familycare.feature.medications.status
 import io.github.lgpy.familycare.feature.medications.testPatientId
 import io.github.lgpy.familycare.feature.medications.todayGroup
 import io.github.lgpy.familycare.feature.medications.withRegimens
+import java.time.Instant
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -192,6 +194,198 @@ class NeedsAttentionViewModelTest {
             val state = awaitWhere { it.loaded && it.missedEarlier.isNotEmpty() }
             assertEquals(1, state.missedEarlier.size)
             assertTrue(state.groups.isEmpty())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /**
+     * A group of [at]'s slots with the status the domain derives at [now]
+     * (patient defaults: 30 minutes to overdue, 120 to missed).
+     */
+    private fun groupAt(
+        now: Instant,
+        at: LocalDateTime,
+        confirmed: Boolean = false,
+    ) = slot(firstRegimen, at).let { doseSlot ->
+        val entries = if (confirmed) listOf(entry(doseSlot)) else emptyList()
+        todayGroup(
+            slots = listOf(doseSlot),
+            statuses = listOf(
+                DoseStatusRules.doseStatus(
+                    slot = doseSlot,
+                    entries = entries,
+                    now = now,
+                    escalationDelayMinutes = 30,
+                    missedWindowMinutes = 120,
+                ),
+            ),
+        )
+    }
+
+    private val lateEvening: LocalDateTime = LocalDateTime.of(2026, 11, 19, 23, 0)
+
+    @Test
+    fun `a late dose still overdue after midnight stays in needs attention`() = runTest {
+        // Fixed clock 00:20 on the 20th (Lisbon is UTC+0): the 23:00 dose of the
+        // 19th is OVERDUE (past the 30-minute delay, inside the 120-minute window)
+        // but it is yesterday's, so only the recent list has it.
+        val now = Instant.parse("2026-11-20T00:20:00Z")
+        val yesterdays = groupAt(now, lateEvening)
+        assertEquals(DoseState.OVERDUE, yesterdays.statuses.single().state)
+        doses.todayFlow.value = emptyList()
+        doses.recentFlow.value = listOf(yesterdays)
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            val row = state.groups.single()
+            assertEquals(DoseGroupState.OVERDUE, row.state)
+            assertEquals(lateEvening, row.scheduledLocal)
+            assertTrue("not missed yet", state.missedEarlier.isEmpty())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a late dose still due after midnight is shown too`() = runTest {
+        val now = Instant.parse("2026-11-20T00:10:00Z")
+        val yesterdays = groupAt(now, lateEvening.plusMinutes(50))
+        assertEquals(DoseState.DUE, yesterdays.statuses.single().state)
+        doses.recentFlow.value = listOf(yesterdays)
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            assertEquals(DoseGroupState.DUE, state.groups.single().state)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `yesterday's dose leaves needs attention when it turns missed`() = runTest {
+        // 01:10: past the 120-minute window of the 23:00 dose.
+        val now = Instant.parse("2026-11-20T01:10:00Z")
+        val yesterdays = groupAt(now, lateEvening)
+        assertEquals(DoseState.MISSED, yesterdays.statuses.single().state)
+        doses.recentFlow.value = listOf(yesterdays)
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && it.missedEarlier.isNotEmpty() }
+            assertTrue(state.groups.isEmpty())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `yesterday's dose leaves needs attention when it is confirmed`() = runTest {
+        val now = Instant.parse("2026-11-20T00:20:00Z")
+        doses.recentFlow.value = listOf(groupAt(now, lateEvening))
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            doses.recentFlow.value = listOf(groupAt(now, lateEvening, confirmed = true))
+
+            val state = awaitWhere { it.groups.isEmpty() }
+            assertTrue(state.missedEarlier.isEmpty())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `giving yesterday's overdue dose confirms that group`() = runTest {
+        val now = Instant.parse("2026-11-20T00:20:00Z")
+        doses.recentFlow.value = listOf(groupAt(now, lateEvening))
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            viewModel.give(testPatientId, lateEvening)
+
+            assertEquals(lateEvening, doses.confirmations.single().group.scheduledLocal)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `earlier rows come before today's`() = runTest {
+        val now = Instant.parse("2026-11-20T00:20:00Z")
+        doses.recentFlow.value = listOf(groupAt(now, lateEvening))
+        val todays = slot(firstRegimen, LocalDateTime.of(2026, 11, 20, 0, 0))
+        doses.todayFlow.value = listOf(
+            todayGroup(slots = listOf(todays), statuses = listOf(status(todays, DoseState.OVERDUE))),
+        )
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && it.groups.size == 2 }
+            assertEquals(
+                listOf(lateEvening, LocalDateTime.of(2026, 11, 20, 0, 0)),
+                state.groups.map { it.scheduledLocal },
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `give anyway writes only the slots without an entry`() = runTest {
+        val taken = entry(firstSlot, givenByUserId = "u2")
+        doses.todayFlow.value = listOf(
+            todayGroup(
+                slots = listOf(firstSlot, secondSlot),
+                statuses = listOf(
+                    status(firstSlot, DoseState.TAKEN, listOf(taken)),
+                    status(secondSlot, DoseState.OVERDUE),
+                ),
+            ),
+        )
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            viewModel.give(testPatientId, scheduled)
+            assertEquals(0, doses.confirmations.size)
+
+            viewModel.giveAnyway()
+
+            val call = doses.confirmations.single()
+            assertEquals(listOf(secondSlot.slotId), call.group.slots.map { it.slotId })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `give anyway writes nothing once every slot has an entry`() = runTest {
+        val taken = entry(firstSlot, givenByUserId = "u2")
+        doses.todayFlow.value = listOf(
+            todayGroup(
+                slots = listOf(firstSlot, secondSlot),
+                statuses = listOf(
+                    status(firstSlot, DoseState.TAKEN, listOf(taken)),
+                    status(secondSlot, DoseState.OVERDUE),
+                ),
+            ),
+        )
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            viewModel.give(testPatientId, scheduled)
+
+            // Another phone confirms the rest while the dialog is open: the group
+            // leaves the card and "Give anyway" has nothing to write.
+            val other = entry(secondSlot, id = "entry-2", givenByUserId = "u2")
+            doses.todayFlow.value = listOf(
+                todayGroup(
+                    slots = listOf(firstSlot, secondSlot),
+                    statuses = listOf(
+                        status(firstSlot, DoseState.TAKEN, listOf(taken)),
+                        status(secondSlot, DoseState.TAKEN, listOf(other)),
+                    ),
+                ),
+            )
+            awaitWhere { it.groups.isEmpty() }
+
+            viewModel.giveAnyway()
+            assertEquals(0, doses.confirmations.size)
+            assertNull(viewModel.uiState.value.warning)
             cancelAndIgnoreRemainingEvents()
         }
     }

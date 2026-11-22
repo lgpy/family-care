@@ -174,9 +174,103 @@ class DosesTodayViewModelTest {
             assertTrue(viewModel.uiState.value.groups.single().hasConfirmation)
             assertEquals(0, doses.confirmations.size)
 
+            // Every slot already has an entry: "Give anyway" has nothing left to write.
             viewModel.giveAnyway()
-            assertEquals(1, doses.confirmations.size)
+            assertEquals(0, doses.confirmations.size)
             assertNull(viewModel.uiState.value.warning)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `give anyway writes only the slots without an entry`() = runTest {
+        val taken = entry(firstSlot, givenByUserId = "u2")
+        doses.todayFlow.value = listOf(
+            todayGroup(
+                slots = listOf(firstSlot, secondSlot),
+                statuses = listOf(
+                    status(firstSlot, DoseState.TAKEN, listOf(taken)),
+                    status(secondSlot, DoseState.DUE),
+                ),
+            ),
+        )
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            viewModel.give(testPatientId, scheduled)
+            assertEquals(0, doses.confirmations.size)
+
+            viewModel.giveAnyway()
+
+            val call = doses.confirmations.single()
+            assertEquals(listOf(secondSlot.slotId), call.group.slots.map { it.slotId })
+            assertEquals(GivenBy.Me, call.givenBy)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `give anyway does not write a second entry for a skipped slot`() = runTest {
+        val skipped = entry(
+            firstSlot,
+            outcome = io.github.lgpy.familycare.feature.medications.domain.DoseOutcome.SKIPPED,
+            skipReason = io.github.lgpy.familycare.feature.medications.domain.SkipReason.OTHER,
+        )
+        doses.todayFlow.value = listOf(
+            todayGroup(
+                slots = listOf(firstSlot, secondSlot),
+                statuses = listOf(
+                    status(firstSlot, DoseState.SKIPPED, listOf(skipped)),
+                    status(secondSlot, DoseState.OVERDUE),
+                ),
+            ),
+        )
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            viewModel.give(testPatientId, scheduled)
+            viewModel.giveAnyway()
+
+            assertEquals(listOf(secondSlot.slotId), doses.confirmations.single().group.slots.map { it.slotId })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `give anyway reads the slots at the time of the tap, not when the warning opened`() = runTest {
+        val taken = entry(firstSlot, givenByUserId = "u2")
+        doses.todayFlow.value = listOf(
+            todayGroup(
+                slots = listOf(firstSlot, secondSlot),
+                statuses = listOf(
+                    status(firstSlot, DoseState.TAKEN, listOf(taken)),
+                    status(secondSlot, DoseState.DUE),
+                ),
+            ),
+        )
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.groups.isNotEmpty() }
+            viewModel.give(testPatientId, scheduled)
+
+            // Another phone confirms the second slot while the dialog is open.
+            val other = entry(secondSlot, id = "entry-2", givenByUserId = "u2")
+            doses.todayFlow.value = listOf(
+                todayGroup(
+                    slots = listOf(firstSlot, secondSlot),
+                    statuses = listOf(
+                        status(firstSlot, DoseState.TAKEN, listOf(taken)),
+                        status(secondSlot, DoseState.TAKEN, listOf(other)),
+                    ),
+                ),
+            )
+            awaitWhere { it.groups.single().allConfirmed }
+
+            viewModel.giveAnyway()
+            assertEquals(0, doses.confirmations.size)
             cancelAndIgnoreRemainingEvents()
         }
     }

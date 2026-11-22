@@ -20,6 +20,7 @@ import io.github.lgpy.familycare.feature.medications.ui.MedsUiError
 import io.github.lgpy.familycare.feature.medications.ui.parseStockQuantity
 import io.github.lgpy.familycare.feature.medications.ui.stockErrors
 import io.github.lgpy.familycare.feature.medications.ui.uiError
+import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -51,6 +52,7 @@ class MedicationDetailViewModel(
     private val stockRepository: StockRepository,
     careCircleRepository: CareCircleRepository,
     private val today: () -> LocalDate = { LocalDate.now() },
+    private val now: () -> Instant = { Instant.now() },
 ) : ViewModel() {
 
     private val local = MutableStateFlow(MedicationDetailUiState())
@@ -67,6 +69,7 @@ class MedicationDetailViewModel(
             notFound = loaded == null,
             canWrite = role.canWrite,
             medication = loaded,
+            stopped = loaded?.medication?.isStoppedAt(now()) == true,
             stock = stock,
             recentEntries = entries
                 .sortedWith(compareByDescending<DoseLogEntry> { it.scheduledLocal }.thenByDescending { it.actualAt })
@@ -268,6 +271,8 @@ data class MedicationDetailUiState(
     val notFound: Boolean = false,
     val canWrite: Boolean = false,
     val medication: MedicationWithRegimens? = null,
+    /** `stopped_at` is set and not in the future; a pending stop is still active. */
+    val stopped: Boolean = false,
     /** The ledger, its summary and the medication, from [StockRepository] (D28). */
     val stock: StockOverview? = null,
     val recentEntries: List<DoseLogEntry> = emptyList(),

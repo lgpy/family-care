@@ -1,7 +1,9 @@
 package io.github.lgpy.familycare.feature.medications.domain
 
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 /**
  * The regimen rules from docs/domain/medications.md, including versioning
@@ -9,16 +11,24 @@ import java.time.ZoneId
  * starts a new one.
  *
  * Everything here is pure and clock-free: callers pass the date a change takes
- * effect, so the same rules run in tests, in the app and (mirrored in
- * TypeScript) on the server.
+ * effect and, where a rule depends on today, the instant to read it from, so
+ * the same rules run in tests, in the app and (mirrored in TypeScript) on the
+ * server.
  *
  * ### Versioning contract
  * - [changeRegimen] requires `effectiveFrom > current.startDate`; a change on
  *   the day the regimen started would leave a zero-day version and make history
  *   ambiguous. The UI asks for the next day instead.
+ * - [changeRegimen] also requires `effectiveFrom` to be after today in the
+ *   regimen's time zone: a change effective today or earlier would orphan
+ *   doses already given today and show them again as unconfirmed slots. The
+ *   caller passes `now` so the rule stays testable.
  * - When the current version has an end date, a change may take effect at most
  *   on that last day. Later than that would leave the new version no days (or,
  *   further out, days with no regimen); that is a new regimen, not a change.
+ * - A dose change of an every-N-days regimen that keeps N keeps its phase: the
+ *   new version starts on the first day of the old phase on or after
+ *   `effectiveFrom`, so a change never brings a dose forward.
  * - The new version inherits the current version's `endDate`, so a treatment
  *   that was due to stop on 30 April still stops on 30 April after a dose change.
  * - [stop] may only move the end date earlier, never later, and never before the
@@ -101,6 +111,8 @@ object RegimenRules {
      *
      * @param times The new times (quantity changes live here). Defaults to the
      *   current ones.
+     * @param now The instant "today" is read from, in the regimen's zone;
+     *   [effectiveFrom] must be after that date.
      */
     fun changeRegimen(
         current: Regimen,
@@ -111,6 +123,7 @@ object RegimenRules {
         weekdays: Int? = current.weekdays,
         intervalDays: Int? = current.intervalDays,
         timeZone: ZoneId = current.timeZone,
+        now: Instant,
     ): RegimenChange {
         require(newId != current.id) { "A regimen change needs a new id" }
 
@@ -118,6 +131,12 @@ object RegimenRules {
 
         if (!effectiveFrom.isAfter(current.startDate)) {
             // A change on (or before) the first day would leave a zero-day version.
+            errors += MedicationField.REGIMEN_START_DATE
+        }
+        if (!effectiveFrom.isAfter(latestToday(now, current.timeZone, timeZone))) {
+            // A change effective today or earlier would end the old version
+            // before doses that already happened (or were confirmed) today, and
+            // the new version would show them as unconfirmed slots.
             errors += MedicationField.REGIMEN_START_DATE
         }
         val currentEnd = current.endDate
@@ -131,12 +150,22 @@ object RegimenRules {
             return RegimenChange.Rejected(errors)
         }
 
+        // An every-N-days regimen is anchored on its start date, so a dose change
+        // that keeps N must keep the phase: start on the first day of the old
+        // phase on or after effectiveFrom, not on effectiveFrom itself.
+        val startDate = phaseAlignedStart(current, effectiveFrom, scheduleType, intervalDays)
+        if (currentEnd != null && startDate.isAfter(currentEnd)) {
+            // The next dose of the old phase is after the end date: the new
+            // version would have no days.
+            return RegimenChange.Rejected(setOf(MedicationField.REGIMEN_START_DATE))
+        }
+
         val ended = current.copy(endDate = effectiveFrom.minusDays(1)).normalized()
         val started = Regimen(
             id = newId,
             medicationId = current.medicationId,
             scheduleType = scheduleType,
-            startDate = effectiveFrom,
+            startDate = startDate,
             timeZone = timeZone,
             times = times,
             endDate = currentEnd,
@@ -150,6 +179,42 @@ object RegimenRules {
             return RegimenChange.Rejected(errors)
         }
         return RegimenChange.Changed(ended = ended, started = started)
+    }
+
+    /**
+     * "Today" at [now]: the later of the dates in the zone of the version being
+     * ended and in the zone of the new one, so a zone change cannot slip a date
+     * that is already today in either zone past the "after today" rule.
+     */
+    private fun latestToday(now: Instant, vararg zones: ZoneId): LocalDate =
+        zones.map { LocalDate.ofInstant(now, it) }.max()
+
+    /**
+     * The start date of the version that replaces [current] from [effectiveFrom].
+     *
+     * [effectiveFrom] itself, except when both versions are every-N-days with
+     * the same N: then the first date on [current]'s phase that is on or after
+     * [effectiveFrom] (so a dose that was not due is not made due by the change).
+     * [effectiveFrom] is after [current]'s start date here, so the offset is
+     * positive.
+     */
+    private fun phaseAlignedStart(
+        current: Regimen,
+        effectiveFrom: LocalDate,
+        scheduleType: ScheduleType,
+        intervalDays: Int?,
+    ): LocalDate {
+        val interval = current.intervalDays
+        if (current.scheduleType != ScheduleType.EVERY_N_DAYS ||
+            scheduleType != ScheduleType.EVERY_N_DAYS ||
+            interval == null ||
+            interval != intervalDays
+        ) {
+            return effectiveFrom
+        }
+        val offset = ChronoUnit.DAYS.between(current.startDate, effectiveFrom)
+        val remainder = offset % interval
+        return if (remainder == 0L) effectiveFrom else effectiveFrom.plusDays(interval - remainder)
     }
 
     /**
@@ -182,6 +247,17 @@ object RegimenRules {
         } else {
             RegimenStop.Rejected(errors)
         }
+    }
+
+    /**
+     * The instant a stop with [lastDay] takes effect: the start of the day
+     * after [lastDay] in [timeZone] (the regimen's zone), or [now] when that
+     * instant is already past. This is what `meds.medications.stopped_at`
+     * stores; a medication counts as stopped once `stopped_at <= now`.
+     */
+    fun stopEffectiveAt(lastDay: LocalDate, timeZone: ZoneId, now: Instant): Instant {
+        val dayAfter = lastDay.plusDays(1).atStartOfDay(timeZone).toInstant()
+        return if (dayAfter.isBefore(now)) now else dayAfter
     }
 
     /**

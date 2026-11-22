@@ -239,7 +239,9 @@ class StockRepositoryTest {
         }
         assertTrue(low.single().low, "A count of zero with an active daily schedule is low")
 
-        medications.stop(medication(MED_1), regimen(REGIMEN_1, MED_1), TODAY)
+        // A last day that is already over stops the medication now; a last day of
+        // today would only stop it at midnight and it would stay low until then.
+        medications.stop(medication(MED_1), regimen(REGIMEN_1, MED_1), TODAY.minusDays(1))
         local.database.drainUploadQueue()
 
         val afterStop = withTimeout(TIMEOUT_MS) {

@@ -108,6 +108,17 @@ class MissedDosesViewModelTest {
     }
 
     @Test
+    fun `a dose still overdue is not missed yet`() = runTest {
+        recent(group(yesterday, DoseState.OVERDUE), group(twoDaysAgo, DoseState.DUE))
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded }
+            assertTrue(state.days.isEmpty())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `not given skips only the open slots, at the scheduled time`() = runTest {
         val at = twoDaysAgo.plusHours(7)
         recent(group(at, DoseState.TAKEN, DoseState.MISSED))

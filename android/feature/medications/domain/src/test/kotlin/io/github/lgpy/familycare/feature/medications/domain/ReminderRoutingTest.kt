@@ -292,6 +292,26 @@ class ReminderPlanningTest {
     }
 
     @Test
+    fun `a medication with a pending stop is still planned until it takes effect`() {
+        // Stopped with last day the 17th: stopped_at is the start of the 18th,
+        // the regimen ends on the 17th. Tuesday 17th must keep its reminder.
+        val pending = ReminderSource(
+            Fixtures.medication(stoppedAt = Instant.parse("2026-11-18T00:00:00Z")),
+            listOf(Fixtures.regimen(endDate = LocalDate.parse("2026-11-17"))),
+        )
+
+        val groups = plan("2026-11-16T07:00:00Z", listOf(pending))
+
+        assertEquals(
+            listOf(
+                Instant.parse("2026-11-16T08:00:00Z"),
+                Instant.parse("2026-11-17T08:00:00Z"),
+            ),
+            groups.map { it.instant },
+        )
+    }
+
+    @Test
     fun `DST spring-forward keeps the wall clock and moves the instant`() {
         // Europe/Lisbon springs forward at 01:00 on 2026-03-29. A 01:30 dose
         // that day does not exist; java.time resolves it to 02:30+01:00, i.e.

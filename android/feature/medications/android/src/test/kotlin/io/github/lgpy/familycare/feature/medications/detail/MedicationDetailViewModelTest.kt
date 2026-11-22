@@ -52,6 +52,7 @@ class MedicationDetailViewModelTest {
     private lateinit var circles: FakeCareCircleRepository
 
     private val today = LocalDate.of(2026, 11, 18)
+    private val now = Instant.parse("2026-11-18T10:00:00Z")
     private val firstVersion = regimen(
         id = "reg-1",
         medicationId = "med-1",
@@ -85,6 +86,7 @@ class MedicationDetailViewModelTest {
         stockRepository = stock,
         careCircleRepository = circles,
         today = { today },
+        now = { now },
     )
 
     @Test
@@ -141,6 +143,43 @@ class MedicationDetailViewModelTest {
             assertEquals(today, call.lastDay)
             assertEquals(secondVersion.id, call.regimen.id)
             assertFalse(viewModel.uiState.value.showStop)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a stop with a future last day leaves the medication active until it takes effect`() = runTest {
+        meds.now = now
+        meds.observed["med-1"] = MutableStateFlow(
+            withRegimens(medication(id = "med-1"), listOf(secondVersion)),
+        )
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.medication != null }
+            viewModel.requestStop()
+            viewModel.onLastDayChanged(today.plusDays(3).toString())
+            viewModel.confirmStop()
+
+            val state = awaitWhere { it.medication?.medication?.stoppedAt != null }
+            assertFalse(state.stopped)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a stop with a past last day marks the medication stopped`() = runTest {
+        meds.now = now
+        meds.observed["med-1"] = MutableStateFlow(
+            withRegimens(medication(id = "med-1"), listOf(secondVersion)),
+        )
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.medication != null }
+            viewModel.requestStop()
+            viewModel.onLastDayChanged(today.minusDays(1).toString())
+            viewModel.confirmStop()
+
+            assertTrue(awaitWhere { it.stopped }.stopped)
             cancelAndIgnoreRemainingEvents()
         }
     }

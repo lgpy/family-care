@@ -49,7 +49,8 @@ import kotlinx.coroutines.flow.map
  * ([MemberRole.canWrite]) and that the row belongs to the current circle; a
  * viewer gets [MedsError.NotAllowed] and nothing is queued.
  *
- * @param now The clock used for `stopped_at`; injectable for tests.
+ * @param now The clock used for `stopped_at` and the active-medications filter;
+ *   injectable for tests.
  * @param newId Generates regimen ids; injectable so a test can assert the queued
  *   rows.
  */
@@ -83,7 +84,7 @@ internal class PowerSyncMedicationRepository(
             if (userId == null) {
                 flowOf(emptyList())
             } else {
-                database.watch(SELECT_ACTIVE_MEDICATIONS, listOf(userId)) { cursor ->
+                database.watch(SELECT_ACTIVE_MEDICATIONS, listOf(now().toString(), userId)) { cursor ->
                     cursor.toMedicationRow()
                 }.map { rows -> rows.toMedicationWithRegimens() }
             }
@@ -184,6 +185,7 @@ internal class PowerSyncMedicationRepository(
             weekdays = weekdays,
             intervalDays = intervalDays,
             timeZone = timeZone,
+            now = now(),
         )
         val changed = when (change) {
             is RegimenChange.Rejected -> return MedsResult.Failure(MedsError.Invalid(change.errors))
@@ -221,7 +223,9 @@ internal class PowerSyncMedicationRepository(
             return MedsResult.Failure(MedsError.NotAllowed)
         }
 
-        val stoppedAt = now().toString()
+        // The stop takes effect the day after the last day, not now: the doses
+        // up to and including the last day stay on Today and keep their reminders.
+        val stoppedAt = RegimenRules.stopEffectiveAt(lastDay, regimen.timeZone, now()).toString()
         return writeInOneTransaction(Unit) { tx ->
             tx.execute(UPDATE_REGIMEN_END_DATE, listOf(formatDate(endDate), regimen.id.value))
             tx.execute(

@@ -190,7 +190,7 @@ class MedsRepositoryTest {
         val repository = medicationRepository(newId = { REGIMEN_2 })
         val result = repository.changeRegimen(
             current = regimen(REGIMEN_1, MED_1),
-            effectiveFrom = LocalDate.of(2026, 11, 10),
+            effectiveFrom = LocalDate.of(2026, 11, 20),
             times = listOf(DoseTime(LocalTime.of(9, 0), BigDecimal("1"))),
         )
 
@@ -206,11 +206,11 @@ class MedsRepositoryTest {
 
         // Only end_date: the server's trigger refuses every other change.
         assertEquals(
-            JsonObject(mapOf("end_date" to JsonPrimitive("2026-11-09"))),
+            JsonObject(mapOf("end_date" to JsonPrimitive("2026-11-19"))),
             transaction.crud.first().values(),
         )
         val started = transaction.crud.last().values()
-        assertEquals(JsonPrimitive("2026-11-10"), started["start_date"])
+        assertEquals(JsonPrimitive("2026-11-20"), started["start_date"])
         assertNull(started["end_date"], "An open-ended new version sends no end date")
     }
 
@@ -228,10 +228,28 @@ class MedsRepositoryTest {
         assertNull(local.database.getNextCrudTransaction())
     }
 
+    @Test
+    fun `a change effective today or earlier is refused`() = runBlocking {
+        seedCircleAndPatient()
+        val created = medicationRepository()
+        created.create(medication(MED_1), regimen(REGIMEN_1, MED_1))
+        local.database.drainUploadQueue()
+
+        // NOW is 10:00 on the 19th: today and yesterday would orphan the doses
+        // already confirmed and show them again as unconfirmed.
+        listOf(TODAY, TODAY.minusDays(1)).forEach { effectiveFrom ->
+            val result = medicationRepository(newId = { REGIMEN_2 })
+                .changeRegimen(regimen(REGIMEN_1, MED_1), effectiveFrom = effectiveFrom)
+
+            assertInstanceOf(MedsResult.Failure::class.java, result, "$effectiveFrom")
+            assertNull(local.database.getNextCrudTransaction(), "$effectiveFrom")
+        }
+    }
+
     // --- Stopping -----------------------------------------------------------
 
     @Test
-    fun `stopping sets the regimen's end date and the medication's stopped_at`() = runBlocking {
+    fun `stopping with a future last day stops the medication at the start of the next day`() = runBlocking {
         seedCircleAndPatient()
         val repository = medicationRepository()
         repository.create(medication(MED_1), regimen(REGIMEN_1, MED_1))
@@ -252,14 +270,62 @@ class MedsRepositoryTest {
             JsonObject(mapOf("end_date" to JsonPrimitive("2026-11-20"))),
             transaction.crud.first().values(),
         )
+        // Last day Friday 20th: the stop takes effect at the start of the 21st
+        // (Lisbon is UTC+0 in November), not now.
+        val effective = Instant.parse("2026-11-21T00:00:00Z")
+        assertEquals(
+            JsonPrimitive(effective.toString()),
+            transaction.crud.last().values()["stopped_at"],
+        )
+        // The local row must agree with the queue.
+        val stopped = medicationRepository().observeMedication(MedicationId(MED_1)).first()!!.medication
+        assertEquals(effective, stopped.stoppedAt)
+        assertFalse(stopped.isStoppedAt(NOW), "a pending stop is not a stop yet")
+        assertTrue(stopped.isStoppedAt(effective))
+    }
+
+    @Test
+    fun `stopping with a last day in the past stops the medication now`() = runBlocking {
+        seedCircleAndPatient()
+        val repository = medicationRepository()
+        repository.create(medication(MED_1), regimen(REGIMEN_1, MED_1))
+        local.database.drainUploadQueue()
+
+        val result = repository.stop(medication(MED_1), regimen(REGIMEN_1, MED_1), LocalDate.of(2026, 11, 10))
+
+        assertEquals(MedsResult.Success(Unit), result)
+        val transaction = local.database.nextTransaction()
         assertEquals(
             JsonPrimitive(NOW.toString()),
             transaction.crud.last().values()["stopped_at"],
         )
-        // The local row must agree with the queue, or the medication would stay on
-        // the Today screen after being stopped.
         val stopped = medicationRepository().observeMedication(MedicationId(MED_1)).first()!!.medication
-        assertTrue(stopped.isStopped)
+        assertTrue(stopped.isStoppedAt(NOW))
+    }
+
+    @Test
+    fun `a medication with a pending stop stays in the active list and in doses today`() = runBlocking {
+        seedCircleAndPatient()
+        local.database.execute(
+            INSERT_MEDICATION,
+            listOf(MED_1, PATIENT_1, "Metformin", "tablet", "tablet", 0L, 7L),
+        )
+        local.database.execute(
+            INSERT_REGIMEN,
+            listOf(REGIMEN_1, MED_1, "daily", "2026-11-01", "Europe/Lisbon",
+                """[{"time":"19:00","quantity":1}]"""),
+        )
+        local.database.execute(
+            "UPDATE medications SET stopped_at = ? WHERE id = ?",
+            listOf(Instant.parse("2026-11-21T00:00:00Z").toString(), MED_1),
+        )
+        local.database.drainUploadQueue()
+
+        val active = withTimeout(TIMEOUT_MS) { medicationRepository().activeMedications.first() }
+        val groups = withTimeout(TIMEOUT_MS) { doseLogRepository().dosesToday.first() }
+
+        assertEquals(listOf(MedicationId(MED_1)), active.map { it.medication.id })
+        assertEquals(1, groups.size, "The 19:00 dose of a pending stop is still due today")
     }
 
     @Test
@@ -506,6 +572,32 @@ class MedsRepositoryTest {
     }
 
     @Test
+    fun `a late dose still overdue at 00_20 is in recent doses and not in doses today`() = runBlocking {
+        seedCircleAndPatient()
+        local.database.execute(
+            INSERT_MEDICATION,
+            listOf(MED_1, PATIENT_1, "Metformin", "tablet", "tablet", 0L, 7L),
+        )
+        local.database.execute(
+            INSERT_REGIMEN,
+            listOf(REGIMEN_1, MED_1, "daily", "2026-11-01", "Europe/Lisbon",
+                """[{"time":"23:00","quantity":1}]"""),
+        )
+        local.database.drainUploadQueue()
+        // 00:20 on the 20th in Lisbon (UTC+0 in November); the patient's defaults
+        // are a 30-minute escalation delay and a 120-minute missed window.
+        val repository = doseLogRepositoryAt(Instant.parse("2026-11-20T00:20:00Z"))
+
+        val today = withTimeout(TIMEOUT_MS) { repository.dosesToday.first() }
+        val recent = withTimeout(TIMEOUT_MS) { repository.recentDoses.first { it.isNotEmpty() } }
+
+        assertEquals(listOf(LocalDate.of(2026, 11, 20).atTime(23, 0)), today.map { it.scheduledLocal })
+        val lastNight = recent.first()
+        assertEquals(LocalDate.of(2026, 11, 19).atTime(23, 0), lastNight.scheduledLocal)
+        assertEquals(DoseState.OVERDUE, lastNight.statuses.single().state)
+    }
+
+    @Test
     fun `a catch-up confirmation keeps the time it was given`() = runBlocking {
         seedCircleAndPatient()
         medicationRepository().create(medication(MED_1), regimen(REGIMEN_1, MED_1))
@@ -582,6 +674,15 @@ class MedsRepositoryTest {
             authState = local.authState,
             now = { NOW },
             newId = newId,
+        )
+
+    private fun doseLogRepositoryAt(at: Instant): DoseLogRepository =
+        PowerSyncDoseLogRepository(
+            database = local.database,
+            authState = local.authState,
+            now = { at },
+            ticks = flowOf(at),
+            newId = { entryIds.next() },
         )
 
     private var entryIds = listOf(ENTRY_1, ENTRY_2).iterator()

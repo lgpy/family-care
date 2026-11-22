@@ -124,7 +124,7 @@ fun MedicationDetailScreen(
             .padding(top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        val stopped = uiState.medication?.medication?.isStopped == true
+        val stopped = uiState.stopped
         DetailTopBar(
             canWrite = uiState.canWrite,
             stopped = stopped,
@@ -146,9 +146,9 @@ fun MedicationDetailScreen(
             else -> {
                 val item = uiState.medication!!
                 val medication = item.medication
-                val canAct = uiState.canWrite && !medication.isStopped
+                val canAct = uiState.canWrite && !uiState.stopped
 
-                if (medication.isStopped) {
+                if (uiState.stopped) {
                     medication.stoppedAt?.let { stoppedAt ->
                         Text(
                             text = stringResource(
