@@ -6,10 +6,11 @@
  * every rule. The IO layer is `stock-low/index.ts`.
  *
  * Rules (D28):
- * - Only active medications with a regimen are considered (stopped means
- *   `stopped_at` is set and not after the run's `now`; a future `stopped_at` is
- *   still active); the
- *   stock itself is derived by `stock.ts` (the shared vectors are the contract).
+ * - Only active medications are considered: stopped means `stopped_at` is set and
+ *   not after the run's `now` (a future `stopped_at` is still active). They also
+ *   need a regimen and at least one stock movement of any kind; with none the
+ *   stock is untracked and never low, like the app (`StockOverview.tracked`).
+ *   The stock itself is derived by `stock.ts` (the shared vectors are the contract).
  * - One push per **low episode**: a medication that already has a
  *   `meds.stock_alerts` row is skipped until that row is cleared.
  * - The row is written even when nobody has a device, so the episode is not
@@ -238,6 +239,13 @@ export function planStockAlerts(input: StockAlertInput): StockAlertPlan {
     // No regimen means no scheduled consumption, so days remaining is unknown
     // and the medication can never be low.
     if (regimens.length === 0) continue;
+
+    // No movement of any kind: nobody has recorded what is in the box. The
+    // stock maths start such a ledger at 0 ("0 days left"), but the app treats
+    // the medication as untracked and never low (`StockOverview.tracked`), so the
+    // server does not push about a box it was never told about. It still
+    // reaches `cleared` below if it had a row.
+    if ((movementsByMedication.get(medication.id) ?? []).length === 0) continue;
 
     const today = currentLocalDate(
       input.now,

@@ -277,3 +277,45 @@ Deno.test('stock-alerts: a null stopped_at is active', () => {
 
   assertEquals(plan.low, [MED]);
 });
+
+Deno.test('stock-alerts: a medication that was never counted is untracked, never low', () => {
+  // No movement of any kind: the maths say 0 days left, but nobody has told
+  // the app what is in the box. The app treats it as untracked (never low).
+  const plan = planStockAlerts(baseInput({ movements: [], alerted: [MED] }));
+
+  assertEquals(plan.low, []);
+  assertEquals(plan.notifications, []);
+  assertEquals(plan.alerts, []);
+  assertEquals(plan.cleared, [MED]);
+});
+
+Deno.test('stock-alerts: a refill or discard alone makes a medication tracked', () => {
+  for (const kind of ['refill', 'discard'] as const) {
+    const plan = planStockAlerts(baseInput({
+      movements: [{
+        id: 'a0000000-0000-4000-8000-0000000000f1',
+        medication_id: MED,
+        kind,
+        quantity: 1,
+        occurred_at: '2026-11-18T07:00:00Z',
+      }],
+    }));
+
+    // Nothing counted: stock is the refill (1) or the discard (-1), 1 or 0 days.
+    assertEquals(plan.low, [MED], kind);
+  }
+});
+
+Deno.test('stock-alerts: another medication\'s movements do not make this one tracked', () => {
+  const plan = planStockAlerts(baseInput({
+    movements: [{
+      id: 'a0000000-0000-4000-8000-0000000000f2',
+      medication_id: '50000000-0000-4000-8000-0000000000ff',
+      kind: 'count',
+      quantity: 4,
+      occurred_at: '2026-11-18T07:00:00Z',
+    }],
+  }));
+
+  assertEquals(plan.low, []);
+});
