@@ -3,6 +3,7 @@ package io.github.lgpy.familycare.feature.medications.domain
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 /**
  * The regimen rules from docs/domain/medications.md, including versioning
@@ -20,6 +21,9 @@ import java.time.ZoneId
  * - When the current version has an end date, a change may take effect at most
  *   on that last day. Later than that would leave the new version no days (or,
  *   further out, days with no regimen); that is a new regimen, not a change.
+ * - A dose change of an every-N-days regimen that keeps N keeps its phase: the
+ *   new version starts on the first day of the old phase on or after
+ *   `effectiveFrom`, so a change never brings a dose forward.
  * - The new version inherits the current version's `endDate`, so a treatment
  *   that was due to stop on 30 April still stops on 30 April after a dose change.
  * - [stop] may only move the end date earlier, never later, and never before the
@@ -132,12 +136,22 @@ object RegimenRules {
             return RegimenChange.Rejected(errors)
         }
 
+        // An every-N-days regimen is anchored on its start date, so a dose change
+        // that keeps N must keep the phase: start on the first day of the old
+        // phase on or after effectiveFrom, not on effectiveFrom itself.
+        val startDate = phaseAlignedStart(current, effectiveFrom, scheduleType, intervalDays)
+        if (currentEnd != null && startDate.isAfter(currentEnd)) {
+            // The next dose of the old phase is after the end date: the new
+            // version would have no days.
+            return RegimenChange.Rejected(setOf(MedicationField.REGIMEN_START_DATE))
+        }
+
         val ended = current.copy(endDate = effectiveFrom.minusDays(1)).normalized()
         val started = Regimen(
             id = newId,
             medicationId = current.medicationId,
             scheduleType = scheduleType,
-            startDate = effectiveFrom,
+            startDate = startDate,
             timeZone = timeZone,
             times = times,
             endDate = currentEnd,
@@ -151,6 +165,34 @@ object RegimenRules {
             return RegimenChange.Rejected(errors)
         }
         return RegimenChange.Changed(ended = ended, started = started)
+    }
+
+    /**
+     * The start date of the version that replaces [current] from [effectiveFrom].
+     *
+     * [effectiveFrom] itself, except when both versions are every-N-days with
+     * the same N: then the first date on [current]'s phase that is on or after
+     * [effectiveFrom] (so a dose that was not due is not made due by the change).
+     * [effectiveFrom] is after [current]'s start date here, so the offset is
+     * positive.
+     */
+    private fun phaseAlignedStart(
+        current: Regimen,
+        effectiveFrom: LocalDate,
+        scheduleType: ScheduleType,
+        intervalDays: Int?,
+    ): LocalDate {
+        val interval = current.intervalDays
+        if (current.scheduleType != ScheduleType.EVERY_N_DAYS ||
+            scheduleType != ScheduleType.EVERY_N_DAYS ||
+            interval == null ||
+            interval != intervalDays
+        ) {
+            return effectiveFrom
+        }
+        val offset = ChronoUnit.DAYS.between(current.startDate, effectiveFrom)
+        val remainder = offset % interval
+        return if (remainder == 0L) effectiveFrom else effectiveFrom.plusDays(interval - remainder)
     }
 
     /**

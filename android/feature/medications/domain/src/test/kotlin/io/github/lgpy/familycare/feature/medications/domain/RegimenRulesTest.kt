@@ -405,6 +405,121 @@ class RegimenRulesTest {
         assertEquals(WeekdayMask.MONDAY, changed.started.weekdays)
     }
 
+    private fun weekly(startDate: String = "2026-11-02", endDate: String? = null) = Fixtures.regimen(
+        startDate = day(startDate),
+        endDate = endDate?.let(day),
+        scheduleType = ScheduleType.EVERY_N_DAYS,
+        intervalDays = 7,
+    )
+
+    @Test
+    fun `a dose change keeps the phase of an every-N-days regimen`() {
+        // Weekly from Monday 2 Nov; the dose changes on Wednesday 18 Nov. The
+        // next dose is Monday 23 Nov, not Wednesday 18 Nov two days early.
+        val current = weekly()
+
+        val changed = assertInstanceOf(
+            RegimenChange.Changed::class.java,
+            RegimenRules.changeRegimen(
+                current = current,
+                effectiveFrom = day("2026-11-18"),
+                newId = RegimenId("reg-2"),
+                times = listOf(Fixtures.time("08:00", 2)),
+            ),
+        )
+
+        assertEquals(day("2026-11-17"), changed.ended.endDate)
+        assertEquals(day("2026-11-23"), changed.started.startDate)
+        assertFalse(changed.started.occursOn(day("2026-11-18")))
+        assertTrue(changed.started.occursOn(day("2026-11-23")))
+        assertTrue(changed.started.occursOn(day("2026-11-30")))
+        // The two versions together never have a dose two days after another.
+        val doseDays = (2..30).map { day("2026-11-%02d".format(it)) }
+            .filter { changed.ended.occursOn(it) || changed.started.occursOn(it) }
+        assertEquals(
+            listOf("2026-11-02", "2026-11-09", "2026-11-16", "2026-11-23", "2026-11-30").map(day),
+            doseDays,
+        )
+    }
+
+    @Test
+    fun `a change on a phase day of an every-N-days regimen starts on that day`() {
+        val current = weekly()
+
+        val changed = assertInstanceOf(
+            RegimenChange.Changed::class.java,
+            RegimenRules.changeRegimen(current, day("2026-11-16"), RegimenId("reg-2")),
+        )
+
+        assertEquals(day("2026-11-15"), changed.ended.endDate)
+        assertEquals(day("2026-11-16"), changed.started.startDate)
+        assertTrue(changed.started.occursOn(day("2026-11-16")))
+    }
+
+    @Test
+    fun `a change the day after a phase day starts on the next phase day`() {
+        val changed = assertInstanceOf(
+            RegimenChange.Changed::class.java,
+            RegimenRules.changeRegimen(weekly(), day("2026-11-10"), RegimenId("reg-2")),
+        )
+
+        assertEquals(day("2026-11-16"), changed.started.startDate)
+    }
+
+    @Test
+    fun `a new interval or schedule type anchors at the effective date`() {
+        val current = weekly()
+
+        val otherInterval = assertInstanceOf(
+            RegimenChange.Changed::class.java,
+            RegimenRules.changeRegimen(
+                current = current,
+                effectiveFrom = day("2026-11-18"),
+                newId = RegimenId("reg-2"),
+                intervalDays = 14,
+            ),
+        )
+        assertEquals(day("2026-11-18"), otherInterval.started.startDate)
+
+        val toDaily = assertInstanceOf(
+            RegimenChange.Changed::class.java,
+            RegimenRules.changeRegimen(
+                current = current,
+                effectiveFrom = day("2026-11-18"),
+                newId = RegimenId("reg-3"),
+                scheduleType = ScheduleType.DAILY,
+                intervalDays = null,
+            ),
+        )
+        assertEquals(day("2026-11-18"), toDaily.started.startDate)
+
+        val toEveryN = assertInstanceOf(
+            RegimenChange.Changed::class.java,
+            RegimenRules.changeRegimen(
+                current = Fixtures.regimen(startDate = day("2026-11-02")),
+                effectiveFrom = day("2026-11-18"),
+                newId = RegimenId("reg-4"),
+                scheduleType = ScheduleType.EVERY_N_DAYS,
+                intervalDays = 7,
+            ),
+        )
+        assertEquals(day("2026-11-18"), toEveryN.started.startDate)
+    }
+
+    @Test
+    fun `a phase-aligned start after the end date leaves no days and is rejected`() {
+        // Weekly doses 2, 9, 16, 23 Nov; the version ends on the 20th. A change
+        // on the 18th would start on the 23rd, after the end: no new days.
+        val current = weekly(endDate = "2026-11-20")
+
+        val rejected = assertInstanceOf(
+            RegimenChange.Rejected::class.java,
+            RegimenRules.changeRegimen(current, day("2026-11-18"), RegimenId("reg-2")),
+        )
+
+        assertEquals(setOf(MedicationField.REGIMEN_START_DATE), rejected.errors)
+    }
+
     @Test
     fun `a change needs a new regimen id`() {
         val current = Fixtures.regimen()
