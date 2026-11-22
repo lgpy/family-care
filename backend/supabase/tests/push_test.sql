@@ -11,7 +11,8 @@
 --    duplicating it. The audit log records the change without the token.
 -- 2. `meds.escalations` is server-only: no API role has any privilege.
 -- 3. `meds.effective_reminder` coalesces the medication override over the
---    patient policy/primary, and hides stopped medications.
+--    patient policy/primary, and hides stopped medications (a future
+--    stopped_at still counts as active).
 -- 4. The webhooks are no-ops when Vault is unconfigured, and queue exactly one
 --    pg_net request (URL + secret header, row id body) when it is configured.
 --
@@ -21,7 +22,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(60);
+select plan(62);
 
 -- --- Fixtures ---------------------------------------------------------------
 -- Circle A: Alice owner, Bob caregiver, Carol viewer. Circle B: Dave owner.
@@ -356,7 +357,7 @@ select throws_ok(
 reset role;
 
 -- --- 7. Effective reminder settings ---------------------------------------
--- (5 assertions)
+-- (7 assertions)
 
 select is(
   (select reminder_policy::text from meds.effective_reminder
@@ -389,6 +390,27 @@ select is(
         '50000000-0000-4000-8000-000000000002',
         '50000000-0000-4000-8000-000000000004'],
   'stopped medications are not in the effective view');
+
+-- stopped_at is when the stop takes effect (20261127130000_future_stopped_at):
+-- a medication whose last day is still ahead keeps its reminders.
+insert into meds.medications (id, patient_id, name, form, stock_unit, stopped_at)
+values
+  ('50000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000001',
+   'Stops tomorrow', 'tablet', 'tablet', now() + interval '1 day'),
+  ('50000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000001',
+   'Stopped yesterday', 'tablet', 'tablet', now() - interval '1 day');
+
+select is(
+  (select count(*)::int from meds.effective_reminder
+    where medication_id = '50000000-0000-4000-8000-000000000005'),
+  1,
+  'a medication with stopped_at one day ahead is still in the effective view');
+
+select is(
+  (select count(*)::int from meds.effective_reminder
+    where medication_id = '50000000-0000-4000-8000-000000000006'),
+  0,
+  'a medication with stopped_at in the past is not in the effective view');
 
 -- --- 8. Webhooks: no-op without Vault, one queued request with it ---------
 -- (8 assertions)
