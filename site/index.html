@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Family Care: a private Android app for family caregivers</title>
+<meta name="description" content="Family Care is a private Android app that helps a family share the care of their relatives: medicines with reminders, missed doses, stock, appointments and allergies. Offline-first, in English and Portuguese (Portugal).">
+<meta name="color-scheme" content="light dark">
+<script>
+(function () {
+  var d = document.documentElement;
+  d.className = d.className.replace('no-js', 'js');
+  var q = null;
+  try { q = new URLSearchParams(location.search); } catch (e) {}
+  function p(k) { return q ? q.get(k) : null; }
+  function g(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  var l = p('lang');
+  if (l !== 'en' && l !== 'pt') l = g('fc-lang');
+  if (l !== 'en' && l !== 'pt') {
+    var n = (navigator.languages && navigator.languages[0]) || navigator.language || 'en';
+    l = /^pt/i.test(n) ? 'pt' : 'en';
+  }
+  var t = p('theme');
+  if (t !== 'dark' && t !== 'light') t = g('fc-theme');
+  if (t !== 'dark' && t !== 'light') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  d.lang = l === 'pt' ? 'pt-PT' : 'en';
+  d.setAttribute('data-theme', t);
+})();
+</script>
+<style>
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("fonts/atkinson_hyperlegible_next.ttf") format("truetype");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Tokens: green preset (Color.kt) + fixed semantic colours ---------- */
+:root {
+  color-scheme: light;
+  --primary:#3A6A4F; --on-primary:#FFFFFF; --pc:#BCEFCF; --on-pc:#00210F;
+  --sc:#D2E8D6; --on-sc:#0E1F14; --tertiary:#6F5B3E;
+  --surface:#F6FBF4; --on-surface:#171D19; --on-sv:#404943;
+  --outline:#707A72; --outline-v:#C0C9C1;
+  --c-lowest:#FFFFFF; --c-low:#F0F5EE; --c-mid:#EAEFE8; --c-high:#E4EAE3; --c-highest:#DFE4DD;
+  --inverse:#2C322D; --on-inverse:#EDF2EC;
+  --attn-c:#FFDDB3; --on-attn-c:#2A1800; --attn:#8A5100;
+  --crit-c:#FFDAD6; --on-crit-c:#410002; --crit:#BA1A1A;
+  --p-maria:#9A4F00; --p-antonio:#00687A; --p-mom:#6B4EA2; --p-you:#5D6300;
+  --bezel:#1B1F1C;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --primary:#A1D3B4; --on-primary:#053822; --pc:#215239; --on-pc:#BCEFCF;
+    --sc:#374B3D; --on-sc:#D2E8D6; --tertiary:#DAC2A3;
+    --surface:#0F1511; --on-surface:#DEE4DD; --on-sv:#C0C9C1;
+    --outline:#8A938B; --outline-v:#404943;
+    --c-lowest:#0A0F0B; --c-low:#171D19; --c-mid:#1B211D; --c-high:#252B27; --c-highest:#303631;
+    --inverse:#DEE4DD; --on-inverse:#2C322D;
+    --attn-c:#5A3500; --on-attn-c:#FFDDB3; --attn:#FFB95C;
+    --crit-c:#93000A; --on-crit-c:#FFDAD6; --crit:#FFB4AB;
+    --p-maria:#FFB77C; --p-antonio:#53D7F1; --p-mom:#D4BBFF; --p-you:#C6CE6C;
+    --bezel:#000000;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --primary:#A1D3B4; --on-primary:#053822; --pc:#215239; --on-pc:#BCEFCF;
+  --sc:#374B3D; --on-sc:#D2E8D6; --tertiary:#DAC2A3;
+  --surface:#0F1511; --on-surface:#DEE4DD; --on-sv:#C0C9C1;
+  --outline:#8A938B; --outline-v:#404943;
+  --c-lowest:#0A0F0B; --c-low:#171D19; --c-mid:#1B211D; --c-high:#252B27; --c-highest:#303631;
+  --inverse:#DEE4DD; --on-inverse:#2C322D;
+  --attn-c:#5A3500; --on-attn-c:#FFDDB3; --attn:#FFB95C;
+  --crit-c:#93000A; --on-crit-c:#FFDAD6; --crit:#FFB4AB;
+  --p-maria:#FFB77C; --p-antonio:#53D7F1; --p-mom:#D4BBFF; --p-you:#C6CE6C;
+  --bezel:#000000;
+}
+
+/* ---------- Language switching: both languages are in the page, one is shown ---------- */
+html:not(:lang(pt)) .pt { display: none !important; }
+html:lang(pt) .en { display: none !important; }
+
+/* ---------- Page ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  margin: 0; background: var(--surface); color: var(--on-surface);
+  font-family: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  font-size: 1.125rem; line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+}
+img, svg { display: block; }
+a { color: var(--primary); text-underline-offset: .18em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; border-radius: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.skip { position: absolute; left: 16px; top: -100px; z-index: 10; background: var(--primary); color: var(--on-primary); padding: 12px 18px; border-radius: 999px; font-weight: 700; text-decoration: none; }
+.skip:focus { top: 12px; }
+
+.wrap { max-width: 1200px; margin: 0 auto; padding-inline: clamp(20px, 5vw, 64px); }
+
+/* Masthead */
+.masthead { border-bottom: 1px solid var(--outline-v); }
+.masthead .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-block: 14px; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--on-surface); font-weight: 700; font-size: 1.25rem; letter-spacing: -.01em; min-height: 44px; }
+.brand-mark { width: 36px; height: 36px; border-radius: 12px; background: var(--pc); color: var(--on-pc); display: grid; place-items: center; flex: none; }
+.brand-mark svg { width: 22px; height: 22px; fill: currentColor; }
+.brand small { font-weight: 500; font-size: .875rem; color: var(--on-sv); letter-spacing: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.no-js .controls { display: none; }
+.seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--outline); border-radius: 26px; padding: 3px; gap: 2px; }
+.seg button, .tbtn {
+  font: inherit; font-size: .9375rem; font-weight: 600; color: var(--on-surface); background: transparent;
+  border: 0; border-radius: 999px; min-height: 44px; min-width: 44px; padding: 0 14px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.seg button[aria-pressed="true"] { background: var(--sc); color: var(--on-sc); }
+.tbtn { border: 1px solid var(--outline); }
+.tbtn svg { width: 20px; height: 20px; fill: currentColor; }
+.tbtn[aria-pressed="true"] { background: var(--sc); color: var(--on-sc); border-color: transparent; }
+
+/* Type */
+.kicker { font-size: .875rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); margin: 0 0 18px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.kicker .num { font-size: 1rem; letter-spacing: .04em; }
+.kicker .num::after { content: ""; display: inline-block; width: 32px; height: 1px; background: currentColor; vertical-align: middle; margin-left: 14px; }
+h1, h2, h3 { margin: 0; font-weight: 700; text-wrap: balance; }
+h1 { font-size: clamp(2.6rem, 1.4rem + 4.4vw, 5rem); line-height: 1.02; letter-spacing: -.03em; }
+h2 { font-size: clamp(2rem, 1.2rem + 2.6vw, 3.4rem); line-height: 1.06; letter-spacing: -.025em; margin-bottom: 24px; }
+h3 { font-size: 1.1875rem; line-height: 1.3; letter-spacing: -.005em; }
+p { margin: 0 0 1em; }
+.lede { font-size: clamp(1.1875rem, 1.05rem + .5vw, 1.4375rem); line-height: 1.5; color: var(--on-surface); max-width: 33em; }
+.body { max-width: 34em; color: var(--on-sv); }
+.body strong, .lede strong { color: var(--on-surface); }
+.ui-word { font-weight: 700; color: var(--on-surface); white-space: nowrap; }
+
+/* Hero */
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 48px 72px; align-items: center; padding-block: clamp(48px, 7vw, 96px) clamp(56px, 7vw, 104px); }
+.hero h1 { margin-bottom: 28px; }
+.hero .lede { margin-bottom: 36px; }
+.facts { list-style: none; margin: 0 0 36px; padding: 0; border-top: 1px solid var(--outline-v); max-width: 36em; }
+.facts li { display: grid; grid-template-columns: minmax(0, 13em) minmax(0, 1fr); gap: 4px 24px; padding: 14px 0; border-bottom: 1px solid var(--outline-v); }
+.facts b { font-weight: 700; line-height: 1.35; }
+.facts span { color: var(--on-sv); line-height: 1.5; font-size: 1.0625rem; }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+.cta { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 10px 24px; border-radius: 999px; font-weight: 700; text-decoration: none; font-size: 1.0625rem; line-height: 1.25; }
+.cta.primary { background: var(--primary); color: var(--on-primary); }
+.cta.quiet { border: 1px solid var(--outline); color: var(--on-surface); }
+.cta svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
+.small-print { font-size: .9375rem; color: var(--on-sv); margin: 0; max-width: 36em; }
+
+/* Contents */
+.contents { border-top: 1px solid var(--outline-v); border-bottom: 1px solid var(--outline-v); }
+.contents .wrap { padding-block: 28px; display: grid; grid-template-columns: minmax(0, 12em) minmax(0, 1fr); gap: 16px 40px; align-items: start; }
+.contents h2 { font-size: .875rem; letter-spacing: .12em; text-transform: uppercase; color: var(--on-sv); margin: 12px 0 0; }
+.contents ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 28px; }
+.contents a { display: flex; gap: 12px; align-items: baseline; min-height: 44px; padding: 10px 0; text-decoration: none; color: var(--on-surface); font-weight: 600; line-height: 1.3; border-bottom: 1px solid transparent; }
+.contents a:hover { border-bottom-color: var(--outline); }
+.contents a span:first-child { color: var(--primary); font-weight: 700; font-size: .9375rem; flex: none; }
+
+/* Story sections */
+.story { border-bottom: 1px solid var(--outline-v); }
+.story > .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px 80px; align-items: center; padding-block: clamp(64px, 8vw, 120px); }
+.story.flip .text { order: 2; }
+.story.flip figure { order: 1; }
+.aside { border-left: 3px solid var(--primary); padding: 4px 0 4px 18px; margin: 28px 0 0; max-width: 32em; color: var(--on-sv); font-size: 1.0625rem; }
+.aside b { color: var(--on-surface); }
+figure { margin: 0; }
+.plate { background: var(--c-low); border-radius: 32px; padding: clamp(16px, 3vw, 36px); display: flex; justify-content: center; }
+.plate > .app { width: 100%; max-width: 384px; }
+figcaption { font-size: .9375rem; color: var(--on-sv); margin-top: 14px; line-height: 1.5; max-width: 30em; }
+figcaption::before { content: ""; display: inline-block; width: 18px; height: 1px; background: var(--outline); vertical-align: middle; margin-right: 10px; }
+.morning { list-style: none; margin: 28px 0 0; padding: 0; max-width: 32em; }
+.morning li { display: grid; grid-template-columns: 4.2em minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--outline-v); color: var(--on-sv); font-size: 1.0625rem; line-height: 1.5; }
+.morning li:last-child { border-bottom: 1px solid var(--outline-v); }
+.morning time { font-weight: 700; color: var(--on-surface); font-size: 1.1875rem; letter-spacing: -.02em; line-height: 1.35; }
+
+/* Privacy */
+.privacy > .wrap { display: block; }
+.privacy .head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px 80px; align-items: end; margin-bottom: 48px; }
+.privacy .head .lede { margin: 0; }
+.principles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 48px; }
+.principles li { border-top: 1px solid var(--outline-v); padding: 22px 0 30px; }
+.principles h3 { margin-bottom: 8px; }
+.principles p { color: var(--on-sv); margin: 0; font-size: 1.0625rem; }
+.privacy-fig { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px 80px; margin-top: 40px; align-items: center; }
+
+/* Colophon */
+.colophon > .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px 80px; padding-block: clamp(64px, 8vw, 120px); align-items: start; }
+.spec { margin: 8px 0 0; display: grid; grid-template-columns: minmax(0, 11em) minmax(0, 1fr); border-top: 1px solid var(--outline-v); }
+.spec dt, .spec dd { margin: 0; padding: 14px 0; border-bottom: 1px solid var(--outline-v); line-height: 1.45; }
+.spec dt { font-weight: 700; padding-right: 16px; }
+.spec dd { color: var(--on-sv); }
+footer .wrap { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px 24px; padding-block: 28px 40px; color: var(--on-sv); font-size: .9375rem; }
+footer a { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* ---------- App UI (from docs/ux/mockups: scaling.html, screens-v2.html, missed-doses.html) ---------- */
+.app { font-size: 15px; line-height: 1.3; color: var(--on-surface); text-align: left; font-variant-numeric: tabular-nums; }
+.app .ic { width: 22px; height: 22px; fill: currentColor; flex: none; }
+.app .ic.s { width: 18px; height: 18px; }
+.app .ic.xs { width: 16px; height: 16px; }
+.phone { width: min(360px, calc(100% - 20px)); margin: 10px auto; border-radius: 38px; overflow: hidden; background: var(--surface); box-shadow: 0 0 0 10px var(--bezel), 0 0 0 11px var(--outline-v), 0 24px 60px rgba(0,0,0,.22); }
+.status { height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 12px; font-weight: 600; }
+.status .sig { display: flex; gap: 6px; align-items: center; }
+.status .sig i { display: block; width: 16px; height: 9px; border: 1.5px solid currentColor; border-radius: 2px; position: relative; }
+.status .sig i::after { content: ""; position: absolute; inset: 1px 4px 1px 1px; background: currentColor; border-radius: 1px; }
+.scr { padding: 0 16px 18px; }
+.appbar { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0 12px; }
+.appbar .t { flex: 1; min-width: 0; font-size: 24px; line-height: 1.15; font-weight: 700; }
+.appbar .t .sub { display: block; font-size: 14px; font-weight: 500; color: var(--on-sv); margin-top: 2px; }
+.iconbtn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--on-sv); flex: none; }
+.topbar { display: flex; align-items: center; gap: 6px; min-height: 48px; margin: 0 -6px 4px; }
+.topbar .t { flex: 1; font-size: 18px; font-weight: 700; }
+.sec { margin-top: 18px; }
+.sh { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+.sh .ic { color: var(--primary); }
+.sh .more { margin-left: auto; font-size: 13px; color: var(--primary); font-weight: 600; }
+.sh.day-h { font-size: 14px; color: var(--on-sv); }
+.av { width: var(--av, 30px); height: var(--av, 30px); border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 700; font-size: calc(var(--av, 30px) * .46); line-height: 1; color: var(--surface); background: var(--pc-col); }
+.av.maria { --pc-col: var(--p-maria); } .av.antonio { --pc-col: var(--p-antonio); } .av.mom { --pc-col: var(--p-mom); }
+
+.attn { background: var(--attn-c); color: var(--on-attn-c); border-radius: 20px; padding: 6px 0; }
+.attn .row { display: flex; gap: 12px; align-items: center; padding: 10px 14px; flex-wrap: wrap; }
+.attn .row + .row { border-top: 1px solid color-mix(in srgb, var(--on-attn-c) 14%, transparent); }
+.attn .aic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--attn) 18%, transparent); color: var(--attn); flex: none; }
+.attn .tx { flex: 1 1 9em; min-width: 0; }
+.attn b { display: block; font-size: 15px; line-height: 1.25; }
+.attn small { display: block; font-size: 13px; margin-top: 2px; line-height: 1.3; }
+.attn .chev { color: var(--on-attn-c); }
+
+.btn { font: inherit; font-weight: 700; font-size: 15px; border: 0; border-radius: 999px; min-height: 44px; padding: 0 16px; display: inline-flex; gap: 6px; align-items: center; justify-content: center; white-space: nowrap; }
+.btn.sm { min-height: 40px; padding: 0 14px; font-size: 14px; }
+.btn.filled { background: var(--primary); color: var(--on-primary); }
+.btn.tonal { background: var(--sc); color: var(--on-sc); }
+.btn.attn-b { background: var(--attn); color: var(--attn-c); }
+.btn.outline { background: transparent; color: var(--primary); border: 1px solid var(--outline); }
+.btn.block { width: 100%; min-height: 52px; font-size: 16px; }
+.btn .ic { width: 20px; height: 20px; }
+
+.rail { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 10px; }
+.time { font-size: 22px; font-weight: 700; letter-spacing: -.02em; padding-top: 12px; line-height: 1; width: min-content; }
+.time.done { color: color-mix(in srgb, var(--on-sv) 75%, transparent); }
+.time small { display: block; font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--on-sv); margin-top: 6px; line-height: 1.25; }
+.slot { background: var(--c-mid); border-radius: 20px; padding: 10px 12px; margin-bottom: 8px; }
+.slot.next { background: var(--pc); color: var(--on-pc); }
+.slot.next .btn.outline { color: var(--on-pc); border-color: color-mix(in srgb, var(--on-pc) 45%, transparent); }
+.slot.done { background: transparent; border: 1px dashed var(--outline-v); color: var(--on-sv); }
+.slot .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.slot .who { flex: 1 1 6em; min-width: 0; }
+.slot .who b { font-size: 15px; display: block; }
+.pills { display: flex; gap: 4px; margin-top: 3px; align-items: center; flex-wrap: wrap; }
+.pills svg { width: 22px; height: 22px; }
+.pills .n { font-size: 12px; margin-left: 4px; }
+.given { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 6px; }
+
+.list { border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
+.li { background: var(--c-lowest); display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 56px; flex-wrap: wrap; }
+.plate .li { background: var(--surface); }
+.phone .li { background: var(--c-low); }
+.li .tx { flex: 1 1 8em; min-width: 0; }
+.li .tx b { display: block; font-size: 15px; font-weight: 600; line-height: 1.25; }
+.li .tx > span { display: block; font-size: 13px; color: var(--on-sv); margin-top: 2px; line-height: 1.35; }
+.li .chev { color: var(--on-sv); }
+.tile { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--c-high); color: var(--on-sv); flex: none; }
+.tile.pri { background: var(--pc); color: var(--on-pc); }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; font-size: 13px; color: var(--on-sv); }
+.meta > span { display: inline-flex; align-items: center; gap: 4px; }
+.tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 8px; background: var(--attn-c); color: var(--on-attn-c); }
+.tag.neutral { background: var(--c-high); color: var(--on-sv); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.day { width: 40px; text-align: center; line-height: 1.05; flex: none; }
+.day b { display: block; font-size: 20px; letter-spacing: -.02em; }
+.day span { font-size: 12px; color: var(--on-sv); }
+
+.bottom { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--c-mid); padding: 8px 2px 12px; }
+.bottom div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; color: var(--on-sv); text-align: center; min-width: 0; }
+.bottom .pillx { width: 56px; max-width: 100%; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+.bottom .on { color: var(--on-surface); }
+.bottom .on .pillx { background: var(--sc); color: var(--on-sc); }
+
+.allergy { background: var(--crit-c); color: var(--on-crit-c); border-radius: 14px; padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; font-weight: 700; font-size: 15px; line-height: 1.35; }
+.allergy .ic { color: var(--crit); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--outline-v); font-size: 14px; font-weight: 500; color: var(--on-sv); }
+.chip.on { background: var(--sc); color: var(--on-sc); border-color: transparent; font-weight: 700; }
+.phead { display: flex; align-items: center; gap: 14px; padding: 4px 0 12px; flex-wrap: wrap; }
+.phead .n { font-size: 24px; font-weight: 700; line-height: 1.15; }
+.phead .s { font-size: 13px; color: var(--on-sv); }
+.tabs { display: flex; margin: 14px -4px 0; border-bottom: 1px solid var(--outline-v); }
+.tab { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; font-size: 12px; font-weight: 600; color: var(--on-sv); border-bottom: 3px solid transparent; text-align: center; overflow-wrap: anywhere; }
+.tab.on { color: var(--primary); border-color: var(--primary); }
+
+.med { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 18px; background: var(--c-mid); margin-bottom: 8px; }
+.plate .med { background: var(--surface); }
+.med .tx { flex: 1; min-width: 0; }
+.med .tx b { display: block; font-size: 15px; }
+.med .tx span { font-size: 13px; color: var(--on-sv); display: inline-flex; gap: 4px; align-items: center; }
+.pilltile { width: 48px; height: 48px; border-radius: 14px; background: var(--c-high); display: grid; place-items: center; flex: none; }
+.pilltile svg { width: 40px; height: 40px; }
+.check { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--primary); color: var(--on-primary); flex: none; }
+.check.off { background: transparent; border: 2px solid var(--outline-v); color: transparent; }
+.med.skipped .tx b { text-decoration: line-through; color: var(--on-sv); }
+
+.stock { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--on-sv); margin-top: 6px; flex-wrap: wrap; }
+.meter { flex: 1 1 5em; height: 8px; border-radius: 4px; background: var(--c-high); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
+.meter.low i { background: var(--attn); }
+.stock.low { color: var(--attn); font-weight: 700; }
+.shop-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+
+.missed-card { background: var(--surface); border: 1px solid var(--outline-v); border-radius: 20px; padding: 10px 12px; margin-bottom: 8px; }
+.missed-card .acts { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.missed-card .acts .btn { flex: 1 1 8em; }
+
+.lock { background: var(--c-highest); border-radius: 30px; padding: 26px 16px 20px; }
+.lock .clock { text-align: center; font-size: 56px; font-weight: 600; letter-spacing: -.03em; line-height: 1; }
+.lock .date { text-align: center; font-size: 14px; color: var(--on-sv); margin: 8px 0 22px; }
+.notif { background: var(--surface); border-radius: 22px; padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; margin-top: 8px; }
+.notif .nic { width: 32px; height: 32px; border-radius: 50%; background: var(--pc); color: var(--on-pc); display: grid; place-items: center; flex: none; }
+.notif .nic svg { width: 18px; height: 18px; fill: currentColor; }
+.notif .tx { flex: 1; min-width: 0; }
+.notif .app-n { font-size: 12px; color: var(--on-sv); display: flex; gap: 6px; }
+.notif b { display: block; font-size: 15px; margin-top: 2px; }
+
+
+/* ---------- Merge additions ---------- */
+[hidden] { display: none !important; }
+.nav-primary { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.nav-primary a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px; color: var(--on-surface); font-weight: 600; font-size: 1rem; text-decoration: none; }
+.nav-primary a:hover { background: var(--c-high); }
+.small-print { text-wrap: balance; }
+.ib { display: inline-block; }
+
+/* Hero demo (progressive enhancement) */
+.demo-ui { display: none; margin-top: 16px; max-width: 30em; }
+.js .demo-ui { display: block; }
+.demo-hint { display: flex; align-items: center; gap: 10px; margin: 0; font-size: .875rem; color: var(--on-sv); }
+.demo-hint::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); flex: none; }
+.demo-live { margin: 10px 0 0; font-size: .875rem; line-height: 1.5; color: var(--on-surface); min-height: 1.5em; }
+button.btn { cursor: pointer; }
+.attn button.btn:hover { filter: brightness(1.08); }
+.attn button.btn:focus-visible { outline-color: var(--on-attn-c); }
+.attn .row[hidden] + .row { border-top: 0; }
+
+/* Section 01: pill amounts */
+.pill-strip { grid-column: 1 / -1; order: 3; border-top: 1px solid var(--outline-v); padding-top: 36px; }
+.pill-strip h3, .esc-flow h3 { font-size: 1.5rem; margin-bottom: 8px; }
+.pill-strip > p, .esc-flow > p { max-width: 40em; color: var(--on-sv); margin-bottom: 0; }
+.amts { list-style: none; margin: 24px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 32px; }
+.amts li { display: flex; align-items: center; gap: 16px; background: var(--c-low); border-radius: 20px; padding: 14px 18px; }
+.amts .pr { display: flex; align-items: center; gap: 2px; flex: none; background: var(--c-high); border-radius: 14px; padding: 6px; }
+.amts .pr svg, .amts .pa { width: 40px; height: 40px; }
+.amts .pa { position: relative; display: block; }
+.amts .pa svg { position: absolute; inset: 0; }
+.amts .gh { opacity: .5; }
+.amts .n { white-space: nowrap; font-size: 2rem; font-weight: 700; letter-spacing: -.02em; line-height: 1; min-width: 1.1em; }
+.amts .d { display: block; font-size: .9375rem; color: var(--on-sv); line-height: 1.35; min-width: 0; }
+.amts .d b { display: block; color: var(--on-surface); }
+
+/* Section 02: escalation panels */
+.esc-flow { grid-column: 1 / -1; order: 3; border-top: 1px solid var(--outline-v); padding-top: 36px; }
+.esc-panels { margin: 28px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.esc-panels figure { background: var(--c-low); border-radius: 28px; padding: 20px; height: 100%; display: flex; flex-direction: column; }
+.esc-panels .lbl { font-size: .875rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--on-sv); margin: 0 0 14px; }
+.esc-panels .lock { padding: 16px; border-radius: 24px; }
+.esc-panels .notif { margin-top: 0; }
+.dlg { background: var(--surface); border: 1px solid var(--outline-v); border-radius: 24px; padding: 20px; }
+.dlg b { display: block; font-size: 19px; margin-bottom: 8px; }
+.dlg p { margin: 0 0 16px; font-size: 15px; line-height: 1.4; color: var(--on-sv); }
+.dlg .da { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.dlg .da span { font-weight: 700; color: var(--primary); padding: 8px 12px; }
+.esc-panels figcaption { margin-top: auto; padding-top: 12px; }
+.attn button.btn { min-height: 44px; }
+
+/* Section 08: reliability checklist */
+.reliable { margin-top: 32px; border: 1px solid var(--outline-v); border-radius: 24px; padding: 22px 24px; max-width: 34em; }
+.reliable h3 { margin-bottom: 8px; }
+.reliable p { color: var(--on-sv); font-size: 1.0625rem; margin-bottom: 14px; }
+.reliable ul { list-style: none; margin: 0; padding: 0; }
+.reliable li { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--outline-v); font-weight: 600; }
+.reliable li svg { width: 22px; height: 22px; fill: var(--on-sv); flex: none; }
+
+/* Privacy: wide item and honest limit */
+.principles li.wide { grid-column: 1 / -1; }
+.principles li.wide p { max-width: 44em; }
+.aside p { margin: 0 0 .7em; }
+.aside p:last-child { margin-bottom: 0; }
+
+/* Profile tab row scrolls instead of breaking words */
+.tabs { overflow-x: auto; scrollbar-width: thin; }
+.tab { flex: 1 0 auto; padding: 8px 10px; white-space: nowrap; overflow-wrap: normal; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1040px) {
+  .esc-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .amts { grid-template-columns: minmax(0, 1fr); }
+  .contents ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .principles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .nav-primary { display: none; }
+}
+@media (max-width: 880px) {
+  .hero .wrap, .story > .wrap, .privacy .head, .privacy-fig, .colophon > .wrap, .contents .wrap { grid-template-columns: minmax(0, 1fr); }
+  .story.flip .text, .story.flip figure { order: 0; }
+  .story > .wrap { gap: 40px; }
+  .contents h2 { margin: 0; }
+}
+@media (max-width: 560px) {
+  .facts li { grid-template-columns: minmax(0, 1fr); }
+  .contents ol { grid-template-columns: minmax(0, 1fr); }
+  .principles { grid-template-columns: minmax(0, 1fr); }
+  .spec { grid-template-columns: minmax(0, 1fr); }
+  .spec dt { border-bottom: 0; padding-bottom: 0; }
+  .spec dd { padding-top: 4px; }
+  .plate { border-radius: 24px; padding: 12px; }
+  .cta { width: 100%; }
+  .esc-panels { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+<symbol id="i-add_shopping_cart" viewBox="0 0 960 960"><path d="M440,240L360,240Q343,240 331.5,228.5Q320,217 320,200Q320,183 331.5,171.5Q343,160 360,160L440,160L440,80Q440,63 451.5,51.5Q463,40 480,40Q497,40 508.5,51.5Q520,63 520,80L520,160L600,160Q617,160 628.5,171.5Q640,183 640,200Q640,217 628.5,228.5Q617,240 600,240L520,240L520,320Q520,337 508.5,348.5Q497,360 480,360Q463,360 451.5,348.5Q440,337 440,320L440,240ZM280,880Q247,880 223.5,856.5Q200,833 200,800Q200,767 223.5,743.5Q247,720 280,720Q313,720 336.5,743.5Q360,767 360,800Q360,833 336.5,856.5Q313,880 280,880ZM680,880Q647,880 623.5,856.5Q600,833 600,800Q600,767 623.5,743.5Q647,720 680,720Q713,720 736.5,743.5Q760,767 760,800Q760,833 736.5,856.5Q713,880 680,880ZM120,160L80,160Q63,160 51.5,148.5Q40,137 40,120Q40,103 51.5,91.5Q63,80 80,80L146,80Q157,80 167,86Q177,92 182,103L341,440L621,440Q621,440 621,440Q621,440 621,440L766,180Q771,170 780,165Q789,160 800,160Q823,160 834.5,179.5Q846,199 835,219L692,478Q681,498 662.5,509Q644,520 622,520L324,520L280,600Q280,600 280,600Q280,600 280,600L720,600Q737,600 748.5,611.5Q760,623 760,640Q760,657 748.5,668.5Q737,680 720,680L280,680Q235,680 211.5,641Q188,602 210,562L264,464L120,160Z"/></symbol>
+<symbol id="i-arrow_back" viewBox="0 0 960 960"><path d="M313,520L509,716Q521,728 520.5,744Q520,760 508,772Q496,783 480,783.5Q464,784 452,772L188,508Q182,502 179.5,495Q177,488 177,480Q177,472 179.5,465Q182,458 188,452L452,188Q463,177 479.5,177Q496,177 508,188Q520,200 520,216.5Q520,233 508,245L313,440L760,440Q777,440 788.5,451.5Q800,463 800,480Q800,497 788.5,508.5Q777,520 760,520L313,520Z"/></symbol>
+<symbol id="i-badge" viewBox="0 0 960 960"><path d="M240,720L480,720L480,702Q480,685 470.5,670.5Q461,656 444,648Q424,639 403.5,634.5Q383,630 360,630Q337,630 316.5,634.5Q296,639 276,648Q259,656 249.5,670.5Q240,685 240,702L240,720ZM590,660L690,660Q703,660 711.5,651.5Q720,643 720,630Q720,617 711.5,608.5Q703,600 690,600L590,600Q577,600 568.5,608.5Q560,617 560,630Q560,643 568.5,651.5Q577,660 590,660ZM360,600Q385,600 402.5,582.5Q420,565 420,540Q420,515 402.5,497.5Q385,480 360,480Q335,480 317.5,497.5Q300,515 300,540Q300,565 317.5,582.5Q335,600 360,600ZM590,540L690,540Q703,540 711.5,531.5Q720,523 720,510Q720,497 711.5,488.5Q703,480 690,480L590,480Q577,480 568.5,488.5Q560,497 560,510Q560,523 568.5,531.5Q577,540 590,540ZM160,880Q127,880 103.5,856.5Q80,833 80,800L80,360Q80,327 103.5,303.5Q127,280 160,280L360,280L360,160Q360,127 383.5,103.5Q407,80 440,80L520,80Q553,80 576.5,103.5Q600,127 600,160L600,280L800,280Q833,280 856.5,303.5Q880,327 880,360L880,800Q880,833 856.5,856.5Q833,880 800,880L160,880ZM160,800L800,800Q800,800 800,800Q800,800 800,800L800,360Q800,360 800,360Q800,360 800,360L600,360L600,360Q600,393 576.5,416.5Q553,440 520,440L440,440Q407,440 383.5,416.5Q360,393 360,360L360,360L160,360Q160,360 160,360Q160,360 160,360L160,800Q160,800 160,800Q160,800 160,800ZM440,360L520,360L520,160L440,160L440,360ZM480,580Q480,580 480,580Q480,580 480,580L480,580Q480,580 480,580Q480,580 480,580L480,580L480,580Q480,580 480,580Q480,580 480,580L480,580Q480,580 480,580Q480,580 480,580L480,580L480,580Q480,580 480,580Q480,580 480,580L480,580Q480,580 480,580Q480,580 480,580L480,580Z"/></symbol>
+<symbol id="i-badge_fill1" viewBox="0 0 960 960"><path d="M240-240h240v-18q0-17-9.5-31.5T444-312q-20-9-40.5-13.5T360-330q-23 0-43.5 4.5T276-312q-17 8-26.5 22.5T240-258v18Zm350-60h100q13 0 21.5-8.5T720-330q0-13-8.5-21.5T690-360H590q-13 0-21.5 8.5T560-330q0 13 8.5 21.5T590-300Zm-187.5-77.5Q420-395 420-420t-17.5-42.5Q385-480 360-480t-42.5 17.5Q300-445 300-420t17.5 42.5Q335-360 360-360t42.5-17.5ZM590-420h100q13 0 21.5-8.5T720-450q0-13-8.5-21.5T690-480H590q-13 0-21.5 8.5T560-450q0 13 8.5 21.5T590-420ZM160-80q-33 0-56.5-23.5T80-160v-440q0-33 23.5-56.5T160-680h200v-120q0-33 23.5-56.5T440-880h80q33 0 56.5 23.5T600-800v120h200q33 0 56.5 23.5T880-600v440q0 33-23.5 56.5T800-80H160Zm280-520h80v-200h-80v200Z"/></symbol>
+<symbol id="i-block" viewBox="0 0 960 960"><path d="M480,880Q397,880 324,848.5Q251,817 197,763Q143,709 111.5,636Q80,563 80,480Q80,397 111.5,324Q143,251 197,197Q251,143 324,111.5Q397,80 480,80Q563,80 636,111.5Q709,143 763,197Q817,251 848.5,324Q880,397 880,480Q880,563 848.5,636Q817,709 763,763Q709,817 636,848.5Q563,880 480,880ZM480,800Q534,800 584,782.5Q634,765 676,732L228,284Q195,326 177.5,376Q160,426 160,480Q160,614 253,707Q346,800 480,800ZM732,676Q765,634 782.5,584Q800,534 800,480Q800,346 707,253Q614,160 480,160Q426,160 376,177.5Q326,195 284,228L732,676Z"/></symbol>
+<symbol id="i-bloodtype" viewBox="0 0 960 960"><path d="M480,880Q343,880 251.5,786Q160,692 160,552Q160,490 188,428Q216,366 258,309Q300,252 349,202Q398,152 440,115Q448,107 458.5,103.5Q469,100 480,100Q491,100 501.5,103.5Q512,107 520,115Q562,152 611,202Q660,252 702,309Q744,366 772,428Q800,490 800,552Q800,692 708.5,786Q617,880 480,880ZM480,800Q584,800 652,729.5Q720,659 720,552Q720,479 659.5,387Q599,295 480,186Q361,295 300.5,387Q240,479 240,552Q240,659 308,729.5Q376,800 480,800ZM480,480ZM400,720L560,720Q577,720 588.5,708.5Q600,697 600,680Q600,663 588.5,651.5Q577,640 560,640L400,640Q383,640 371.5,651.5Q360,663 360,680Q360,697 371.5,708.5Q383,720 400,720ZM440,520L440,560Q440,577 451.5,588.5Q463,600 480,600Q497,600 508.5,588.5Q520,577 520,560L520,520L560,520Q577,520 588.5,508.5Q600,497 600,480Q600,463 588.5,451.5Q577,440 560,440L520,440L520,400Q520,383 508.5,371.5Q497,360 480,360Q463,360 451.5,371.5Q440,383 440,400L440,440L400,440Q383,440 371.5,451.5Q360,463 360,480Q360,497 371.5,508.5Q383,520 400,520L440,520Z"/></symbol>
+<symbol id="i-calendar_month" viewBox="0 0 960 960"><path d="M200,880Q167,880 143.5,856.5Q120,833 120,800L120,240Q120,207 143.5,183.5Q167,160 200,160L240,160L240,120Q240,103 251.5,91.5Q263,80 280,80Q297,80 308.5,91.5Q320,103 320,120L320,160L640,160L640,120Q640,103 651.5,91.5Q663,80 680,80Q697,80 708.5,91.5Q720,103 720,120L720,160L760,160Q793,160 816.5,183.5Q840,207 840,240L840,800Q840,833 816.5,856.5Q793,880 760,880L200,880ZM200,800L760,800Q760,800 760,800Q760,800 760,800L760,400L200,400L200,800Q200,800 200,800Q200,800 200,800ZM200,320L760,320L760,240Q760,240 760,240Q760,240 760,240L200,240Q200,240 200,240Q200,240 200,240L200,320ZM200,320L200,240Q200,240 200,240Q200,240 200,240L200,240Q200,240 200,240Q200,240 200,240L200,320L200,320ZM480,560Q463,560 451.5,548.5Q440,537 440,520Q440,503 451.5,491.5Q463,480 480,480Q497,480 508.5,491.5Q520,503 520,520Q520,537 508.5,548.5Q497,560 480,560ZM320,560Q303,560 291.5,548.5Q280,537 280,520Q280,503 291.5,491.5Q303,480 320,480Q337,480 348.5,491.5Q360,503 360,520Q360,537 348.5,548.5Q337,560 320,560ZM640,560Q623,560 611.5,548.5Q600,537 600,520Q600,503 611.5,491.5Q623,480 640,480Q657,480 668.5,491.5Q680,503 680,520Q680,537 668.5,548.5Q657,560 640,560ZM480,720Q463,720 451.5,708.5Q440,697 440,680Q440,663 451.5,651.5Q463,640 480,640Q497,640 508.5,651.5Q520,663 520,680Q520,697 508.5,708.5Q497,720 480,720ZM320,720Q303,720 291.5,708.5Q280,697 280,680Q280,663 291.5,651.5Q303,640 320,640Q337,640 348.5,651.5Q360,663 360,680Q360,697 348.5,708.5Q337,720 320,720ZM640,720Q623,720 611.5,708.5Q600,697 600,680Q600,663 611.5,651.5Q623,640 640,640Q657,640 668.5,651.5Q680,663 680,680Q680,697 668.5,708.5Q657,720 640,720Z"/></symbol>
+<symbol id="i-calendar_today" viewBox="0 0 960 960"><path d="M200,880Q167,880 143.5,856.5Q120,833 120,800L120,240Q120,207 143.5,183.5Q167,160 200,160L240,160L240,120Q240,103 251.5,91.5Q263,80 280,80Q297,80 308.5,91.5Q320,103 320,120L320,160L640,160L640,120Q640,103 651.5,91.5Q663,80 680,80Q697,80 708.5,91.5Q720,103 720,120L720,160L760,160Q793,160 816.5,183.5Q840,207 840,240L840,800Q840,833 816.5,856.5Q793,880 760,880L200,880ZM200,800L760,800Q760,800 760,800Q760,800 760,800L760,400L200,400L200,800Q200,800 200,800Q200,800 200,800ZM200,320L760,320L760,240Q760,240 760,240Q760,240 760,240L200,240Q200,240 200,240Q200,240 200,240L200,320ZM200,320L200,240Q200,240 200,240Q200,240 200,240L200,240Q200,240 200,240Q200,240 200,240L200,320L200,320Z"/></symbol>
+<symbol id="i-call" viewBox="0 0 960 960"><path d="M798,840Q673,840 551,785.5Q429,731 329,631Q229,531 174.5,409Q120,287 120,162Q120,144 132,132Q144,120 162,120L324,120Q338,120 349,129.5Q360,139 362,152L388,292Q390,308 387,319Q384,330 376,338L279,436Q299,473 326.5,507.5Q354,542 387,574Q418,605 452,631.5Q486,658 524,680L618,586Q627,577 641.5,572.5Q656,568 670,570L808,598Q822,602 831,612.5Q840,623 840,636L840,798Q840,816 828,828Q816,840 798,840ZM241,360L307,294Q307,294 307,294Q307,294 307,294L290,200Q290,200 290,200Q290,200 290,200L201,200Q201,200 201,200Q201,200 201,200Q206,241 215,281Q224,321 241,360ZM599,718Q638,735 678.5,745Q719,755 760,758Q760,758 760,758Q760,758 760,758L760,670Q760,670 760,670Q760,670 760,670L666,651Q666,651 666,651Q666,651 666,651L599,718ZM241,360Q241,360 241,360Q241,360 241,360Q241,360 241,360Q241,360 241,360L241,360Q241,360 241,360Q241,360 241,360L241,360Q241,360 241,360Q241,360 241,360L241,360ZM599,718L599,718Q599,718 599,718Q599,718 599,718L599,718Q599,718 599,718Q599,718 599,718L599,718Q599,718 599,718Q599,718 599,718Q599,718 599,718Q599,718 599,718Z"/></symbol>
+<symbol id="i-call_fill1" viewBox="0 0 960 960"><path d="M798,840Q673,840 551,785.5Q429,731 329,631Q229,531 174.5,409Q120,287 120,162Q120,144 132,132Q144,120 162,120L324,120Q338,120 349,129.5Q360,139 362,152L388,292Q390,308 387,319Q384,330 376,338L279,436Q299,473 326.5,507.5Q354,542 387,574Q418,605 452,631.5Q486,658 524,680L618,586Q627,577 641.5,572.5Q656,568 670,570L808,598Q822,602 831,612.5Q840,623 840,636L840,798Q840,816 828,828Q816,840 798,840Z"/></symbol>
+<symbol id="i-cardiology" viewBox="0 0 960 960"><path d="M480,204Q514,164 561,142Q608,120 660,120Q748,120 809.5,176Q871,232 879,320Q879,320 879,320Q879,320 879,320Q880,337 868.5,348.5Q857,360 840,361Q823,362 811.5,350.5Q800,339 799,322Q799,322 799,322Q799,322 799,322Q793,268 754.5,234Q716,200 660,200Q620,200 584.5,220Q549,240 529,272L529,272Q520,286 506.5,293Q493,300 479,300Q465,300 452,293Q439,286 431,272L431,272Q411,240 375.5,220Q340,200 300,200Q244,200 205.5,234Q167,268 161,322Q161,322 161,322Q161,322 161,322Q160,339 148.5,350.5Q137,362 120,361Q103,360 91.5,348.5Q80,337 81,320Q81,320 81,320Q81,320 81,320Q89,232 150.5,176Q212,120 300,120Q352,120 399,142Q446,164 480,204ZM480,827Q466,827 452,822Q438,817 427,806Q384,768 347.5,733.5Q311,699 279,668Q265,654 266.5,638.5Q268,623 279,612Q290,601 305.5,599.5Q321,598 335,611Q365,640 400.5,673.5Q436,707 480,746Q524,707 559.5,673.5Q595,640 625,611Q639,597 654.5,599.5Q670,602 681,613Q692,624 693,640Q694,656 680,670Q648,700 611.5,734Q575,768 533,806Q522,817 508,822Q494,827 480,827ZM442,640Q455,640 464.5,632.5Q474,625 478,613L532,450L567,502Q572,510 581,515Q590,520 600,520L880,520Q897,520 908.5,508.5Q920,497 920,480Q920,463 908.5,451.5Q897,440 880,440L623,440L554,338Q548,329 538.5,324.5Q529,320 518,320Q505,320 495.5,327.5Q486,335 482,347L428,509L394,458Q389,450 380,445Q371,440 361,440L80,440Q63,440 51.5,451.5Q40,463 40,480Q40,497 51.5,508.5Q63,520 80,520L337,520L406,622Q412,631 421.5,635.5Q431,640 442,640ZM480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473L480,473L480,473L480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Q480,473 480,473Z"/></symbol>
+<symbol id="i-check" viewBox="0 0 960 960"><path d="M382,606L721,267Q733,255 749,255Q765,255 777,267Q789,279 789,295.5Q789,312 777,324L410,692Q398,704 382,704Q366,704 354,692L182,520Q170,508 170.5,491.5Q171,475 183,463Q195,451 211.5,451Q228,451 240,463L382,606Z"/></symbol>
+<symbol id="i-check_circle" viewBox="0 0 960 960"><path d="M424,552L338,466Q327,455 310,455Q293,455 282,466Q271,477 271,494Q271,511 282,522L396,636Q408,648 424,648Q440,648 452,636L678,410Q689,399 689,382Q689,365 678,354Q667,343 650,343Q633,343 622,354L424,552ZM480,880Q397,880 324,848.5Q251,817 197,763Q143,709 111.5,636Q80,563 80,480Q80,397 111.5,324Q143,251 197,197Q251,143 324,111.5Q397,80 480,80Q563,80 636,111.5Q709,143 763,197Q817,251 848.5,324Q880,397 880,480Q880,563 848.5,636Q817,709 763,763Q709,817 636,848.5Q563,880 480,880ZM480,800Q614,800 707,707Q800,614 800,480Q800,346 707,253Q614,160 480,160Q346,160 253,253Q160,346 160,480Q160,614 253,707Q346,800 480,800ZM480,480Z"/></symbol>
+<symbol id="i-chevron_right" viewBox="0 0 960 960"><path d="M504,480L348,324Q337,313 337,296Q337,279 348,268Q359,257 376,257Q393,257 404,268L588,452Q594,458 596.5,465Q599,472 599,480Q599,488 596.5,495Q594,502 588,508L404,692Q393,703 376,703Q359,703 348,692Q337,681 337,664Q337,647 348,636L504,480Z"/></symbol>
+<symbol id="i-close" viewBox="0 0 960 960"><path d="M480,536L284,732Q273,743 256,743Q239,743 228,732Q217,721 217,704Q217,687 228,676L424,480L228,284Q217,273 217,256Q217,239 228,228Q239,217 256,217Q273,217 284,228L480,424L676,228Q687,217 704,217Q721,217 732,228Q743,239 743,256Q743,273 732,284L536,480L732,676Q743,687 743,704Q743,721 732,732Q721,743 704,743Q687,743 676,732L480,536Z"/></symbol>
+<symbol id="i-contrast" viewBox="0 0 960 960"><path d="M480,880Q397,880 324,848.5Q251,817 197,763Q143,709 111.5,636Q80,563 80,480Q80,397 111.5,324Q143,251 197,197Q251,143 324,111.5Q397,80 480,80Q563,80 636,111.5Q709,143 763,197Q817,251 848.5,324Q880,397 880,480Q880,563 848.5,636Q817,709 763,763Q709,817 636,848.5Q563,880 480,880ZM520,797Q639,782 719.5,692.5Q800,603 800,480Q800,357 719.5,267.5Q639,178 520,163L520,797Z"/></symbol>
+<symbol id="i-edit" viewBox="0 0 960 960"><path d="M200,760L257,760L648,369L591,312L200,703L200,760ZM160,840Q143,840 131.5,828.5Q120,817 120,800L120,703Q120,687 126,672.5Q132,658 143,647L648,143Q660,132 674.5,126Q689,120 705,120Q721,120 736,126Q751,132 762,144L817,200Q829,211 834.5,226Q840,241 840,256Q840,272 834.5,286.5Q829,301 817,313L313,817Q302,828 287.5,834Q273,840 257,840L160,840ZM760,256L760,256L704,200L704,200L760,256ZM619,341L591,312L591,312L648,369L648,369L619,341Z"/></symbol>
+<symbol id="i-emergency_fill1" viewBox="0 0 960 960"><path d="M410,770L410,602L264,686Q239,700 211,693Q183,686 169,660Q155,635 162,607Q169,579 194,565L340,480L194,396Q169,382 162,353.5Q155,325 169,300Q183,275 211,268Q239,261 264,275L410,359L410,190Q410,161 430.5,140.5Q451,120 480,120Q509,120 529.5,140.5Q550,161 550,190L550,359L696,275Q721,261 749,268Q777,275 791,300Q805,325 797.5,353.5Q790,382 765,396L620,480L766,565Q791,579 798,607Q805,635 791,661Q777,686 749,693Q721,700 696,686L550,602L550,770Q550,799 529.5,819.5Q509,840 480,840Q451,840 430.5,819.5Q410,799 410,770Z"/></symbol>
+<symbol id="i-event" viewBox="0 0 960 960"><path d="M580,720Q538,720 509,691Q480,662 480,620Q480,578 509,549Q538,520 580,520Q622,520 651,549Q680,578 680,620Q680,662 651,691Q622,720 580,720ZM200,880Q167,880 143.5,856.5Q120,833 120,800L120,240Q120,207 143.5,183.5Q167,160 200,160L240,160L240,120Q240,103 251.5,91.5Q263,80 280,80Q297,80 308.5,91.5Q320,103 320,120L320,160L640,160L640,120Q640,103 651.5,91.5Q663,80 680,80Q697,80 708.5,91.5Q720,103 720,120L720,160L760,160Q793,160 816.5,183.5Q840,207 840,240L840,800Q840,833 816.5,856.5Q793,880 760,880L200,880ZM200,800L760,800Q760,800 760,800Q760,800 760,800L760,400L200,400L200,800Q200,800 200,800Q200,800 200,800ZM200,320L760,320L760,240Q760,240 760,240Q760,240 760,240L200,240Q200,240 200,240Q200,240 200,240L200,320ZM200,320L200,240Q200,240 200,240Q200,240 200,240L200,240Q200,240 200,240Q200,240 200,240L200,320L200,320Z"/></symbol>
+<symbol id="i-filter_list" viewBox="0 0 960 960"><path d="M440,720Q423,720 411.5,708.5Q400,697 400,680Q400,663 411.5,651.5Q423,640 440,640L520,640Q537,640 548.5,651.5Q560,663 560,680Q560,697 548.5,708.5Q537,720 520,720L440,720ZM280,520Q263,520 251.5,508.5Q240,497 240,480Q240,463 251.5,451.5Q263,440 280,440L680,440Q697,440 708.5,451.5Q720,463 720,480Q720,497 708.5,508.5Q697,520 680,520L280,520ZM160,320Q143,320 131.5,308.5Q120,297 120,280Q120,263 131.5,251.5Q143,240 160,240L800,240Q817,240 828.5,251.5Q840,263 840,280Q840,297 828.5,308.5Q817,320 800,320L160,320Z"/></symbol>
+<symbol id="i-folder" viewBox="0 0 960 960"><path d="M160,800Q127,800 103.5,776.5Q80,753 80,720L80,240Q80,207 103.5,183.5Q127,160 160,160L367,160Q383,160 397.5,166Q412,172 423,183L480,240L800,240Q833,240 856.5,263.5Q880,287 880,320L880,720Q880,753 856.5,776.5Q833,800 800,800L160,800ZM160,720L800,720Q800,720 800,720Q800,720 800,720L800,320Q800,320 800,320Q800,320 800,320L447,320L367,240Q367,240 367,240Q367,240 367,240L160,240Q160,240 160,240Q160,240 160,240L160,720Q160,720 160,720Q160,720 160,720ZM160,720Q160,720 160,720Q160,720 160,720L160,240Q160,240 160,240Q160,240 160,240L160,240Q160,240 160,240Q160,240 160,240L160,320L160,320Q160,320 160,320Q160,320 160,320L160,720Q160,720 160,720Q160,720 160,720L160,720Z"/></symbol>
+<symbol id="i-glucose" viewBox="0 0 960 960"><path d="M576,880Q541,880 509,865.5Q477,851 454,824L250,586Q239,572 240.5,555.5Q242,539 256,528L274,515Q294,500 319,499Q344,498 365,512L420,547L420,160Q420,143 431.5,131.5Q443,120 460,120Q477,120 488.5,131.5Q500,143 500,160L500,620Q500,644 479,655Q458,666 438,653L382,617Q382,617 382,617Q382,617 382,617L382,617L526,786Q532,793 540,796.5Q548,800 557,800L760,800Q793,800 816.5,776.5Q840,753 840,720L840,440Q840,423 851.5,411.5Q863,400 880,400Q897,400 908.5,411.5Q920,423 920,440L920,720Q920,786 873,833Q826,880 760,880L576,880ZM600,280Q617,280 628.5,291.5Q640,303 640,320L640,480Q640,497 628.5,508.5Q617,520 600,520L600,520Q583,520 571.5,508.5Q560,497 560,480L560,320Q560,303 571.5,291.5Q583,280 600,280ZM740,320Q757,320 768.5,331.5Q780,343 780,360L780,480Q780,497 768.5,508.5Q757,520 740,520L740,520Q723,520 711.5,508.5Q700,497 700,480L700,360Q700,343 711.5,331.5Q723,320 740,320ZM180,400Q121,400 80.5,359.5Q40,319 40,262Q40,228 53.5,203Q67,178 117,121L150,84Q162,70 180,70Q198,70 210,84L243,122Q294,181 307,205Q320,229 320,262Q320,319 279,359.5Q238,400 180,400ZM180,320Q205,320 222.5,303Q240,286 240,262Q240,245 231.5,231.5Q223,218 185,176L180,171L175,176Q143,212 131.5,230Q120,248 120,262Q120,286 137,303Q154,320 180,320ZM180,262Q180,262 180,262Q180,262 180,262Q180,262 180,262Q180,262 180,262L180,262L180,262Q180,262 180,262Q180,262 180,262Q180,262 180,262Q180,262 180,262ZM840,800Q840,800 816.5,800Q793,800 760,800L557,800Q548,800 540,800Q532,800 526,800L526,800L526,800Q526,800 526,800Q526,800 526,800L526,800Q526,800 526,800Q526,800 526,800L526,800L640,800L700,800L840,800L840,800Z"/></symbol>
+<symbol id="i-group" viewBox="0 0 960 960"><path d="M40,688Q40,654 57.5,625.5Q75,597 104,582Q166,551 230,535.5Q294,520 360,520Q426,520 490,535.5Q554,551 616,582Q645,597 662.5,625.5Q680,654 680,688L680,720Q680,753 656.5,776.5Q633,800 600,800L120,800Q87,800 63.5,776.5Q40,753 40,720L40,688ZM840,800L738,800Q749,782 754.5,761.5Q760,741 760,720L760,680Q760,636 735.5,595.5Q711,555 666,526Q717,532 762,546.5Q807,561 846,582Q882,602 901,626.5Q920,651 920,680L920,720Q920,753 896.5,776.5Q873,800 840,800ZM360,480Q294,480 247,433Q200,386 200,320Q200,254 247,207Q294,160 360,160Q426,160 473,207Q520,254 520,320Q520,386 473,433Q426,480 360,480ZM760,320Q760,386 713,433Q666,480 600,480Q589,480 572,477.5Q555,475 544,472Q571,440 585.5,401Q600,362 600,320Q600,278 585.5,239Q571,200 544,168Q558,163 572,161.5Q586,160 600,160Q666,160 713,207Q760,254 760,320ZM120,720L600,720L600,688Q600,677 594.5,668Q589,659 580,654Q526,627 471,613.5Q416,600 360,600Q304,600 249,613.5Q194,627 140,654Q131,659 125.5,668Q120,677 120,688L120,720ZM360,400Q393,400 416.5,376.5Q440,353 440,320Q440,287 416.5,263.5Q393,240 360,240Q327,240 303.5,263.5Q280,287 280,320Q280,353 303.5,376.5Q327,400 360,400ZM360,720L360,720L360,720Q360,720 360,720Q360,720 360,720Q360,720 360,720Q360,720 360,720Q360,720 360,720Q360,720 360,720Q360,720 360,720Q360,720 360,720L360,720ZM360,320Q360,320 360,320Q360,320 360,320Q360,320 360,320Q360,320 360,320Q360,320 360,320Q360,320 360,320Q360,320 360,320Q360,320 360,320Z"/></symbol>
+<symbol id="i-groups" viewBox="0 0 960 960"><path d="M40,720Q23,720 11.5,708.5Q0,697 0,680L0,657Q0,614 44,587Q88,560 160,560Q173,560 185,560.5Q197,561 208,563Q194,584 187,607Q180,630 180,655L180,720L40,720ZM280,720Q263,720 251.5,708.5Q240,697 240,680L240,655Q240,623 257.5,596.5Q275,570 307,550Q339,530 383.5,520Q428,510 480,510Q533,510 577.5,520Q622,530 654,550Q686,570 703,596.5Q720,623 720,655L720,680Q720,697 708.5,708.5Q697,720 680,720L280,720ZM780,720L780,655Q780,629 773.5,606Q767,583 754,563Q765,561 776.5,560.5Q788,560 800,560Q872,560 916,586.5Q960,613 960,657L960,680Q960,697 948.5,708.5Q937,720 920,720L780,720ZM325,640L636,640L636,640Q626,620 580.5,605Q535,590 480,590Q425,590 379.5,605Q334,620 325,640L325,640ZM160,520Q127,520 103.5,496.5Q80,473 80,440Q80,406 103.5,383Q127,360 160,360Q194,360 217,383Q240,406 240,440Q240,473 217,496.5Q194,520 160,520ZM800,520Q767,520 743.5,496.5Q720,473 720,440Q720,406 743.5,383Q767,360 800,360Q834,360 857,383Q880,406 880,440Q880,473 857,496.5Q834,520 800,520ZM480,480Q430,480 395,445Q360,410 360,360Q360,309 395,274.5Q430,240 480,240Q531,240 565.5,274.5Q600,309 600,360Q600,410 565.5,445Q531,480 480,480ZM480,400Q497,400 508.5,388.5Q520,377 520,360Q520,343 508.5,331.5Q497,320 480,320Q463,320 451.5,331.5Q440,343 440,360Q440,377 451.5,388.5Q463,400 480,400ZM481,640L481,640Q481,640 481,640Q481,640 481,640Q481,640 481,640Q481,640 481,640L481,640L481,640ZM480,360Q480,360 480,360Q480,360 480,360Q480,360 480,360Q480,360 480,360Q480,360 480,360Q480,360 480,360Q480,360 480,360Q480,360 480,360Z"/></symbol>
+<symbol id="i-history" viewBox="0 0 960 960"><path d="M480,840Q354,840 257,763.5Q160,687 131,568Q127,553 137,540.5Q147,528 164,526Q180,524 193,532Q206,540 211,556Q235,646 310,703Q385,760 480,760Q597,760 678.5,678.5Q760,597 760,480Q760,363 678.5,281.5Q597,200 480,200Q411,200 351,232Q291,264 250,320L320,320Q337,320 348.5,331.5Q360,343 360,360Q360,377 348.5,388.5Q337,400 320,400L160,400Q143,400 131.5,388.5Q120,377 120,360L120,200Q120,183 131.5,171.5Q143,160 160,160Q177,160 188.5,171.5Q200,183 200,200L200,254Q251,190 324.5,155Q398,120 480,120Q555,120 620.5,148.5Q686,177 734.5,225.5Q783,274 811.5,339.5Q840,405 840,480Q840,555 811.5,620.5Q783,686 734.5,734.5Q686,783 620.5,811.5Q555,840 480,840ZM520,464L620,564Q631,575 631,592Q631,609 620,620Q609,631 592,631Q575,631 564,620L452,508Q446,502 443,494.5Q440,487 440,479L440,320Q440,303 451.5,291.5Q463,280 480,280Q497,280 508.5,291.5Q520,303 520,320L520,464Z"/></symbol>
+<symbol id="i-home" viewBox="0 0 960 960"><path d="M240,760L360,760L360,560Q360,543 371.5,531.5Q383,520 400,520L560,520Q577,520 588.5,531.5Q600,543 600,560L600,760L720,760L720,400Q720,400 720,400Q720,400 720,400L480,220Q480,220 480,220Q480,220 480,220L240,400Q240,400 240,400Q240,400 240,400L240,760ZM160,760L160,400Q160,381 168.5,364Q177,347 192,336L432,156Q453,140 480,140Q507,140 528,156L768,336Q783,347 791.5,364Q800,381 800,400L800,760Q800,793 776.5,816.5Q753,840 720,840L560,840Q543,840 531.5,828.5Q520,817 520,800L520,600Q520,600 520,600Q520,600 520,600L440,600Q440,600 440,600Q440,600 440,600L440,800Q440,817 428.5,828.5Q417,840 400,840L240,840Q207,840 183.5,816.5Q160,793 160,760ZM480,490L480,490L480,490Q480,490 480,490Q480,490 480,490L480,490L480,490L480,490L480,490Q480,490 480,490Q480,490 480,490L480,490Q480,490 480,490Q480,490 480,490L480,490L480,490Z"/></symbol>
+<symbol id="i-inventory_2" viewBox="0 0 960 960"><path d="M200,880Q167,880 143.5,856.5Q120,833 120,800L120,349Q102,338 91,320.5Q80,303 80,280L80,160Q80,127 103.5,103.5Q127,80 160,80L800,80Q833,80 856.5,103.5Q880,127 880,160L880,280Q880,303 869,320.5Q858,338 840,349L840,800Q840,833 816.5,856.5Q793,880 760,880L200,880ZM200,360L200,800Q200,800 200,800Q200,800 200,800L760,800Q760,800 760,800Q760,800 760,800L760,360L200,360ZM160,280L800,280Q800,280 800,280Q800,280 800,280L800,160Q800,160 800,160Q800,160 800,160L160,160Q160,160 160,160Q160,160 160,160L160,280Q160,280 160,280Q160,280 160,280ZM400,560L560,560Q577,560 588.5,548.5Q600,537 600,520Q600,503 588.5,491.5Q577,480 560,480L400,480Q383,480 371.5,491.5Q360,503 360,520Q360,537 371.5,548.5Q383,560 400,560ZM480,580L480,580L480,580Q480,580 480,580Q480,580 480,580L480,580Q480,580 480,580Q480,580 480,580L480,580Z"/></symbol>
+<symbol id="i-location_on" viewBox="0 0 960 960"><path d="M480,774Q602,662 661,570.5Q720,479 720,408Q720,299 650.5,229.5Q581,160 480,160Q379,160 309.5,229.5Q240,299 240,408Q240,479 299,570.5Q358,662 480,774ZM480,853Q466,853 452,848Q438,843 427,833Q362,773 312,716Q262,659 228.5,605.5Q195,552 177.5,502.5Q160,453 160,408Q160,258 256.5,169Q353,80 480,80Q607,80 703.5,169Q800,258 800,408Q800,453 782.5,502.5Q765,552 731.5,605.5Q698,659 648,716Q598,773 533,833Q522,843 508,848Q494,853 480,853ZM480,400Q480,400 480,400Q480,400 480,400Q480,400 480,400Q480,400 480,400Q480,400 480,400Q480,400 480,400Q480,400 480,400Q480,400 480,400ZM480,480Q513,480 536.5,456.5Q560,433 560,400Q560,367 536.5,343.5Q513,320 480,320Q447,320 423.5,343.5Q400,367 400,400Q400,433 423.5,456.5Q447,480 480,480Z"/></symbol>
+<symbol id="i-medication" viewBox="0 0 960 960"><path d="M420,600L420,640Q420,665 437.5,682.5Q455,700 480,700Q505,700 522.5,682.5Q540,665 540,640L540,600L580,600Q605,600 622.5,582.5Q640,565 640,540Q640,515 622.5,497.5Q605,480 580,480L540,480L540,440Q540,415 522.5,397.5Q505,380 480,380Q455,380 437.5,397.5Q420,415 420,440L420,480L380,480Q355,480 337.5,497.5Q320,515 320,540Q320,565 337.5,582.5Q355,600 380,600L420,600ZM280,840Q247,840 223.5,816.5Q200,793 200,760L200,320Q200,287 223.5,263.5Q247,240 280,240L680,240Q713,240 736.5,263.5Q760,287 760,320L760,760Q760,793 736.5,816.5Q713,840 680,840L280,840ZM280,760L680,760Q680,760 680,760Q680,760 680,760L680,320Q680,320 680,320Q680,320 680,320L280,320Q280,320 280,320Q280,320 280,320L280,760Q280,760 280,760Q280,760 280,760ZM280,200Q263,200 251.5,188.5Q240,177 240,160Q240,143 251.5,131.5Q263,120 280,120L680,120Q697,120 708.5,131.5Q720,143 720,160Q720,177 708.5,188.5Q697,200 680,200L280,200ZM280,320L280,320Q280,320 280,320Q280,320 280,320L280,760Q280,760 280,760Q280,760 280,760L280,760Q280,760 280,760Q280,760 280,760L280,320Q280,320 280,320Q280,320 280,320Z"/></symbol>
+<symbol id="i-medication_fill1" viewBox="0 0 960 960"><path d="M420,600L420,640Q420,665 437.5,682.5Q455,700 480,700Q505,700 522.5,682.5Q540,665 540,640L540,600L580,600Q605,600 622.5,582.5Q640,565 640,540Q640,515 622.5,497.5Q605,480 580,480L540,480L540,440Q540,415 522.5,397.5Q505,380 480,380Q455,380 437.5,397.5Q420,415 420,440L420,480L380,480Q355,480 337.5,497.5Q320,515 320,540Q320,565 337.5,582.5Q355,600 380,600L420,600ZM280,840Q247,840 223.5,816.5Q200,793 200,760L200,320Q200,287 223.5,263.5Q247,240 280,240L680,240Q713,240 736.5,263.5Q760,287 760,320L760,760Q760,793 736.5,816.5Q713,840 680,840L280,840ZM280,200Q263,200 251.5,188.5Q240,177 240,160Q240,143 251.5,131.5Q263,120 280,120L680,120Q697,120 708.5,131.5Q720,143 720,160Q720,177 708.5,188.5Q697,200 680,200L280,200Z"/></symbol>
+<symbol id="i-menu" viewBox="0 0 960 960"><path d="M160,720Q143,720 131.5,708.5Q120,697 120,680Q120,663 131.5,651.5Q143,640 160,640L800,640Q817,640 828.5,651.5Q840,663 840,680Q840,697 828.5,708.5Q817,720 800,720L160,720ZM160,520Q143,520 131.5,508.5Q120,497 120,480Q120,463 131.5,451.5Q143,440 160,440L800,440Q817,440 828.5,451.5Q840,463 840,480Q840,497 828.5,508.5Q817,520 800,520L160,520ZM160,320Q143,320 131.5,308.5Q120,297 120,280Q120,263 131.5,251.5Q143,240 160,240L800,240Q817,240 828.5,251.5Q840,263 840,280Q840,297 828.5,308.5Q817,320 800,320L160,320Z"/></symbol>
+<symbol id="i-more_vert" viewBox="0 0 960 960"><path d="M480,800Q447,800 423.5,776.5Q400,753 400,720Q400,687 423.5,663.5Q447,640 480,640Q513,640 536.5,663.5Q560,687 560,720Q560,753 536.5,776.5Q513,800 480,800ZM480,560Q447,560 423.5,536.5Q400,513 400,480Q400,447 423.5,423.5Q447,400 480,400Q513,400 536.5,423.5Q560,447 560,480Q560,513 536.5,536.5Q513,560 480,560ZM480,320Q447,320 423.5,296.5Q400,273 400,240Q400,207 423.5,183.5Q447,160 480,160Q513,160 536.5,183.5Q560,207 560,240Q560,273 536.5,296.5Q513,320 480,320Z"/></symbol>
+<symbol id="i-no_food" viewBox="0 0 960 960"><path d="M916,244L873,666Q871,691 847,699.5Q823,708 805,690Q799,684 796,675.5Q793,667 794,658L832,280L488,280Q471,280 459.5,268.5Q448,257 448,240Q448,223 459.5,211.5Q471,200 488,200L640,200L640,80Q640,63 651.5,51.5Q663,40 680,40Q697,40 708.5,51.5Q720,63 720,80L720,200L876,200Q894,200 906,213Q918,226 916,244ZM625,511L625,511L625,511L625,511L625,511ZM791,903L55,168Q43,156 43,139.5Q43,123 55,111Q67,99 83.5,99Q100,99 112,111L848,847Q860,859 860,875Q860,891 848,903Q836,915 819.5,915Q803,915 791,903ZM80,760Q63,760 51.5,748.5Q40,737 40,720Q40,703 51.5,691.5Q63,680 80,680L600,680Q617,680 628.5,691.5Q640,703 640,720Q640,737 628.5,748.5Q617,760 600,760L80,760ZM80,920Q63,920 51.5,908.5Q40,897 40,880Q40,863 51.5,851.5Q63,840 80,840L600,840Q617,840 628.5,851.5Q640,863 640,880Q640,897 628.5,908.5Q617,920 600,920L80,920ZM362,361L362,441Q357,441 351,440.5Q345,440 340,440Q281,440 228.5,460Q176,480 147,520L521,520L601,600L89,600Q70,600 57.5,585.5Q45,571 49,552Q59,501 88,464.5Q117,428 157,404.5Q197,381 244.5,370.5Q292,360 340,360Q345,360 351,360.5Q357,361 362,361ZM340,520L340,520Q340,520 340,520Q340,520 340,520Q340,520 340,520Q340,520 340,520L340,520Z"/></symbol>
+<symbol id="i-notifications_active" viewBox="0 0 960 960"><path d="M200,760Q183,760 171.5,748.5Q160,737 160,720Q160,703 171.5,691.5Q183,680 200,680L240,680L240,400Q240,317 290,252.5Q340,188 420,168L420,140Q420,115 437.5,97.5Q455,80 480,80Q505,80 522.5,97.5Q540,115 540,140L540,168Q620,188 670,252.5Q720,317 720,400L720,680L760,680Q777,680 788.5,691.5Q800,703 800,720Q800,737 788.5,748.5Q777,760 760,760L200,760ZM480,460L480,460L480,460L480,460Q480,460 480,460Q480,460 480,460Q480,460 480,460Q480,460 480,460ZM480,880Q447,880 423.5,856.5Q400,833 400,800L560,800Q560,833 536.5,856.5Q513,880 480,880ZM320,680L640,680L640,400Q640,334 593,287Q546,240 480,240Q414,240 367,287Q320,334 320,400L320,680ZM120,400Q103,400 91.5,387Q80,374 82,357Q90,282 124,217.5Q158,153 211,105Q224,94 240.5,95Q257,96 267,110Q277,124 275,140Q273,156 260,168Q221,205 196,254Q171,303 163,360Q161,377 149,388.5Q137,400 120,400ZM840,400Q823,400 811,388.5Q799,377 797,360Q789,303 764,254Q739,205 700,168Q687,156 685,140Q683,124 693,110Q703,96 719.5,95Q736,94 749,105Q802,153 836,217.5Q870,282 878,357Q880,374 868.5,387Q857,400 840,400Z"/></symbol>
+<symbol id="i-person" viewBox="0 0 960 960"><path d="M480,480Q414,480 367,433Q320,386 320,320Q320,254 367,207Q414,160 480,160Q546,160 593,207Q640,254 640,320Q640,386 593,433Q546,480 480,480ZM160,720L160,688Q160,654 177.5,625.5Q195,597 224,582Q286,551 350,535.5Q414,520 480,520Q546,520 610,535.5Q674,551 736,582Q765,597 782.5,625.5Q800,654 800,688L800,720Q800,753 776.5,776.5Q753,800 720,800L240,800Q207,800 183.5,776.5Q160,753 160,720ZM240,720L720,720L720,688Q720,677 714.5,668Q709,659 700,654Q646,627 591,613.5Q536,600 480,600Q424,600 369,613.5Q314,627 260,654Q251,659 245.5,668Q240,677 240,688L240,720ZM480,400Q513,400 536.5,376.5Q560,353 560,320Q560,287 536.5,263.5Q513,240 480,240Q447,240 423.5,263.5Q400,287 400,320Q400,353 423.5,376.5Q447,400 480,400ZM480,320Q480,320 480,320Q480,320 480,320Q480,320 480,320Q480,320 480,320Q480,320 480,320Q480,320 480,320Q480,320 480,320Q480,320 480,320ZM480,720L480,720Q480,720 480,720Q480,720 480,720Q480,720 480,720Q480,720 480,720Q480,720 480,720Q480,720 480,720Q480,720 480,720Q480,720 480,720L480,720L480,720Z"/></symbol>
+<symbol id="i-prescriptions" viewBox="0 0 960 960"><path d="M678,826L724,780L660,716L614,762Q600,776 600,794Q600,812 614,826Q628,840 646,840Q664,840 678,826ZM780,724L826,678Q840,664 840,646Q840,628 826,614Q812,600 794,600Q776,600 762,614L716,660L780,724ZM735,883Q698,920 646,920Q594,920 557,883Q520,846 520,794Q520,742 557,705L705,557Q742,520 794,520Q846,520 883,557Q920,594 920,646Q920,698 883,735L735,883ZM200,760Q200,732 200,704.5Q200,677 200,649L200,500Q200,486 200,471.5Q200,457 200,443L200,200Q200,200 200,200Q200,200 200,200L200,200Q200,200 200,200Q200,200 200,200L200,760Q200,760 200,760Q200,760 200,760L200,760ZM200,840Q167,840 143.5,816.5Q120,793 120,760L120,200Q120,167 143.5,143.5Q167,120 200,120L368,120Q381,84 411.5,62Q442,40 480,40Q518,40 548.5,62Q579,84 592,120L760,120Q793,120 816.5,143.5Q840,167 840,200L840,445Q820,440 800,440Q780,440 760,443L760,200Q760,200 760,200Q760,200 760,200L200,200Q200,200 200,200Q200,200 200,200L200,760Q200,760 200,760Q200,760 200,760L443,760Q440,780 440,800Q440,820 445,840L200,840ZM480,170Q493,170 501.5,161.5Q510,153 510,140Q510,127 501.5,118.5Q493,110 480,110Q467,110 458.5,118.5Q450,127 450,140Q450,153 458.5,161.5Q467,170 480,170ZM280,360L280,280L680,280L680,360L280,360ZM280,520L280,440L680,440L680,474Q672,479 664.5,485.5Q657,492 649,500L629,520L280,520ZM280,680L280,600L549,600L500,649Q492,657 485.5,664.5Q479,672 474,680L280,680Z"/></symbol>
+<symbol id="i-receipt_long" viewBox="0 0 960 960"><path d="M240,880Q190,880 155,845Q120,810 120,760L120,680Q120,663 131.5,651.5Q143,640 160,640L240,640L240,104Q240,97 246,94.5Q252,92 257,97L286,126Q292,132 300,132Q308,132 314,126L346,94Q352,88 360,88Q368,88 374,94L406,126Q412,132 420,132Q428,132 434,126L466,94Q472,88 480,88Q488,88 494,94L526,126Q532,132 540,132Q548,132 554,126L586,94Q592,88 600,88Q608,88 614,94L646,126Q652,132 660,132Q668,132 674,126L706,94Q712,88 720,88Q728,88 734,94L766,126Q772,132 780,132Q788,132 794,126L823,97Q828,92 834,94.5Q840,97 840,104L840,760Q840,810 805,845Q770,880 720,880L240,880ZM720,800Q737,800 748.5,788.5Q760,777 760,760L760,200L320,200L320,640L640,640Q657,640 668.5,651.5Q680,663 680,680L680,760Q680,777 691.5,788.5Q703,800 720,800ZM400,280L560,280Q577,280 588.5,291.5Q600,303 600,320Q600,337 588.5,348.5Q577,360 560,360L400,360Q383,360 371.5,348.5Q360,337 360,320Q360,303 371.5,291.5Q383,280 400,280ZM400,400L560,400Q577,400 588.5,411.5Q600,423 600,440Q600,457 588.5,468.5Q577,480 560,480L400,480Q383,480 371.5,468.5Q360,457 360,440Q360,423 371.5,411.5Q383,400 400,400ZM680,360Q663,360 651.5,348.5Q640,337 640,320Q640,303 651.5,291.5Q663,280 680,280Q697,280 708.5,291.5Q720,303 720,320Q720,337 708.5,348.5Q697,360 680,360ZM680,480Q663,480 651.5,468.5Q640,457 640,440Q640,423 651.5,411.5Q663,400 680,400Q697,400 708.5,411.5Q720,423 720,440Q720,457 708.5,468.5Q697,480 680,480ZM240,800L600,800L600,720L200,720L200,760Q200,777 211.5,788.5Q223,800 240,800ZM200,800Q200,800 200,788.5Q200,777 200,760L200,720L200,720L200,800L200,800Z"/></symbol>
+<symbol id="i-schedule" viewBox="0 0 960 960"><path d="M520,464L520,320Q520,303 508.5,291.5Q497,280 480,280Q463,280 451.5,291.5Q440,303 440,320L440,479Q440,487 443,494.5Q446,502 452,508L584,640Q595,651 612,651Q629,651 640,640Q651,629 651,612Q651,595 640,584L520,464ZM480,880Q397,880 324,848.5Q251,817 197,763Q143,709 111.5,636Q80,563 80,480Q80,397 111.5,324Q143,251 197,197Q251,143 324,111.5Q397,80 480,80Q563,80 636,111.5Q709,143 763,197Q817,251 848.5,324Q880,397 880,480Q880,563 848.5,636Q817,709 763,763Q709,817 636,848.5Q563,880 480,880ZM480,480ZM480,800Q613,800 706.5,706.5Q800,613 800,480Q800,347 706.5,253.5Q613,160 480,160Q347,160 253.5,253.5Q160,347 160,480Q160,613 253.5,706.5Q347,800 480,800Z"/></symbol>
+<symbol id="i-shopping_cart" viewBox="0 0 960 960"><path d="M280,880Q247,880 223.5,856.5Q200,833 200,800Q200,767 223.5,743.5Q247,720 280,720Q313,720 336.5,743.5Q360,767 360,800Q360,833 336.5,856.5Q313,880 280,880ZM680,880Q647,880 623.5,856.5Q600,833 600,800Q600,767 623.5,743.5Q647,720 680,720Q713,720 736.5,743.5Q760,767 760,800Q760,833 736.5,856.5Q713,880 680,880ZM246,240L342,440L622,440Q622,440 622,440Q622,440 622,440L732,240Q732,240 732,240Q732,240 732,240L246,240ZM208,160L798,160Q821,160 833,180.5Q845,201 834,222L692,478Q681,498 662.5,509Q644,520 622,520L324,520L280,600Q280,600 280,600Q280,600 280,600L720,600Q737,600 748.5,611.5Q760,623 760,640Q760,657 748.5,668.5Q737,680 720,680L280,680Q235,680 212,640.5Q189,601 210,562L264,464L120,160L80,160Q63,160 51.5,148.5Q40,137 40,120Q40,103 51.5,91.5Q63,80 80,80L145,80Q156,80 166,86Q176,92 181,103L208,160ZM342,440L342,440L622,440Q622,440 622,440Q622,440 622,440L622,440L342,440Z"/></symbol>
+<symbol id="i-stethoscope" viewBox="0 0 960 960"><path d="M540,880Q432,880 356,804Q280,728 280,620L280,597Q194,583 137,516.5Q80,450 80,360L80,160Q80,143 91.5,131.5Q103,120 120,120L200,120L200,120Q200,103 211.5,91.5Q223,80 240,80Q257,80 268.5,91.5Q280,103 280,120L280,200Q280,217 268.5,228.5Q257,240 240,240Q223,240 211.5,228.5Q200,217 200,200L200,200L160,200L160,360Q160,426 207,473Q254,520 320,520Q386,520 433,473Q480,426 480,360L480,200L440,200L440,200Q440,217 428.5,228.5Q417,240 400,240Q383,240 371.5,228.5Q360,217 360,200L360,120Q360,103 371.5,91.5Q383,80 400,80Q417,80 428.5,91.5Q440,103 440,120L440,120L520,120Q537,120 548.5,131.5Q560,143 560,160L560,360Q560,450 503,516.5Q446,583 360,597L360,620Q360,695 412.5,747.5Q465,800 540,800Q615,800 667.5,747.5Q720,695 720,620L720,553Q685,540 662.5,509.5Q640,479 640,440Q640,390 675,355Q710,320 760,320Q810,320 845,355Q880,390 880,440Q880,479 857.5,509.5Q835,540 800,553L800,620Q800,728 724,804Q648,880 540,880ZM760,480Q777,480 788.5,468.5Q800,457 800,440Q800,423 788.5,411.5Q777,400 760,400Q743,400 731.5,411.5Q720,423 720,440Q720,457 731.5,468.5Q743,480 760,480ZM760,440Q760,440 760,440Q760,440 760,440Q760,440 760,440Q760,440 760,440Q760,440 760,440Q760,440 760,440Q760,440 760,440Q760,440 760,440Z"/></symbol>
+<symbol id="i-warning_fill1" viewBox="0 0 960 960"><path d="M109,840Q98,840 89,834.5Q80,829 75,820Q70,811 69.5,800.5Q69,790 75,780L445,140Q451,130 460.5,125Q470,120 480,120Q490,120 499.5,125Q509,130 515,140L885,780Q891,790 890.5,800.5Q890,811 885,820Q880,829 871,834.5Q862,840 851,840L109,840ZM480,720Q497,720 508.5,708.5Q520,697 520,680Q520,663 508.5,651.5Q497,640 480,640Q463,640 451.5,651.5Q440,663 440,680Q440,697 451.5,708.5Q463,720 480,720ZM480,600Q497,600 508.5,588.5Q520,577 520,560L520,440Q520,423 508.5,411.5Q497,400 480,400Q463,400 451.5,411.5Q440,423 440,440L440,560Q440,577 451.5,588.5Q463,600 480,600Z"/></symbol>
+
+<symbol id="p-round" viewBox="0 0 40 40"><circle cx="20" cy="20" r="12" fill="#F7F5F0" stroke="rgba(0,0,0,.28)" stroke-width="1.2"/><ellipse cx="16.4" cy="15.8" rx="4.6" ry="2.4" fill="rgba(255,255,255,.55)"/><line x1="11" y1="20" x2="29" y2="20" stroke="rgba(0,0,0,.28)" stroke-width="1.4" stroke-linecap="round"/></symbol>
+<symbol id="p-oblong" viewBox="0 0 40 40"><g transform="rotate(-30 20 20)"><rect x="3.6" y="12.85" width="32.8" height="14.3" rx="7.15" fill="#F7F5F0" stroke="rgba(0,0,0,.28)" stroke-width="1.2"/><rect x="8.6" y="15.4" width="16.4" height="2.9" rx="1.4" fill="rgba(255,255,255,.55)"/><line x1="20" y1="15" x2="20" y2="25" stroke="rgba(0,0,0,.28)" stroke-width="1.4" stroke-linecap="round"/></g></symbol>
+<symbol id="p-capsule" viewBox="0 0 40 40"><g transform="rotate(-30 20 20)"><path d="M10.4 13.6H20v12.8h-9.6a6.4 6.4 0 0 1 0-12.8z" fill="#A88BD8"/><path d="M20 13.6h9.6a6.4 6.4 0 0 1 0 12.8H20z" fill="#F2A7BD"/><rect x="4" y="13.6" width="32" height="12.8" rx="6.4" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.2"/><line x1="20" y1="13.6" x2="20" y2="26.4" stroke="rgba(0,0,0,.28)" stroke-width="1"/><rect x="8.5" y="15.9" width="17.6" height="2.6" rx="1.3" fill="rgba(255,255,255,.55)"/></g></symbol>
+<symbol id="p-oval" viewBox="0 0 40 40"><g transform="rotate(-25 20 20)"><ellipse cx="20" cy="20" rx="14.4" ry="9.2" fill="#F2A7BD" stroke="rgba(0,0,0,.28)" stroke-width="1.2"/><ellipse cx="15.7" cy="15.9" rx="5" ry="2" fill="rgba(255,255,255,.55)"/></g></symbol>
+<symbol id="p-small" viewBox="0 0 40 40"><circle cx="20" cy="20" r="9.6" fill="#F6D04D" stroke="rgba(0,0,0,.28)" stroke-width="1.2"/><ellipse cx="17.1" cy="16.6" rx="3.6" ry="1.9" fill="rgba(255,255,255,.55)"/></symbol>
+</svg>
+
+<a class="skip" href="#main"><span class="en">Skip to content</span><span class="pt" lang="pt-PT">Saltar para o conteúdo</span></a>
+
+<header class="masthead">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true"><svg><use href="#i-medication_fill1"/></svg></span>
+      <span>Family Care <small><span class="en">Version 0.9.0</span><span class="pt" lang="pt-PT">Versão 0.9.0</span></small></span>
+    </a>
+    <nav class="nav-primary" aria-label="Sections" data-aria-en="Sections" data-aria-pt="Secções">
+      <a href="#doses"><span class="en">How it works</span><span class="pt" lang="pt-PT">Como funciona</span></a>
+      <a href="#privacy"><span class="en">Privacy</span><span class="pt" lang="pt-PT">Privacidade</span></a>
+      <a href="#colophon"><span class="en">How it’s installed</span><span class="pt" lang="pt-PT">Como se instala</span></a>
+    </nav>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Language" data-aria-en="Language" data-aria-pt="Idioma">
+        <button type="button" data-set-lang="en" lang="en" aria-pressed="true">English</button>
+        <button type="button" data-set-lang="pt" lang="pt-PT" aria-pressed="false">Português</button>
+      </div>
+      <button type="button" class="tbtn" data-theme-toggle aria-pressed="false">
+        <svg aria-hidden="true"><use href="#i-contrast"/></svg>
+        <span class="en">Dark theme</span><span class="pt" lang="pt-PT">Tema escuro</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ============ HERO ============ -->
+<section class="hero" id="top" aria-labelledby="hero-title">
+  <div class="wrap">
+    <div class="text">
+      <p class="kicker"><span class="en">A private Android app for family caregivers</span><span class="pt" lang="pt-PT">Uma app Android privada para quem cuida da família</span></p>
+      <h1 id="hero-title"><span class="en">The family’s care, shared in one calm place.</span><span class="pt" lang="pt-PT">Os cuidados da família, partilhados num só lugar tranquilo.</span></h1>
+      <p class="lede en">Family Care helps the people who look after their relatives share the work: medicines and their reminders, appointments, stock and allergies, for several people at once. The relatives themselves need no account.</p>
+      <p class="lede pt" lang="pt-PT">A Family Care ajuda quem cuida dos seus familiares a partilhar o trabalho: medicamentos e os seus lembretes, consultas, stock e alergias, de várias pessoas ao mesmo tempo. Os próprios familiares não precisam de conta.</p>
+      <ul class="facts">
+        <li><b><span class="en">Reminders reach the right person</span><span class="pt" lang="pt-PT">Os lembretes chegam à pessoa certa</span></b>
+            <span><span class="en">One caregiver is reminded first. If the dose isn’t confirmed, the others are alerted.</span><span class="pt" lang="pt-PT">Um cuidador é lembrado primeiro. Se a toma não for confirmada, os outros são avisados.</span></span></li>
+        <li><b><span class="en">Works without a connection</span><span class="pt" lang="pt-PT">Funciona sem ligação</span></b>
+            <span><span class="en">Reminders are alarms on the phone, and everything stays on it to read offline.</span><span class="pt" lang="pt-PT">Os lembretes são alarmes no telemóvel, e tudo fica lá para consultar sem internet.</span></span></li>
+        <li><b><span class="en">Private to your family</span><span class="pt" lang="pt-PT">Privada para a sua família</span></b>
+            <span><span class="en">Shared only inside your family circle. No analytics, no tracking.</span><span class="pt" lang="pt-PT">Partilhada só dentro do círculo familiar. Sem estatísticas de utilização nem rastreio.</span></span></li>
+      </ul>
+      <div class="ctas">
+        <a class="cta primary" href="#doses"><span class="en">See how a day looks</span><span class="pt" lang="pt-PT">Ver como é um dia</span><svg aria-hidden="true"><use href="#i-chevron_right"/></svg></a>
+        <a class="cta quiet" href="#privacy"><span class="en">How it keeps things private</span><span class="pt" lang="pt-PT">Como protege a privacidade</span></a>
+      </div>
+      <p class="small-print"><span class="en"><span class="ib">Android · English and Português (Portugal) ·</span> <span class="ib">Installed by hand, not from an app&nbsp;store</span></span><span class="pt" lang="pt-PT"><span class="ib">Android · Português (Portugal) e English ·</span> <span class="ib">Instalada manualmente, não através de uma loja&nbsp;de&nbsp;aplicações</span></span></p>
+    </div>
+
+    <figure>
+      <div class="phone app">
+        <div class="status"><span>09:12</span><span class="sig" aria-hidden="true">82% <i></i></span></div>
+        <div class="scr">
+          <div class="appbar">
+            <div class="t"><span class="en">Today</span><span class="pt" lang="pt-PT">Hoje</span>
+              <span class="sub"><span class="en">Thursday 19 November</span><span class="pt" lang="pt-PT">quinta-feira, 19 de novembro</span></span></div>
+            <span class="iconbtn" aria-hidden="true"><svg class="ic"><use href="#i-filter_list"/></svg></span>
+          </div>
+          <div class="attn">
+            <div class="row" data-demo-row>
+              <span class="aic" aria-hidden="true"><svg class="ic"><use href="#i-medication_fill1"/></svg></span>
+              <div class="tx"><b><span class="en">Maria’s 08:00 not confirmed</span><span class="pt" lang="pt-PT">Maria às 08:00 por confirmar</span></b>
+                <small><span class="en">Mom reminded 08:00, you 08:30</span><span class="pt" lang="pt-PT">Lembrete à Mãe às 08:00, a si às 08:30</span></small></div>
+              <span class="btn sm attn-b" data-demo-give><span class="en">Give all 4</span><span class="pt" lang="pt-PT">Dar todos 4</span></span>
+            </div>
+            <div class="row">
+              <span class="aic" aria-hidden="true"><svg class="ic"><use href="#i-inventory_2"/></svg></span>
+              <div class="tx"><b><span class="en">Metformin running low</span><span class="pt" lang="pt-PT">Metformina está a acabar</span></b>
+                <small><span class="en">António, 5 days left · needs prescription</span><span class="pt" lang="pt-PT">António, restam 5 dias · precisa de receita</span></small></div>
+              <svg class="ic chev" aria-hidden="true"><use href="#i-chevron_right"/></svg>
+            </div>
+          </div>
+
+          <div class="sec">
+            <div class="sh"><svg class="ic" aria-hidden="true"><use href="#i-medication"/></svg><span class="en">Doses today</span><span class="pt" lang="pt-PT">Tomas de hoje</span></div>
+            <div class="rail">
+              <div class="time done">08:00</div>
+              <div><div class="slot done">
+                <div class="top"><span class="av antonio" aria-hidden="true">A</span><div class="who"><b>António</b>
+                  <div class="pills" aria-hidden="true"><svg><use href="#p-round"/></svg><svg><use href="#p-oblong"/></svg><svg><use href="#p-small"/></svg></div></div></div>
+                <div class="given"><svg class="ic s" aria-hidden="true"><use href="#i-check_circle"/></svg><span class="en">Given by Mom at 08:04</span><span class="pt" lang="pt-PT">Dada pela Mãe às 08:04</span></div>
+              </div>
+                <div class="slot done" data-demo-done hidden>
+                  <div class="top"><span class="av maria" aria-hidden="true">M</span><div class="who"><b>Maria</b><div class="pills" aria-hidden="true"><svg><use href="#p-oblong"/></svg><svg><use href="#p-capsule"/></svg><svg><use href="#p-round"/></svg><svg><use href="#p-small"/></svg></div></div></div>
+                  <div class="given"><svg class="ic s" aria-hidden="true"><use href="#i-check_circle"/></svg><span class="en">Given by you at 09:12</span><span class="pt" lang="pt-PT">Dada por si às 09:12</span></div>
+                </div></div>
+
+
+              <div class="time">13:00<small><span class="en">in 3 h 48 min</span><span class="pt" lang="pt-PT">daqui a 3 h 48 min</span></small></div>
+              <div><div class="slot next">
+                <div class="top"><span class="av maria" aria-hidden="true">M</span><div class="who"><b>Maria</b>
+                  <div class="pills"><svg aria-hidden="true"><use href="#p-oblong"/></svg><svg aria-hidden="true"><use href="#p-capsule"/></svg><span class="n"><span class="en">2 pills</span><span class="pt" lang="pt-PT">2 comprimidos</span></span></div></div>
+                  <span class="btn sm outline"><span class="en">Give all 2</span><span class="pt" lang="pt-PT">Dar todos 2</span></span></div>
+              </div></div>
+
+              <div class="time">21:00</div>
+              <div><div class="slot">
+                <div class="top"><span class="av mom" aria-hidden="true">M</span><div class="who"><b><span class="en">Mom</span><span class="pt" lang="pt-PT">Mãe</span></b>
+                  <div class="pills"><svg aria-hidden="true"><use href="#p-oval"/></svg><span class="n"><span class="en">1 pill</span><span class="pt" lang="pt-PT">1 comprimido</span></span></div></div>
+                  <span class="btn sm outline"><span class="en">Give</span><span class="pt" lang="pt-PT">Dar</span></span></div>
+              </div></div>
+            </div>
+          </div>
+
+          <div class="sec">
+            <div class="sh"><svg class="ic" aria-hidden="true"><use href="#i-event"/></svg><span class="en">Next 7 days</span><span class="pt" lang="pt-PT">Próximos 7 dias</span><span class="more">Agenda</span></div>
+            <div class="list">
+              <div class="li"><div class="day"><b>23</b><span><span class="en">Mon</span><span class="pt" lang="pt-PT">seg</span></span></div>
+                <span class="tile" aria-hidden="true"><svg class="ic"><use href="#i-bloodtype"/></svg></span>
+                <div class="tx"><b><span class="en">Blood test</span><span class="pt" lang="pt-PT">Análises</span></b><span>António, 08:30</span></div>
+                <span class="tag"><svg class="ic xs" aria-hidden="true"><use href="#i-no_food"/></svg><span class="en">Fasting</span><span class="pt" lang="pt-PT">Jejum</span></span></div>
+              <div class="li"><div class="day"><b>25</b><span><span class="en">Wed</span><span class="pt" lang="pt-PT">qua</span></span></div>
+                <span class="tile" aria-hidden="true"><svg class="ic"><use href="#i-cardiology"/></svg></span>
+                <div class="tx"><b><span class="en">Cardiology</span><span class="pt" lang="pt-PT">Cardiologia</span></b><span><span class="en">Mom, 15:20</span><span class="pt" lang="pt-PT">Mãe, 15:20</span></span></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom" aria-hidden="true">
+          <div class="on"><span class="pillx"><svg class="ic"><use href="#i-home"/></svg></span><span class="en">Today</span><span class="pt" lang="pt-PT">Hoje</span></div>
+          <div><span class="pillx"><svg class="ic"><use href="#i-group"/></svg></span><span class="en">Patients</span><span class="pt" lang="pt-PT">Pessoas</span></div>
+          <div><span class="pillx"><svg class="ic"><use href="#i-calendar_month"/></svg></span>Agenda</div>
+          <div><span class="pillx"><svg class="ic"><use href="#i-shopping_cart"/></svg></span><span class="en">Shopping</span><span class="pt" lang="pt-PT">Compras</span></div>
+          <div><span class="pillx"><svg class="ic"><use href="#i-menu"/></svg></span><span class="en">More</span><span class="pt" lang="pt-PT">Mais</span></div>
+        </div>
+      </div>
+      <figcaption><span class="en">Today, at 09:12 on a Thursday. Amber marks what needs doing; doses already given turn grey, never green.</span><span class="pt" lang="pt-PT">O ecrã Hoje, às 09:12 de uma quinta-feira. O âmbar marca o que é preciso fazer; as tomas já dadas ficam a cinzento, nunca a verde.</span></figcaption>
+      <div class="demo-ui" data-demo-ui>
+        <p class="demo-hint" data-demo-hint><span class="en">Try it: tap “Give all 4” on the phone.</span><span class="pt" lang="pt-PT">Experimente: toque em «Dar todos 4» no telemóvel.</span></p>
+        <button type="button" class="tbtn" data-demo-reset hidden><span class="en">Reset</span><span class="pt" lang="pt-PT">Repor</span></button>
+        <p class="demo-live" role="status" aria-live="polite" data-demo-live></p>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ CONTENTS ============ -->
+<nav class="contents" aria-labelledby="contents-title">
+  <div class="wrap">
+    <h2 id="contents-title"><span class="en">In this issue</span><span class="pt" lang="pt-PT">Nesta edição</span></h2>
+    <ol>
+      <li><a href="#doses"><span>01</span><span><span class="en">One tap for the whole time</span><span class="pt" lang="pt-PT">Um toque para toda a toma</span></span></a></li>
+      <li><a href="#escalation"><span>02</span><span><span class="en">When nobody confirms</span><span class="pt" lang="pt-PT">Quando ninguém confirma</span></span></a></li>
+      <li><a href="#missed"><span>03</span><span><span class="en">Missed doses</span><span class="pt" lang="pt-PT">Tomas em falta</span></span></a></li>
+      <li><a href="#stock"><span>04</span><span><span class="en">Stock and shopping</span><span class="pt" lang="pt-PT">Stock e compras</span></span></a></li>
+      <li><a href="#appointments"><span>05</span><span><span class="en">Appointments</span><span class="pt" lang="pt-PT">Consultas</span></span></a></li>
+      <li><a href="#allergies"><span>06</span><span><span class="en">Allergies in sight</span><span class="pt" lang="pt-PT">Alergias à vista</span></span></a></li>
+      <li><a href="#privacy"><span>07</span><span><span class="en">Privacy</span><span class="pt" lang="pt-PT">Privacidade</span></span></a></li>
+      <li><a href="#colophon"><span>08</span><span><span class="en">How it’s installed</span><span class="pt" lang="pt-PT">Como se instala</span></span></a></li>
+    </ol>
+  </div>
+</nav>
+
+<!-- ============ 01 DOSES ============ -->
+<section class="story" id="doses" aria-labelledby="doses-title">
+  <div class="wrap">
+    <div class="text">
+      <p class="kicker"><span class="num">01</span><span class="en">Doses</span><span class="pt" lang="pt-PT">Tomas</span></p>
+      <h2 id="doses-title"><span class="en">One tap for everything due at 13:00.</span><span class="pt" lang="pt-PT">Um toque para tudo o que é às 13:00.</span></h2>
+      <p class="lede en">When a time comes round, the reminder already carries <span class="ui-word">Given ✓</span> and <span class="ui-word">Snooze 15 min</span>, so you can answer it without opening the app.</p>
+      <p class="lede pt" lang="pt-PT">Quando chega a hora, o lembrete já traz <span class="ui-word">Dada ✓</span> e <span class="ui-word">Adiar 15 min</span>, para responder sem abrir a app.</p>
+      <p class="body en">In the app, <strong>Give all</strong> confirms every medicine of that person’s time in one tap. If a pill was refused, open the time and untick it; you can also record that someone else gave the dose.</p>
+      <p class="body pt" lang="pt-PT">Na app, <strong>Dar todos</strong> confirma num só toque todos os medicamentos dessa pessoa a essa hora. Se um comprimido foi recusado, abra a toma dessa hora e desmarque-o; também pode registar que foi outra pessoa a dar a toma.</p>
+      <p class="aside en"><b>Two people, one dose?</b> Before saving, the app checks: “Already given by Mom at 08:04. Did you give another one?”</p>
+      <p class="aside pt" lang="pt-PT"><b>Duas pessoas, a mesma toma?</b> Antes de guardar, a app verifica: «Já foi dada pela Mãe às 08:04. Deu outra?»</p>
+    </div>
+    <figure>
+      <div class="plate"><div class="app">
+        <div class="topbar"><span class="iconbtn" aria-hidden="true"><svg class="ic"><use href="#i-close"/></svg></span><span class="t">Maria · 13:00</span></div>
+        <div class="phead" style="padding-top:0"><span class="av maria" style="--av:40px" aria-hidden="true">M</span>
+          <div><div style="font-weight:700;font-size:17px"><span class="en">Grandma Maria</span><span class="pt" lang="pt-PT">Avó Maria</span></div>
+          <div class="s"><span class="en">All ticked as given. Untick any that were not taken.</span><span class="pt" lang="pt-PT">Todos marcados como dados. Desmarque os que não foram tomados.</span></div></div></div>
+        <div class="allergy" style="margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-warning_fill1"/></svg><span><span class="en">Allergies: Penicillin · Ibuprofen</span><span class="pt" lang="pt-PT">Alergias: Penicilina · Ibuprofeno</span></span></div>
+        <div class="med"><span class="pilltile" aria-hidden="true"><svg><use href="#p-oblong"/></svg></span>
+          <div class="tx"><b><span class="en">Metformin 850 mg</span><span class="pt" lang="pt-PT">Metformina 850 mg</span></b><span><span class="en">1 tablet</span><span class="pt" lang="pt-PT">1 comprimido</span></span></div>
+          <span class="check" aria-hidden="true"><svg class="ic"><use href="#i-check"/></svg></span></div>
+        <div class="med"><span class="pilltile" aria-hidden="true"><svg><use href="#p-capsule"/></svg></span>
+          <div class="tx"><b><span class="en">Omeprazole 20 mg</span><span class="pt" lang="pt-PT">Omeprazol 20 mg</span></b><span><span class="en">1 capsule</span><span class="pt" lang="pt-PT">1 cápsula</span></span></div>
+          <span class="check" aria-hidden="true"><svg class="ic"><use href="#i-check"/></svg></span></div>
+        <div class="med skipped"><span class="pilltile" aria-hidden="true"><svg><use href="#p-round"/></svg></span>
+          <div class="tx"><b>Losartan 50 mg</b><span><svg class="ic xs" aria-hidden="true"><use href="#i-block"/></svg><span class="en">Skipped · Refused</span><span class="pt" lang="pt-PT">Não tomada · Recusou</span></span></div>
+          <span class="check off" aria-hidden="true"><svg class="ic"><use href="#i-check"/></svg></span></div>
+        <div class="chips"><span class="chip"><svg class="ic s" aria-hidden="true"><use href="#i-person"/></svg><span class="en">Given by me</span><span class="pt" lang="pt-PT">Dada por mim</span></span><span class="chip"><svg class="ic s" aria-hidden="true"><use href="#i-schedule"/></svg><span class="en">At 13:02</span><span class="pt" lang="pt-PT">Às 13:02</span></span></div>
+        <div style="margin-top:14px"><span class="btn filled block"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="en">Give 2 · skip 1</span><span class="pt" lang="pt-PT">Dar 2 · não dar 1</span></span></div>
+      </div></div>
+      <figcaption><span class="en">The Give screen. Each medicine is drawn as its own pill, to match against the box.</span><span class="pt" lang="pt-PT">O ecrã de dar a toma. Cada medicamento aparece desenhado como o seu comprimido, para comparar com a caixa.</span></figcaption>
+    </figure>
+    <div class="pill-strip">
+      <h3><span class="en">Pills drawn as they look in the box</span><span class="pt" lang="pt-PT">Comprimidos desenhados como são na caixa</span></h3>
+      <p><span class="en">Each medicine gets its own picture: shape, one or two colours, a score line, a size. A dose is then drawn as the pills it is, so one and a quarter shows as one pill and a quarter. Above six whole pills the number stays as text.</span><span class="pt" lang="pt-PT">Cada medicamento tem o seu desenho: forma, uma ou duas cores, ranhura, tamanho. Cada toma é desenhada com os comprimidos que a compõem, por isso um e um quarto aparece como um comprimido e um quarto. Acima de seis comprimidos inteiros fica só o número.</span></p>
+      <ul class="amts">
+        <li><span class="pr"><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><use href="#p-round"/></svg><span class="pa"><svg class="gh" viewBox="0 0 40 40" aria-hidden="true" focusable="false"><use href="#p-round"/></svg><svg viewBox="0 0 40 40" style="clip-path:inset(65% 0 0 0)" aria-hidden="true" focusable="false"><use href="#p-round"/></svg></span></span><span class="n">1¼</span><span class="d"><b>Losartan 50 mg</b><span class="en">one and a quarter tablets</span><span class="pt" lang="pt-PT">um comprimido e um quarto</span></span></li>
+        <li><span class="pr"><span class="pa"><svg class="gh" viewBox="0 0 40 40" aria-hidden="true" focusable="false"><use href="#p-oblong"/></svg><svg viewBox="0 0 40 40" style="clip-path:inset(50% 0 0 0)" aria-hidden="true" focusable="false"><use href="#p-oblong"/></svg></span></span><span class="n">½</span><span class="d"><b><span class="en">Metformin 850 mg</span><span class="pt" lang="pt-PT">Metformina 850 mg</span></b><span class="en">half a tablet</span><span class="pt" lang="pt-PT">meio comprimido</span></span></li>
+        <li><span class="pr"><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><use href="#p-small"/></svg><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><use href="#p-small"/></svg><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><use href="#p-small"/></svg></span><span class="n">3</span><span class="d"><b>Bisoprolol 5&nbsp;mg</b><span class="en">three tablets</span><span class="pt" lang="pt-PT">três comprimidos</span></span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 ESCALATION ============ -->
+<section class="story flip" id="escalation" aria-labelledby="esc-title">
+  <div class="wrap">
+    <div class="text">
+      <p class="kicker"><span class="num">02</span><span class="en">Reminders</span><span class="pt" lang="pt-PT">Lembretes</span></p>
+      <h2 id="esc-title"><span class="en">If nobody confirms, the next person hears.</span><span class="pt" lang="pt-PT">Se ninguém confirmar, a pessoa seguinte é avisada.</span></h2>
+      <p class="body en">Each relative has a reminder policy. Usually one caregiver is reminded first. If the dose is still unconfirmed after the escalation delay, 30 minutes unless you change it, the other caregivers get an alert. The check runs on the server, so it works even when the first phone is switched off.</p>
+      <p class="body pt" lang="pt-PT">Cada familiar tem a sua política de lembretes. Normalmente, um cuidador é lembrado primeiro. Se a toma continuar por confirmar ao fim do atraso de escalonamento, 30 minutos salvo se o alterar, os outros cuidadores recebem um alerta. A verificação é feita no servidor, por isso funciona mesmo com o primeiro telemóvel desligado.</p>
+      <ol class="morning" aria-label="One morning" data-aria-en="One morning" data-aria-pt="Uma manhã">
+        <li><time>08:00</time><span><span class="en">Maria’s four medicines are due. Only Mom’s phone reminds her, and she is out.</span><span class="pt" lang="pt-PT">Chega a hora dos quatro medicamentos da Maria. Só o telemóvel da Mãe toca, e ela está fora.</span></span></li>
+        <li><time>08:30</time><span><span class="en">Still unconfirmed. Your phone gets “A dose needs attention”.</span><span class="pt" lang="pt-PT">Continua por confirmar. O seu telemóvel recebe «Uma toma precisa de atenção».</span></span></li>
+        <li><time>08:35</time><span><span class="en">You give three; Maria refuses one. The stock goes down by three.</span><span class="pt" lang="pt-PT">Dá três; a Maria recusa um. O stock desce três unidades.</span></span></li>
+        <li><time>09:10</time><span><span class="en">Mom opens the app. Her reminder is gone, and Today shows who gave the dose and when.</span><span class="pt" lang="pt-PT">A Mãe abre a app. O lembrete já desapareceu, e o Hoje mostra quem deu a toma e a que horas.</span></span></li>
+      </ol>
+    </div>
+    <figure>
+      <div class="plate"><div class="app">
+        <div class="attn">
+          <div class="row">
+            <span class="aic" aria-hidden="true"><svg class="ic"><use href="#i-medication_fill1"/></svg></span>
+            <div class="tx"><b><span class="en">Maria’s 08:00 not confirmed</span><span class="pt" lang="pt-PT">Maria às 08:00 por confirmar</span></b>
+              <small><span class="en">Mom reminded 08:00, you 08:30</span><span class="pt" lang="pt-PT">Lembrete à Mãe às 08:00, a si às 08:30</span></small></div>
+            <span class="btn sm attn-b"><span class="en">Give all 4</span><span class="pt" lang="pt-PT">Dar todos 4</span></span>
+          </div>
+        </div>
+        <div class="sec" style="margin-top:22px">
+          <div class="sh"><svg class="ic" aria-hidden="true"><use href="#i-notifications_active"/></svg><span class="en">Who gets reminded</span><span class="pt" lang="pt-PT">Quem é lembrado</span></div>
+          <p style="font-size:13px;color:var(--on-sv);margin:0 0 10px"><span class="en">Tap a person to change who is reminded about their doses.</span><span class="pt" lang="pt-PT">Toque numa pessoa para alterar quem é lembrado das suas tomas.</span></p>
+          <div class="list">
+            <div class="li"><span class="av maria" style="--av:40px" aria-hidden="true">M</span><div class="tx"><b><span class="en">Grandma Maria</span><span class="pt" lang="pt-PT">Avó Maria</span></b><span><span class="en">Mom first; everyone after 30 min</span><span class="pt" lang="pt-PT">Primeiro a Mãe; todos após 30 min</span></span></div><svg class="ic chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></div>
+            <div class="li"><span class="av antonio" style="--av:40px" aria-hidden="true">A</span><div class="tx"><b><span class="en">Grandpa António</span><span class="pt" lang="pt-PT">Avô António</span></b><span><span class="en">You first; everyone after 30 min</span><span class="pt" lang="pt-PT">Primeiro você; todos após 30 min</span></span></div><svg class="ic chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></div>
+            <div class="li"><span class="av mom" style="--av:40px" aria-hidden="true">M</span><div class="tx"><b><span class="en">Mom</span><span class="pt" lang="pt-PT">Mãe</span></b><span><span class="en">Only Mom is reminded</span><span class="pt" lang="pt-PT">Só a Mãe recebe lembretes</span></span></div><svg class="ic chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></div>
+          </div>
+        </div>
+      </div></div>
+      <figcaption><span class="en">Today’s attention card, and the per-person setting behind it.</span><span class="pt" lang="pt-PT">O cartão de atenção do Hoje e a definição, pessoa a pessoa, que está por trás dele.</span></figcaption>
+    </figure>
+    <div class="esc-flow">
+      <h3><span class="en">What each phone shows</span><span class="pt" lang="pt-PT">O que mostra cada telemóvel</span></h3>
+      <p><span class="en">Mom’s reminder at 08:00, your alert at 08:30, and the check that stops a dose being recorded twice.</span><span class="pt" lang="pt-PT">O lembrete da Mãe às 08:00, o seu alerta às 08:30, e a verificação que impede que uma toma seja registada duas vezes.</span></p>
+      <ul class="esc-panels"><li><figure><p class="lbl"><span class="en">Mom’s phone · 08:00</span><span class="pt" lang="pt-PT">Telemóvel da Mãe · 08:00</span></p><div class="app"><div class="lock"><div class="notif"><span class="nic" aria-hidden="true"><svg><use href="#i-medication_fill1"/></svg></span><div class="tx"><div class="app-n">Family Care · 08:00</div><b><span class="en">A dose is due</span><span class="pt" lang="pt-PT">Há uma toma para dar</span></b></div></div></div></div><figcaption><span class="en">Her reminder. Nothing says who or what, and she is out.</span><span class="pt" lang="pt-PT">O lembrete dela: não diz quem nem o quê, e ela está fora.</span></figcaption></figure></li><li><figure><p class="lbl"><span class="en">Your phone · 08:30</span><span class="pt" lang="pt-PT">O seu telemóvel · 08:30</span></p><div class="app"><div class="lock"><div class="notif"><span class="nic" aria-hidden="true"><svg><use href="#i-notifications_active"/></svg></span><div class="tx"><div class="app-n">Family Care · 08:30</div><b><span class="en">A dose needs attention</span><span class="pt" lang="pt-PT">Uma toma precisa de atenção</span></b></div></div></div><div class="attn" style="margin-top:12px"><div class="row"><span class="aic" aria-hidden="true"><svg class="ic"><use href="#i-medication_fill1"/></svg></span><div class="tx"><b><span class="en">Maria’s 08:00 not confirmed</span><span class="pt" lang="pt-PT">Maria às 08:00 por confirmar</span></b><small><span class="en">4 medicines</span><span class="pt" lang="pt-PT">4 medicamentos</span></small></div><span class="btn sm attn-b"><span class="en">Give all 4</span><span class="pt" lang="pt-PT">Dar todos 4</span></span></div></div></div><figcaption><span class="en">The alert, then Today on opening.</span><span class="pt" lang="pt-PT">O alerta e, ao abrir, o Hoje.</span></figcaption></figure></li><li><figure><p class="lbl"><span class="en">Your phone · 08:06</span><span class="pt" lang="pt-PT">O seu telemóvel · 08:06</span></p><div class="app"><div class="dlg" role="group" aria-label="Double-dose check" data-aria-en="Double-dose check" data-aria-pt="Verificação de toma repetida"><b><span class="en">Already given</span><span class="pt" lang="pt-PT">Já foi dada</span></b><p><span class="en">Already given by Mom at 08:04. Did you give another one?</span><span class="pt" lang="pt-PT">Já foi dada pela Mãe às 08:04. Deu outra?</span></p><div class="da" aria-hidden="true"><span><span class="en">Cancel</span><span class="pt" lang="pt-PT">Cancelar</span></span><span><span class="en">Give anyway</span><span class="pt" lang="pt-PT">Dar mesmo assim</span></span></div></div></div><figcaption><span class="en">António’s 08:00: Mom had already given it, so the app asks first.</span><span class="pt" lang="pt-PT">A toma das 08:00 do António: a Mãe já a tinha dado, por isso a app pergunta primeiro.</span></figcaption></figure></li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 MISSED ============ -->
+<section class="story" id="missed" aria-labelledby="missed-title">
+  <div class="wrap">
+    <div class="text">
+      <p class="kicker"><span class="num">03</span><span class="en">Missed doses</span><span class="pt" lang="pt-PT">Tomas em falta</span></p>
+      <h2 id="missed-title"><span class="en">A forgotten tick isn’t lost.</span><span class="pt" lang="pt-PT">Um registo esquecido não se perde.</span></h2>
+      <p class="body en">Doses from the last 7 days that nobody recorded wait in one list, reached from a single row on Today. Mark each one <strong>It was given</strong> or <strong>Not given</strong>.</p>
+      <p class="body pt" lang="pt-PT">As tomas dos últimos 7 dias que ninguém registou ficam à espera numa só lista, a que se chega por uma linha no Hoje. Marque cada uma como <strong>Foi dada</strong> ou <strong>Não foi dada</strong>.</p>
+      <p class="body en">A dose marked as given is saved at its scheduled time unless you pick another, so a box you have counted since is not counted down twice.</p>
+      <p class="body pt" lang="pt-PT">Uma toma marcada como dada fica registada à hora prevista, a menos que escolha outra, para que uma caixa contada entretanto não seja descontada duas vezes.</p>
+    </div>
+    <figure>
+      <div class="plate"><div class="app">
+        <div class="topbar"><span class="iconbtn" aria-hidden="true"><svg class="ic"><use href="#i-arrow_back"/></svg></span><span class="t"><span class="en">Missed doses</span><span class="pt" lang="pt-PT">Tomas em falta</span></span></div>
+        <p style="font-size:14px;color:var(--on-sv);margin:0 0 14px"><span class="en">Last 7 days. Mark what was given but never recorded.</span><span class="pt" lang="pt-PT">Últimos 7 dias. Marque o que foi dado e não ficou registado.</span></p>
+        <div class="sh day-h"><svg class="ic s" aria-hidden="true"><use href="#i-calendar_today"/></svg><span class="en">Yesterday</span><span class="pt" lang="pt-PT">Ontem</span></div>
+        <div class="rail">
+          <div class="time">22:00</div>
+          <div><div class="missed-card">
+            <div class="top" style="display:flex;gap:10px;align-items:center"><span class="av maria" aria-hidden="true">M</span><div class="who" style="flex:1"><b style="font-size:15px;display:block">Maria</b>
+              <div class="pills"><svg aria-hidden="true"><use href="#p-oval"/></svg><svg aria-hidden="true"><use href="#p-small"/></svg><span class="n"><span class="en">2 pills</span><span class="pt" lang="pt-PT">2 comprimidos</span></span></div></div></div>
+            <div class="acts"><span class="btn sm tonal"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="en">It was given</span><span class="pt" lang="pt-PT">Foi dada</span></span><span class="btn sm outline"><span class="en">Not given</span><span class="pt" lang="pt-PT">Não foi dada</span></span></div>
+          </div></div>
+          <div class="time">13:00</div>
+          <div><div class="missed-card">
+            <div class="top" style="display:flex;gap:10px;align-items:center"><span class="av antonio" aria-hidden="true">A</span><div class="who" style="flex:1"><b style="font-size:15px;display:block">António</b>
+              <div class="pills"><svg aria-hidden="true"><use href="#p-round"/></svg><svg aria-hidden="true"><use href="#p-oblong"/></svg><svg aria-hidden="true"><use href="#p-small"/></svg><span class="n"><span class="en">3 pills</span><span class="pt" lang="pt-PT">3 comprimidos</span></span></div></div></div>
+            <div class="acts"><span class="btn sm tonal"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="en">It was given</span><span class="pt" lang="pt-PT">Foi dada</span></span><span class="btn sm outline"><span class="en">Not given</span><span class="pt" lang="pt-PT">Não foi dada</span></span></div>
+          </div></div>
+        </div>
+        <div class="sh day-h" style="margin-top:12px"><svg class="ic s" aria-hidden="true"><use href="#i-calendar_today"/></svg><span class="en">Thursday 19</span><span class="pt" lang="pt-PT">Quinta-feira, 19</span></div>
+        <div class="rail">
+          <div class="time done">20:00</div>
+          <div><div class="slot done">
+            <div class="top"><span class="av antonio" aria-hidden="true">A</span><div class="who"><b>António</b>
+              <div class="given" style="margin-top:2px"><svg class="ic s" aria-hidden="true"><use href="#i-check_circle"/></svg><span class="en">Given by you at 20:00</span><span class="pt" lang="pt-PT">Dada por si às 20:00</span></div></div></div>
+          </div></div>
+        </div>
+      </div></div>
+      <figcaption><span class="en">Missed doses: the last 7 days, newest first.</span><span class="pt" lang="pt-PT">Tomas em falta: os últimos 7 dias, dos mais recentes para os mais antigos.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 04 STOCK ============ -->
+<section class="story flip" id="stock" aria-labelledby="stock-title">
+  <div class="wrap">
+    <div class="text">
+      <p class="kicker"><span class="num">04</span><span class="en">Stock and shopping</span><span class="pt" lang="pt-PT">Stock e compras</span></p>
+      <h2 id="stock-title"><span class="en">Count the box once. It counts down from there.</span><span class="pt" lang="pt-PT">Conte a caixa uma vez. A partir daí, desconta sozinha.</span></h2>
+      <p class="body en">Every dose given takes its share, and each medicine shows about how many days are left. When one reaches its warning point, 7 days unless you change it, it appears on Today and on the shopping list.</p>
+      <p class="body pt" lang="pt-PT">Cada toma dada desconta a sua parte, e cada medicamento mostra, aproximadamente, quantos dias faltam. Quando um chega ao limite de stock, 7 dias salvo se o alterar, aparece no Hoje e na lista de compras.</p>
+      <p class="body en">If the prescription is missing or has expired, it waits under <strong>Ask for a prescription first</strong>. Tick it when you buy it, say how many, and the stock is topped up.</p>
+      <p class="body pt" lang="pt-PT">Se a receita faltar ou tiver expirado, fica em <strong>Peça primeiro uma receita</strong>. Quando comprar o medicamento, marque-o, indique quantas unidades comprou e o stock é reposto.</p>
+    </div>
+    <figure>
+      <div class="plate"><div class="app">
+        <div class="appbar"><div class="t"><span class="en">Shopping</span><span class="pt" lang="pt-PT">Compras</span></div></div>
+        <div class="sh"><svg class="ic" aria-hidden="true"><use href="#i-prescriptions"/></svg><span class="en">Ask for a prescription first</span><span class="pt" lang="pt-PT">Peça primeiro uma receita</span></div>
+        <div class="list">
+          <div class="li" style="align-items:flex-start"><span class="pilltile" style="width:40px;height:40px;border-radius:12px" aria-hidden="true"><svg style="width:34px;height:34px"><use href="#p-oblong"/></svg></span>
+            <div class="tx"><b><span class="en">Metformin 850 mg</span><span class="pt" lang="pt-PT">Metformina 850 mg</span></b>
+              <div class="meta"><span><span class="av antonio" style="--av:18px" aria-hidden="true">A</span>António</span><span><svg class="ic xs" aria-hidden="true"><use href="#i-receipt_long"/></svg><span class="en">Prescription missing</span><span class="pt" lang="pt-PT">Falta a receita</span></span></div>
+              <div class="stock low"><span class="meter low"><i style="width:14%"></i></span><span class="en">About 5 days left · buy soon</span><span class="pt" lang="pt-PT">Cerca de 5 dias para acabar · compre em breve</span></div>
+              <div class="shop-actions"><span class="btn sm tonal"><span class="en">Got a new prescription</span><span class="pt" lang="pt-PT">Tenho nova receita</span></span></div></div></div>
+        </div>
+        <div class="sh" style="margin-top:18px"><svg class="ic" aria-hidden="true"><use href="#i-shopping_cart"/></svg><span class="en">Ready to buy</span><span class="pt" lang="pt-PT">Pronto a comprar</span></div>
+        <div class="list">
+          <div class="li" style="align-items:flex-start"><span class="pilltile" style="width:40px;height:40px;border-radius:12px" aria-hidden="true"><svg style="width:34px;height:34px"><use href="#p-oval"/></svg></span>
+            <div class="tx"><b><span class="en">Atorvastatin 20 mg</span><span class="pt" lang="pt-PT">Atorvastatina 20 mg</span></b>
+              <div class="meta"><span><span class="av mom" style="--av:18px" aria-hidden="true">M</span><span class="en">Mom</span><span class="pt" lang="pt-PT">Mãe</span></span><span><svg class="ic xs" aria-hidden="true"><use href="#i-receipt_long"/></svg><span class="en">Valid until March 2027</span><span class="pt" lang="pt-PT">Válida até março de 2027</span></span></div>
+              <div class="stock low"><span class="meter low"><i style="width:18%"></i></span><span class="en">About 6 days left · buy soon</span><span class="pt" lang="pt-PT">Cerca de 6 dias para acabar · compre em breve</span></div>
+              <div class="shop-actions"><span class="btn sm tonal"><svg class="ic" aria-hidden="true"><use href="#i-add_shopping_cart"/></svg><span class="en">Bought</span><span class="pt" lang="pt-PT">Comprado</span></span></div></div></div>
+        </div>
+      </div></div>
+      <figcaption><span class="en">The shopping list, grouped by what to do first.</span><span class="pt" lang="pt-PT">A lista de compras, agrupada pelo que é preciso fazer primeiro.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 05 APPOINTMENTS ============ -->
+<section class="story" id="appointments" aria-labelledby="appt-title">
+  <div class="wrap">
+    <div class="text">
+      <p class="kicker"><span class="num">05</span><span class="en">Appointments</span><span class="pt" lang="pt-PT">Consultas</span></p>
+      <h2 id="appt-title"><span class="en">Every appointment, and what to bring.</span><span class="pt" lang="pt-PT">Todas as consultas, e o que levar.</span></h2>
+      <p class="body en">The Agenda lists everyone’s appointments together, or one person’s at a time, with the place and how to prepare: fasting, results to bring, the SNS card.</p>
+      <p class="body pt" lang="pt-PT">A Agenda junta as consultas de todos, ou mostra as de uma pessoa de cada vez, com o local e a preparação: jejum, resultados a levar, o cartão SNS.</p>
+      <p class="body en">A reminder comes at 20:00 the evening before and again an hour before, on the phone of whoever is going with them, or on every caregiver’s phone if nobody is set.</p>
+      <p class="body pt" lang="pt-PT">Chega um lembrete às 20:00 da véspera e outro uma hora antes, no telemóvel de quem vai acompanhar ou, se ninguém estiver indicado, no de todos os cuidadores.</p>
+    </div>
+    <figure>
+      <div class="plate"><div class="app">
+        <div class="appbar"><div class="t">Agenda</div><span class="iconbtn" aria-hidden="true"><svg class="ic"><use href="#i-history"/></svg></span></div>
+        <div class="chips" style="margin:0 0 4px">
+          <span class="chip on"><svg class="ic s" aria-hidden="true"><use href="#i-groups"/></svg><span class="en">Everyone</span><span class="pt" lang="pt-PT">Todos</span></span>
+          <span class="chip"><span class="av maria" style="--av:22px" aria-hidden="true">M</span>Maria</span>
+          <span class="chip"><span class="av antonio" style="--av:22px" aria-hidden="true">A</span>António</span>
+          <span class="chip"><span class="av mom" style="--av:22px" aria-hidden="true">M</span><span class="en">Mom</span><span class="pt" lang="pt-PT">Mãe</span></span>
+        </div>
+        <div class="sec">
+          <div class="sh day-h"><svg class="ic s" aria-hidden="true"><use href="#i-calendar_today"/></svg><span class="en">Monday 23 November</span><span class="pt" lang="pt-PT">segunda-feira, 23 de novembro</span></div>
+          <div class="list">
+            <div class="li" style="align-items:flex-start"><span class="tile pri" aria-hidden="true"><svg class="ic"><use href="#i-bloodtype"/></svg></span>
+              <div class="tx"><b><span class="en">Blood test</span><span class="pt" lang="pt-PT">Análises</span></b>
+                <div class="meta"><span><svg class="ic xs" aria-hidden="true"><use href="#i-schedule"/></svg>08:30</span><span><span class="av antonio" style="--av:18px" aria-hidden="true">A</span>António</span></div>
+                <div class="meta"><span><svg class="ic xs" aria-hidden="true"><use href="#i-location_on"/></svg><span class="en">Health centre</span><span class="pt" lang="pt-PT">Centro de saúde</span></span></div>
+                <div class="tags"><span class="tag"><svg class="ic xs" aria-hidden="true"><use href="#i-no_food"/></svg><span class="en">Fasting</span><span class="pt" lang="pt-PT">Jejum</span></span><span class="tag neutral"><svg class="ic xs" aria-hidden="true"><use href="#i-folder"/></svg><span class="en">Bring results</span><span class="pt" lang="pt-PT">Trazer resultados</span></span></div></div></div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sh day-h"><svg class="ic s" aria-hidden="true"><use href="#i-calendar_today"/></svg><span class="en">Wednesday 25 November</span><span class="pt" lang="pt-PT">quarta-feira, 25 de novembro</span></div>
+          <div class="list">
+            <div class="li" style="align-items:flex-start"><span class="tile pri" aria-hidden="true"><svg class="ic"><use href="#i-cardiology"/></svg></span>
+              <div class="tx"><b><span class="en">Cardiology</span><span class="pt" lang="pt-PT">Cardiologia</span></b>
+                <div class="meta"><span><svg class="ic xs" aria-hidden="true"><use href="#i-schedule"/></svg>15:20</span><span><span class="av mom" style="--av:18px" aria-hidden="true">M</span><span class="en">Mom</span><span class="pt" lang="pt-PT">Mãe</span></span></div>
+                <div class="tags"><span class="tag neutral"><svg class="ic xs" aria-hidden="true"><use href="#i-badge"/></svg><span class="en">SNS card</span><span class="pt" lang="pt-PT">Cartão SNS</span></span></div></div></div>
+          </div>
+        </div>
+      </div></div>
+      <figcaption><span class="en">The Agenda, for everyone or one person at a time.</span><span class="pt" lang="pt-PT">A Agenda, para todos ou uma pessoa de cada vez.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 06 ALLERGIES ============ -->
+<section class="story flip" id="allergies" aria-labelledby="allergy-title">
+  <div class="wrap">
+    <div class="text">
+      <p class="kicker"><span class="num">06</span><span class="en">Patient information</span><span class="pt" lang="pt-PT">Informação da pessoa</span></p>
+      <h2 id="allergy-title"><span class="en">Allergies stay in sight.</span><span class="pt" lang="pt-PT">As alergias ficam sempre à vista.</span></h2>
+      <p class="body en">On each person’s profile, allergies sit in a red banner above everything else, never cut short. Red is how allergies are marked: a missed or overdue dose is never red.</p>
+      <p class="body pt" lang="pt-PT">No perfil de cada pessoa, as alergias aparecem numa faixa vermelha por cima de tudo, nunca cortadas. O vermelho é a cor das alergias: uma toma em falta ou atrasada nunca aparece a vermelho.</p>
+      <p class="body en">Conditions, the SNS number, the family doctor and emergency contacts are a tab away, with a tap to call.</p>
+      <p class="body pt" lang="pt-PT">As doenças, o número de utente, o médico de família e os contactos de emergência estão no separador ao lado, com um toque para ligar.</p>
+    </div>
+    <figure>
+      <div class="plate"><div class="app">
+        <div class="topbar"><span class="iconbtn" aria-hidden="true"><svg class="ic"><use href="#i-arrow_back"/></svg></span><span class="t"></span><span class="iconbtn" aria-hidden="true"><svg class="ic"><use href="#i-edit"/></svg></span><span class="iconbtn" aria-hidden="true"><svg class="ic"><use href="#i-more_vert"/></svg></span></div>
+        <div class="phead"><span class="av maria" style="--av:56px" aria-hidden="true">M</span><div><div class="n"><span class="en">Grandma Maria</span><span class="pt" lang="pt-PT">Avó Maria</span></div><div class="s"><span class="en">84 years · Mom first; everyone after 30 min</span><span class="pt" lang="pt-PT">84 anos · Primeiro a Mãe; todos após 30 min</span></div></div></div>
+        <div class="allergy"><svg class="ic" aria-hidden="true"><use href="#i-warning_fill1"/></svg><span><span class="en">Allergies: Penicillin · Ibuprofen</span><span class="pt" lang="pt-PT">Alergias: Penicilina · Ibuprofeno</span></span></div>
+        <div class="chips"><span class="chip"><svg class="ic s" aria-hidden="true"><use href="#i-cardiology"/></svg><span class="en">Hypertension</span><span class="pt" lang="pt-PT">Hipertensão</span></span><span class="chip"><svg class="ic s" aria-hidden="true"><use href="#i-glucose"/></svg><span class="en">Type 2 diabetes</span><span class="pt" lang="pt-PT">Diabetes tipo 2</span></span></div>
+        <div class="tabs" aria-hidden="true">
+          <div class="tab"><svg class="ic"><use href="#i-medication"/></svg><span class="en">Medicines</span><span class="pt" lang="pt-PT">Medicamentos</span></div>
+          <div class="tab"><svg class="ic"><use href="#i-event"/></svg><span class="en">Appointments</span><span class="pt" lang="pt-PT">Consultas</span></div>
+          <div class="tab on"><svg class="ic"><use href="#i-badge_fill1"/></svg><span class="en">Info</span><span class="pt" lang="pt-PT">Informação</span></div>
+          <div class="tab"><svg class="ic"><use href="#i-history"/></svg><span class="en">History</span><span class="pt" lang="pt-PT">Histórico</span></div>
+        </div>
+        <div class="list" style="margin-top:12px">
+          <div class="li"><span class="tile pri" aria-hidden="true"><svg class="ic"><use href="#i-emergency_fill1"/></svg></span><div class="tx"><b><span class="en">Emergency contacts</span><span class="pt" lang="pt-PT">Contactos de emergência</span></b><span><span class="en">Mom (daughter)</span><span class="pt" lang="pt-PT">Mãe (filha)</span></span></div><span class="iconbtn" style="color:var(--primary)" aria-hidden="true"><svg class="ic"><use href="#i-call_fill1"/></svg></span></div>
+          <div class="li"><span class="tile" aria-hidden="true"><svg class="ic"><use href="#i-stethoscope"/></svg></span><div class="tx"><b><span class="en">Family doctor</span><span class="pt" lang="pt-PT">Médico de família</span></b><span><span class="en">Health centre</span><span class="pt" lang="pt-PT">Centro de saúde</span></span></div><span class="iconbtn" style="color:var(--primary)" aria-hidden="true"><svg class="ic"><use href="#i-call"/></svg></span></div>
+        </div>
+      </div></div>
+      <figcaption><span class="en">A profile. Allergies get the red banner.</span><span class="pt" lang="pt-PT">Um perfil. As alergias ficam na faixa vermelha.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 07 PRIVACY ============ -->
+<section class="story privacy" id="privacy" aria-labelledby="privacy-title">
+  <div class="wrap" style="padding-block:clamp(64px,8vw,120px)">
+    <div class="head">
+      <div>
+        <p class="kicker"><span class="num">07</span><span class="en">Privacy</span><span class="pt" lang="pt-PT">Privacidade</span></p>
+        <h2 id="privacy-title" style="margin:0"><span class="en">Private, the way health information should be.</span><span class="pt" lang="pt-PT">Privada, como deve ser a informação de saúde.</span></h2>
+      </div>
+      <p class="lede en">Health data is sensitive, so protecting it was part of the design from the start, not added later. In plain terms:</p>
+      <p class="lede pt" lang="pt-PT">Os dados de saúde são sensíveis, por isso protegê-los fez parte da conceção desde o início, e não foi acrescentado depois. Em termos simples:</p>
+    </div>
+    <ul class="principles">
+      <li><h3><span class="en">Only your circle</span><span class="pt" lang="pt-PT">Só o seu círculo</span></h3>
+        <p><span class="en">A family circle sees only its own people. Caregivers join with a one-time invite code and their Google account.</span><span class="pt" lang="pt-PT">Um círculo familiar só vê as suas pessoas. Os cuidadores entram com um código de convite de utilização única e a sua conta Google.</span></p></li>
+      <li><h3><span class="en">Relatives need no account</span><span class="pt" lang="pt-PT">Os familiares não precisam de conta</span></h3>
+        <p><span class="en">The people you look after never have to install anything or sign in.</span><span class="pt" lang="pt-PT">As pessoas de quem cuida nunca têm de instalar nada nem iniciar sessão.</span></p></li>
+      <li><h3><span class="en">Encrypted on the phone</span><span class="pt" lang="pt-PT">Cifrada no telemóvel</span></h3>
+        <p><span class="en">The app’s local database is encrypted, with its key kept in the Android Keystore.</span><span class="pt" lang="pt-PT">A base de dados local da app é cifrada, e a chave fica guardada no Android Keystore.</span></p></li>
+      <li><h3><span class="en">Quiet on the lock screen</span><span class="pt" lang="pt-PT">Discreta com o ecrã bloqueado</span></h3>
+        <p><span class="en">The app marks its reminders as private: when Android is set to hide sensitive content on the lock screen, they show only that a dose is due, not which medicine or for whom.</span><span class="pt" lang="pt-PT">A app marca os seus lembretes como privados: quando o Android está definido para ocultar conteúdo sensível no ecrã bloqueado, mostram apenas que há uma toma para dar, não qual o medicamento nem para quem.</span></p></li>
+      <li><h3><span class="en">No tracking</span><span class="pt" lang="pt-PT">Sem rastreio</span></h3>
+        <p><span class="en">No analytics or tracking tools. Health details are kept out of the app’s logs by design.</span><span class="pt" lang="pt-PT">Sem ferramentas de estatísticas ou de rastreio. Por conceção, os dados de saúde ficam fora dos registos técnicos da app.</span></p></li>
+      <li><h3><span class="en">The family stays in control</span><span class="pt" lang="pt-PT">A família mantém o controlo</span></h3>
+        <p><span class="en">Export a person’s data as a PDF for the doctor or as JSON, archive them, or delete them: the data is erased from the app and the server, and backups keep it until they expire, within a year. The owner can see who changed what.</span><span class="pt" lang="pt-PT">Exporte os dados de uma pessoa em PDF para o médico ou em JSON, arquive-a ou apague-a: os dados são apagados da app e do servidor, e as cópias de segurança guardam-nos até expirarem, no prazo de um ano. O proprietário do círculo pode ver quem alterou o quê.</span></p></li>
+      <li class="wide"><h3><span class="en">Backups that the app cannot delete</span><span class="pt" lang="pt-PT">Cópias de segurança que a app não consegue apagar</span></h3>
+        <p><span class="en">Every night, an encrypted copy of the whole database goes to a second provider in the EU. The app’s own accounts cannot delete it. Restores are meant to be tested every quarter.</span><span class="pt" lang="pt-PT">Todas as noites, uma cópia cifrada de toda a base de dados vai para um segundo fornecedor na UE. As contas da própria app não a conseguem apagar. Os restauros devem ser testados todos os trimestres.</span></p></li>
+    </ul>
+    <div class="privacy-fig">
+      <figure>
+        <div class="plate"><div class="app" style="max-width:360px;width:100%">
+          <div class="lock">
+            <div class="clock">08:30</div>
+            <div class="date"><span class="en">Thursday 19 November</span><span class="pt" lang="pt-PT">quinta-feira, 19 de novembro</span></div>
+            <div class="notif"><span class="nic" aria-hidden="true"><svg><use href="#i-medication_fill1"/></svg></span><div class="tx"><div class="app-n">Family Care · 08:00</div><b><span class="en">Family Care · A dose is due</span><span class="pt" lang="pt-PT">Family Care · Há uma toma para dar</span></b></div></div>
+            <div class="notif"><span class="nic" aria-hidden="true"><svg><use href="#i-notifications_active"/></svg></span><div class="tx"><div class="app-n">Family Care · 08:30</div><b><span class="en">Family Care · A dose is due</span><span class="pt" lang="pt-PT">Family Care · Há uma toma para dar</span></b></div></div>
+          </div>
+        </div></div>
+        <figcaption><span class="en">On a locked phone that hides sensitive content, nothing says who or what.</span><span class="pt" lang="pt-PT">Com o ecrã bloqueado a ocultar conteúdo sensível, nada diz quem nem o quê.</span></figcaption>
+      </figure>
+      <div>
+        <p class="body en">The dose reminder you see once the phone is unlocked names the person and the time, so you know where to go. Anyone glancing at the phone on a table does not.</p>
+        <p class="body pt" lang="pt-PT">Depois de desbloquear o telemóvel, o lembrete da toma indica a pessoa e a hora, para saber para onde ir. Quem olhar de relance para o telemóvel em cima da mesa não fica a saber.</p>
+        <div class="aside en"><p><b>An honest limit.</b> Because everything works offline, the server never sees who reads what on a phone. Changes are logged; reading is not.</p>
+          <p><b>What we will not oversell.</b> So that every caregiver sees the same thing, the data is synced through a server in the EU. It is not end-to-end encrypted.</p>
+          <p>The app also cannot enforce 2-Step Verification on your Google account. That account is the key to the data, so it is worth turning on.</p></div>
+        <div class="aside pt" lang="pt-PT"><p><b>Um limite, para sermos francos.</b> Como tudo funciona sem ligação, o servidor nunca vê quem lê o quê no telemóvel. As alterações ficam registadas; a simples leitura, não.</p>
+          <p><b>O que não vamos prometer a mais.</b> Para que todos os cuidadores vejam o mesmo, os dados são sincronizados através de um servidor na UE. Não estão cifrados de ponta a ponta.</p>
+          <p>A app também não consegue impor a verificação em dois passos na conta Google. Essa conta é a chave dos dados, por isso vale a pena ativá-la.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 08 COLOPHON ============ -->
+<section class="colophon" id="colophon" aria-labelledby="colophon-title">
+  <div class="wrap">
+    <div>
+      <p class="kicker"><span class="num">08</span><span class="en">Colophon</span><span class="pt" lang="pt-PT">Ficha técnica</span></p>
+      <h2 id="colophon-title"><span class="en">Made for one family, installed by hand.</span><span class="pt" lang="pt-PT">Feita para uma família, instalada manualmente.</span></h2>
+      <p class="body en">Family Care isn’t in any app store, and there is nothing to download from this page. It is a private app, installed from a signed APK on the caregivers’ own Android phones.</p>
+      <p class="body pt" lang="pt-PT">A Family Care não está em nenhuma loja de aplicações, e não há nada para descarregar nesta página. É uma app privada, instalada a partir de um APK assinado nos próprios telemóveis Android dos cuidadores.</p>
+      <p class="body en">It is set in Atkinson Hyperlegible Next, a typeface made to be easy to read, and it grows with the phone’s font size up to 200% without cutting anything off.</p>
+      <p class="body pt" lang="pt-PT">Usa a letra Atkinson Hyperlegible Next, desenhada para ser fácil de ler, e acompanha o tamanho de letra do telemóvel até 200% sem cortar nada.</p>
+      <div class="reliable">
+        <h3><span class="en">Make reminders reliable</span><span class="pt" lang="pt-PT">Tornar os lembretes fiáveis</span></h3>
+        <p><span class="en">Some phone makers stop apps in the background. Under More, “Make reminders reliable” checks this phone and walks through the fixes, with steps for Samsung and Honor.</span><span class="pt" lang="pt-PT">Alguns fabricantes fecham aplicações em segundo plano. Em Mais, «Tornar os lembretes fiáveis» verifica este telemóvel e mostra como corrigir, com passos para Samsung e Honor.</span></p>
+        <ul>
+          <li><svg aria-hidden="true"><use href="#i-check_circle"/></svg><span><span class="en">Notifications: allowed</span><span class="pt" lang="pt-PT">Notificações: permitidas</span></span></li>
+          <li><svg aria-hidden="true"><use href="#i-check_circle"/></svg><span><span class="en">Exact alarms: allowed</span><span class="pt" lang="pt-PT">Alarmes exatos: permitidos</span></span></li>
+          <li><svg aria-hidden="true"><use href="#i-check_circle"/></svg><span><span class="en">Battery optimisation: off</span><span class="pt" lang="pt-PT">Otimização da bateria: desligada</span></span></li>
+        </ul>
+      </div>
+    </div>
+    <dl class="spec">
+      <dt><span class="en">Version</span><span class="pt" lang="pt-PT">Versão</span></dt><dd>0.9.0</dd>
+      <dt><span class="en">Platform</span><span class="pt" lang="pt-PT">Plataforma</span></dt><dd><span class="en">Android only</span><span class="pt" lang="pt-PT">Apenas Android</span></dd>
+      <dt><span class="en">Languages</span><span class="pt" lang="pt-PT">Idiomas</span></dt><dd><span class="en">English and Português (Portugal), chosen in More or taken from the phone</span><span class="pt" lang="pt-PT">Português (Portugal) e English, escolhidos em Mais ou seguindo o telemóvel</span></dd>
+      <dt><span class="en">Who signs in</span><span class="pt" lang="pt-PT">Quem inicia sessão</span></dt><dd><span class="en">Caregivers, with Google. Relatives are profiles, not accounts.</span><span class="pt" lang="pt-PT">Os cuidadores, com a conta Google. Os familiares são perfis, não contas.</span></dd>
+      <dt><span class="en">Requires</span><span class="pt" lang="pt-PT">Requer</span></dt><dd><span class="en">Android 13 or newer</span><span class="pt" lang="pt-PT">Android 13 ou mais recente</span></dd>
+      <dt><span class="en">Invitations</span><span class="pt" lang="pt-PT">Convites</span></dt><dd><span class="en">A code works once and expires after seven days</span><span class="pt" lang="pt-PT">O código funciona uma vez e expira ao fim de sete dias</span></dd>
+      <dt><span class="en">Works offline</span><span class="pt" lang="pt-PT">Sem ligação</span></dt><dd><span class="en">Yes. Changes sync when the phone is back online.</span><span class="pt" lang="pt-PT">Funciona. As alterações sincronizam quando o telemóvel volta a ter rede.</span></dd>
+      <dt><span class="en">Distribution</span><span class="pt" lang="pt-PT">Distribuição</span></dt><dd><span class="en">Private: a signed APK, installed by hand</span><span class="pt" lang="pt-PT">Privada: um APK assinado, instalado manualmente</span></dd>
+    </dl>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><span class="en">Family Care · Version 0.9.0 · A private app for family caregivers</span><span class="pt" lang="pt-PT">Family Care · Versão 0.9.0 · Uma app privada para quem cuida da família</span></span>
+    <a href="#top"><span class="en">Back to top</span><span class="pt" lang="pt-PT">Voltar ao início</span></a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var d = document.documentElement;
+  var T = {
+    en: { title: 'Family Care: a private Android app for family caregivers',
+          desc: 'Family Care is a private Android app that helps a family share the care of their relatives: medicines with reminders, missed doses, stock, appointments and allergies. Offline-first, in English and Portuguese (Portugal).' },
+    pt: { title: 'Family Care: uma app Android privada para quem cuida da família',
+          desc: 'A Family Care é uma app Android privada que ajuda uma família a partilhar os cuidados dos seus familiares: medicamentos com lembretes, tomas em falta, stock, consultas e alergias. Funciona sem ligação, em português (Portugal) e inglês.' }
+  };
+  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function setLang(l) {
+    d.lang = l === 'pt' ? 'pt-PT' : 'en';
+    document.title = T[l].title;
+    var m = document.querySelector('meta[name="description"]'); if (m) m.setAttribute('content', T[l].desc);
+    document.querySelectorAll('[data-aria-en]').forEach(function (el) { el.setAttribute('aria-label', el.getAttribute('data-aria-' + l)); });
+    document.querySelectorAll('[data-set-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-set-lang') === l)); });
+  }
+  function setTheme(t) {
+    d.setAttribute('data-theme', t);
+    var b = document.querySelector('[data-theme-toggle]'); if (b) b.setAttribute('aria-pressed', String(t === 'dark'));
+  }
+  setLang(/^pt/i.test(d.lang) ? 'pt' : 'en');
+  setTheme(d.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+  document.querySelectorAll('[data-set-lang]').forEach(function (b) {
+    b.addEventListener('click', function () { var l = b.getAttribute('data-set-lang'); setLang(l); store('fc-lang', l); });
+  });
+  var tb = document.querySelector('[data-theme-toggle]');
+  if (tb) tb.addEventListener('click', function () {
+    var t = d.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; setTheme(t); store('fc-theme', t);
+  });
+})();
+(function () {
+  var d = document.documentElement;
+  var give = document.querySelector('[data-demo-give]');
+  if (!give) return;
+  var row = document.querySelector('[data-demo-row]'), done = document.querySelector('[data-demo-done]'),
+      reset = document.querySelector('[data-demo-reset]'), hint = document.querySelector('[data-demo-hint]'),
+      live = document.querySelector('[data-demo-live]');
+  var btn = document.createElement('button');
+  btn.type = 'button'; btn.className = give.className; btn.innerHTML = give.innerHTML;
+  give.parentNode.replaceChild(btn, give);
+  var M = {
+    given: { en: 'Done: Maria’s four 08:00 medicines are marked as given by you at 09:12, and the amber card no longer lists them.',
+             pt: 'Feito: os quatro medicamentos da Maria das 08:00 ficam registados como dados por si às 09:12, e o cartão âmbar já não os mostra.' },
+    reset: { en: 'Back to the start: Maria’s 08:00 is unconfirmed again.',
+             pt: 'De volta ao início: as 08:00 da Maria voltam a estar por confirmar.' }
+  };
+  var last = null;
+  function text(k) { return k ? M[k][/^pt/i.test(d.lang) ? 'pt' : 'en'] : ''; }
+  function say(k) { last = k; live.textContent = text(k); }
+  function quiet(k) {
+    last = k; live.setAttribute('aria-live', 'off'); live.textContent = text(k);
+    setTimeout(function () { live.setAttribute('aria-live', 'polite'); }, 0);
+  }
+  function set(on, focus) {
+    row.hidden = on; done.hidden = !on; reset.hidden = !on; hint.hidden = on;
+    (focus ? say : quiet)(on ? 'given' : 'reset');
+    if (focus) (on ? reset : btn).focus();
+  }
+  btn.addEventListener('click', function () { set(true, true); });
+  reset.addEventListener('click', function () { set(false, true); });
+  new MutationObserver(function () { if (last) quiet(last === 'reset' ? null : last); }).observe(d, { attributes: true, attributeFilter: ['lang'] });
+  var q = null; try { q = new URLSearchParams(location.search); } catch (e) {}
+  if (q && q.get('demo') === 'given') set(true, false);
+})();
+</script>
+</body>
+</html>
