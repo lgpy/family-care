@@ -246,3 +246,34 @@ Deno.test('stock-alerts: today is the local date in the regimen zone', () => {
   // Lisbon summer time is UTC+1.
   assertEquals(currentLocalDate('2026-07-01T23:30:00Z', 'Europe/Lisbon'), '2026-07-02');
 });
+
+Deno.test('stock-alerts: a medication stopped in the future is still active', () => {
+  const plan = planStockAlerts(baseInput({
+    medications: [{ ...MEDICATION, stopped_at: '2026-11-20T00:00:00Z' }],
+  }));
+
+  assertEquals(plan.low, [MED]);
+  assertEquals(plan.alerts.map((a) => a.medication_id), [MED]);
+});
+
+Deno.test('stock-alerts: a medication whose stop has taken effect is skipped and its row clears', () => {
+  for (const stoppedAt of ['2026-11-18T10:00:00Z', '2026-11-17T00:00:00Z']) {
+    const plan = planStockAlerts(baseInput({
+      medications: [{ ...MEDICATION, stopped_at: stoppedAt }],
+      alerted: [MED],
+    }));
+
+    assertEquals(plan.low, [], stoppedAt);
+    assertEquals(plan.notifications, [], stoppedAt);
+    assertEquals(plan.alerts, [], stoppedAt);
+    assertEquals(plan.cleared, [MED], stoppedAt);
+  }
+});
+
+Deno.test('stock-alerts: a null stopped_at is active', () => {
+  const plan = planStockAlerts(baseInput({
+    medications: [{ ...MEDICATION, stopped_at: null }],
+  }));
+
+  assertEquals(plan.low, [MED]);
+});

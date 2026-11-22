@@ -8,7 +8,8 @@
  * single user may.
  *
  * What it does, in order:
- * 1. Reads the active (not stopped) medications, their regimens, their stock
+ * 1. Reads the active medications (not stopped: `stopped_at` is null or later
+ *    than now, since a stop may be scheduled for a future last day), their regimens, their stock
  *    movements, the `meds.stock_alerts` ledger, and only the dose-log entries
  *    that can affect a stock figure (taken/correcting entries after each
  *    medication's latest count, or the whole history of a medication that has
@@ -126,6 +127,7 @@ Deno.serve(async (request) => {
       low_stock_threshold_days: number;
       reminder_policy: ReminderPolicy | null;
       primary_caregiver_id: string | null;
+      stopped_at: string | null;
     }
     const medicationData = await fetchAllPages<MedicationRow>((from, to) =>
       supabase
@@ -133,9 +135,10 @@ Deno.serve(async (request) => {
         .from('medications')
         .select(
           'id, patient_id, requires_prescription, prescription_valid_until, ' +
-            'low_stock_threshold_days, reminder_policy, primary_caregiver_id',
+            'low_stock_threshold_days, reminder_policy, primary_caregiver_id, stopped_at',
         )
-        .is('stopped_at', null)
+        // Stopped means `stopped_at <= now`; a future last day leaves it active.
+        .or(`stopped_at.is.null,stopped_at.gt.${now}`)
         .order('id')
         .range(from, to) as unknown as PromiseLike<Page<MedicationRow>>
     );
@@ -213,6 +216,7 @@ Deno.serve(async (request) => {
           patient_id: row.patient_id,
           circle_id: patient.circle_id,
           patient_archived: archivedPatients.has(row.patient_id),
+          stopped_at: row.stopped_at,
           low_stock_threshold_days: row.low_stock_threshold_days,
           requires_prescription: row.requires_prescription,
           prescription_valid_until: row.prescription_valid_until,

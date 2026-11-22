@@ -6,7 +6,9 @@
  * every rule. The IO layer is `stock-low/index.ts`.
  *
  * Rules (D28):
- * - Only active (not stopped) medications with a regimen are considered; the
+ * - Only active medications with a regimen are considered (stopped means
+ *   `stopped_at` is set and not after the run's `now`; a future `stopped_at` is
+ *   still active); the
  *   stock itself is derived by `stock.ts` (the shared vectors are the contract).
  * - One push per **low episode**: a medication that already has a
  *   `meds.stock_alerts` row is skipped until that row is cleared.
@@ -52,6 +54,12 @@ export interface ActiveStockMedication extends StockMedication {
    * it is never low here and its alert row is cleared like a stopped one.
    */
   patient_archived?: boolean;
+  /**
+   * When the stop takes effect, if one was set. It may lie in the future (a
+   * medication stopped with a future last day): the medication is stopped only
+   * when this is not null and not after `now`.
+   */
+  stopped_at?: string | null;
 }
 
 /** A `meds.stock_movements` row as the job reads it (one medication each). */
@@ -60,7 +68,10 @@ export type StockMovementRow = StockMovement & { medication_id: string };
 export interface StockAlertInput {
   /** The job's clock, an ISO instant. */
   now: string;
-  /** Active medications only (`medications.stopped_at is null`). */
+  /**
+   * Active medications: `stopped_at` is null or later than `now`. One whose stop
+   * has already taken effect is skipped here too, so a stale read cannot alert.
+   */
   medications: ActiveStockMedication[];
   /** Every regimen version of those medications. */
   regimens: Regimen[];
@@ -217,6 +228,11 @@ export function planStockAlerts(input: StockAlertInput): StockAlertPlan {
     // An archived patient is hidden from every server job (D30). It is not
     // low here, so its ledger row falls out through `cleared` below.
     if (medication.patient_archived) continue;
+    // Stopped: the stop has taken effect (`stopped_at <= now`). A future
+    // `stopped_at` is still active.
+    if (
+      medication.stopped_at != null && Date.parse(medication.stopped_at) <= nowMs
+    ) continue;
 
     const regimens = regimensByMedication.get(medication.id) ?? [];
     // No regimen means no scheduled consumption, so days remaining is unknown
