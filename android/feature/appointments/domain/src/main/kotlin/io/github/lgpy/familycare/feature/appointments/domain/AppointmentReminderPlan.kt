@@ -115,21 +115,7 @@ object AppointmentReminderPlanning {
         return appointments
             .filter { !it.isCancelled }
             .filter { shouldRemindOnThisDevice(it, myUserId, myRole) }
-            .flatMap { appointment ->
-                val start = appointment.startInstant()
-                listOf(
-                    AppointmentReminder(
-                        appointment = appointment,
-                        kind = AppointmentReminderKind.EVENING_BEFORE,
-                        instant = eveningBefore(appointment),
-                    ),
-                    AppointmentReminder(
-                        appointment = appointment,
-                        kind = AppointmentReminderKind.HOUR_BEFORE,
-                        instant = start.minus(HOUR_BEFORE),
-                    ),
-                )
-            }
+            .flatMap { remindersOf(it) }
             .filter { !it.instant.isBefore(now) && !it.instant.isAfter(to) }
             .sortedWith(
                 compareBy(
@@ -139,6 +125,72 @@ object AppointmentReminderPlanning {
                 ),
             )
     }
+
+    /**
+     * The reminders whose time has **passed** but which must stay: the shown
+     * notification and the alarm that is due but not yet delivered. [plan] only
+     * looks forward, so without this every reschedule after the reminder fired
+     * would dismiss it.
+     *
+     * A reminder stays until the appointment's start has passed (its end, when
+     * it has a [Appointment.durationMinutes]), the appointment is cancelled or
+     * deleted (not in [appointments]), moved (the id of a reminder includes its
+     * instant, so the old one is no longer returned) or no longer routed to this
+     * device. Reminders that are still ahead are [plan]'s.
+     */
+    fun openReminders(
+        now: Instant,
+        appointments: List<Appointment>,
+        myUserId: String?,
+        myRole: MemberRole?,
+    ): List<AppointmentReminder> = appointments
+        .filter { !it.isCancelled }
+        .filter { shouldRemindOnThisDevice(it, myUserId, myRole) }
+        .filter { !now.isAfter(endInstant(it)) }
+        .flatMap { remindersOf(it) }
+        .filter { it.instant.isBefore(now) }
+        .sortedWith(
+            compareBy(
+                { it.instant },
+                { it.appointmentId.value },
+                { it.kind.name },
+            ),
+        )
+
+    /**
+     * What a reschedule may cancel out of [candidateIds] (scheduled alarms or
+     * showing notifications): everything that is neither in the forward
+     * [planned] list nor in the [open] list of reminders that are due but whose
+     * appointment has not started.
+     */
+    fun idsToCancel(
+        candidateIds: Collection<Int>,
+        planned: List<AppointmentReminder>,
+        open: List<AppointmentReminder>,
+    ): Set<Int> {
+        val keep = (planned + open).mapTo(hashSetOf()) { AppointmentReminderIds.requestCode(it) }
+        return candidateIds.filterNotTo(linkedSetOf()) { it in keep }
+    }
+
+    /** The start, or the end when the appointment has a duration. */
+    private fun endInstant(appointment: Appointment): Instant {
+        val start = appointment.startInstant()
+        val minutes = appointment.durationMinutes ?: return start
+        return start.plus(Duration.ofMinutes(minutes.toLong()))
+    }
+
+    private fun remindersOf(appointment: Appointment): List<AppointmentReminder> = listOf(
+        AppointmentReminder(
+            appointment = appointment,
+            kind = AppointmentReminderKind.EVENING_BEFORE,
+            instant = eveningBefore(appointment),
+        ),
+        AppointmentReminder(
+            appointment = appointment,
+            kind = AppointmentReminderKind.HOUR_BEFORE,
+            instant = appointment.startInstant().minus(HOUR_BEFORE),
+        ),
+    )
 
     /**
      * 20:00 on the day before the appointment, **in the appointment's zone**.

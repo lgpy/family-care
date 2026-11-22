@@ -22,6 +22,7 @@ import io.github.lgpy.familycare.feature.appointments.domain.AppointmentReminder
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentReminderIds
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentReminderKind
 import io.github.lgpy.familycare.feature.appointments.domain.AppointmentReminderPlanning
+import io.github.lgpy.familycare.feature.appointments.reminders.AppointmentReminderDecisions.PlanRead
 import io.github.lgpy.familycare.feature.appointments.ui.formatAppointmentTime
 import io.github.lgpy.familycare.feature.appointments.ui.labelRes
 import java.time.Instant
@@ -40,11 +41,15 @@ import kotlinx.coroutines.flow.first
  * 2. cancels alarms the previous pass scheduled that are no longer wanted;
  * 3. schedules the new ones, replacing same-identity alarms;
  * 4. cancels notifications whose reminder is gone (the appointment was
- *    cancelled, the companion changed, or the phone is signed out);
+ *    cancelled, moved, deleted, started, the companion changed, or the phone is
+ *    signed out). A reminder whose time has passed stays until then
+ *    (`AppointmentReminderPlanning.openReminders`);
  * 5. records the next alarm time and re-arms the daily safety alarm.
  *
  * **Signed out, or no circle/role**: the plan is null and everything is
- * cancelled. A receiver must never crash in that state.
+ * cancelled. A receiver must never crash in that state. A session that is still
+ * loading (a fresh process) is awaited with a timeout and, if unresolved, or a
+ * failed read, changes nothing.
  *
  * **Exactness**: [AlarmManager.setAlarmClock] is used when
  * `canScheduleExactAlarms()` allows it (D25: `USE_EXACT_ALARM`, granted at
@@ -68,57 +73,83 @@ class AppointmentReminderScheduler(
     private val applicationContext: Context = context.applicationContext
 
     /**
-     * The current plan, or null when signed out / not in a circle. Reads the
-     * same flows the screens do, so a reminder cannot point at data the user
-     * cannot see.
+     * The current plan, or null when signed out / not in a circle (or the
+     * session is still loading). Reads the same flows the screens do, so a
+     * reminder cannot point at data the user cannot see.
      */
-    suspend fun currentPlan(): List<AppointmentReminder>? {
-        val auth = authRepository.state.value
-        if (auth !is AuthState.SignedIn) return null
-        val role = careCircleRepository.myRole.first() ?: return null
+    suspend fun currentPlan(): List<AppointmentReminder>? =
+        (readPlan() as? PlanRead.Ready)?.planned
+
+    /**
+     * Reads the plan and the open reminders once. Waits for a session that is
+     * still loading in a fresh process; after the timeout it is
+     * [PlanRead.Unavailable], not "signed out".
+     */
+    private suspend fun readPlan(): PlanRead {
+        val auth = AppointmentReminderDecisions.resolveAuth(authRepository.state)
+        when (auth) {
+            AuthState.Loading -> return PlanRead.Unavailable
+            AuthState.SignedOut -> return PlanRead.NoPlan
+            is AuthState.SignedIn -> Unit
+        }
+        val role = careCircleRepository.myRole.first() ?: return PlanRead.NoPlan
 
         val appointments = appointmentRepository.observeAgenda(includeCancelled = true)
             .first()
             .map { it.appointment }
+        val names = patientRepository.patients.first().associate { it.id to it.displayName }
 
-        return AppointmentReminderPlanning.plan(
+        val planned = AppointmentReminderPlanning.plan(
             now = now(),
             appointments = appointments,
             myUserId = auth.userId,
             myRole = role,
         )
+        val open = AppointmentReminderPlanning.openReminders(
+            now = now(),
+            appointments = appointments,
+            myUserId = auth.userId,
+            myRole = role,
+        )
+        return PlanRead.Ready(planned = planned, open = open, names = names)
     }
 
-    /** Recomputes the plan and rewrites the alarms and shown notifications. */
+    /**
+     * Recomputes the plan and rewrites the alarms and shown notifications.
+     *
+     * - A read that fails, or a session that is still loading, changes nothing.
+     * - Signed out (resolved), or no circle/role, cancels everything.
+     * - Otherwise a reminder whose time has passed stays until its appointment
+     *   has started (or ended), is cancelled, moved, or no longer routed here.
+     */
     suspend fun reschedule() {
-        val plan = runCatching { currentPlan() }.getOrNull()
-        val names = runCatching {
-            patientRepository.patients.first().associate { it.id to it.displayName }
-        }.getOrDefault(emptyMap())
+        val ready = when (val read = AppointmentReminderDecisions.guardedRead { readPlan() }) {
+            PlanRead.Unavailable -> return
+            PlanRead.NoPlan -> {
+                cancelAll()
+                return
+            }
+            is PlanRead.Ready -> read
+        }
+        val names = ready.names
 
-        // A reminder for a patient the phone has not synced yet cannot name its
-        // subject, so it waits for the next row rather than reminding blindly.
-        val planned = plan.orEmpty().filter { !names[it.patientId].isNullOrBlank() }
+        val planned = AppointmentReminderDecisions.nameable(ready.planned, names)
+        val open = AppointmentReminderDecisions.nameable(ready.open, names)
         val plannedIds = planned.map { AppointmentReminderIds.requestCode(it) }.toSet()
         val previous = store.scheduled()
 
-        // Alarms that are no longer part of the plan.
-        (previous - plannedIds).forEach { cancelAlarm(it) }
-        // Notifications whose reminder is gone.
-        store.posted().filterNot { it in plannedIds }.forEach { cancelNotification(it) }
-
-        if (plan == null) {
-            store.replaceScheduled(emptySet())
-            store.setNextAlarmAt(null)
-            return
-        }
+        // Alarms and notifications that are neither planned nor open.
+        val alarmsToCancel = AppointmentReminderPlanning.idsToCancel(previous, planned, open)
+        alarmsToCancel.forEach { cancelAlarm(it) }
+        AppointmentReminderPlanning.idsToCancel(store.posted(), planned, open)
+            .forEach { cancelNotification(it) }
 
         ensureChannel()
 
         planned.forEach { reminder ->
             scheduleReminder(reminder, names[reminder.patientId].orEmpty())
         }
-        store.replaceScheduled(plannedIds)
+        store.replaceScheduled(plannedIds + (previous - alarmsToCancel))
         // The plan is sorted by instant.
         store.setNextAlarmAt(planned.firstOrNull()?.instant?.toEpochMilli())
         scheduleDailySafety()

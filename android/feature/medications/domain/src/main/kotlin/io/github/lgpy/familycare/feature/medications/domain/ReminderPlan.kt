@@ -136,6 +136,95 @@ object ReminderPlanning {
             )
             .filter { !it.instant.isBefore(now) && !it.instant.isAfter(to) }
     }
+
+    /**
+     * The groups whose time has **passed** but which are still open, so their
+     * alarm (due, not yet delivered) and their showing notification must
+     * survive a reschedule. [plan] only looks forward, so without this every
+     * reschedule after 08:00 would dismiss the unacknowledged 08:00 reminder.
+     *
+     * A group is open while at least one of its slots has no effective entry
+     * ([DoseLogRules.effectiveEntries]) and is not yet
+     * [DoseState.MISSED] by [DoseStatusRules] with the patient's missed window,
+     * and the same medication, patient and routing checks as [plan] hold. The
+     * returned groups hold only the still-open slots, grouped like [plan]
+     * groups, so [ReminderIds.requestCode] gives the same id as before the group
+     * was due.
+     *
+     * Slots that start after [now] are not returned: they are [plan]'s.
+     */
+    fun openGroups(
+        now: Instant,
+        sources: List<ReminderSource>,
+        patients: Map<PatientId, Patient>,
+        entries: List<DoseLogEntry>,
+        myUserId: String?,
+        myRole: MemberRole?,
+    ): List<ReminderGroup> {
+        val grouped = linkedMapOf<Pair<PatientId, LocalDateTime>, MutableList<DoseSlot>>()
+
+        sources.forEach { source ->
+            val medication = source.medication
+            if (medication.isStopped) return@forEach
+            val patient = patients[medication.patientId] ?: return@forEach
+            if (patient.isArchived) return@forEach
+            if (!ReminderRouting.shouldRemindOnThisDevice(
+                    patient = patient,
+                    medication = medication,
+                    myUserId = myUserId,
+                    myRole = myRole,
+                )
+            ) {
+                return@forEach
+            }
+
+            // A slot older than the missed window is missed whatever happens,
+            // so the search can start there.
+            val from = now.minusSeconds(patient.missedWindowMinutes * 60L)
+            DoseSlotRules.slotsDueBetween(source.regimens, from, now)
+                .filter { it.medicationId == medication.id }
+                .filter { slot ->
+                    DoseStatusRules.doseStatus(slot, entries, now, patient).state in OPEN_STATES
+                }
+                .forEach { slot ->
+                    grouped.getOrPut(medication.patientId to slot.scheduledLocal) { mutableListOf() } += slot
+                }
+        }
+
+        return grouped.map { (key, slots) ->
+            ReminderGroup(
+                patientId = key.first,
+                scheduledLocal = key.second,
+                instant = slots.minOf { it.instant },
+                slots = slots.sortedWith(
+                    compareBy({ it.medicationId.value }, { it.regimenId.value }),
+                ),
+            )
+        }.sortedWith(
+            compareBy(
+                { it.instant },
+                { it.patientId.value },
+                { it.scheduledLocal },
+            ),
+        )
+    }
+
+    /**
+     * What a reschedule may cancel out of [candidateIds] (scheduled alarms or
+     * showing notifications): everything that is neither in the forward [planned]
+     * list nor in the [open] list of groups that are due but not yet confirmed
+     * or missed.
+     */
+    fun idsToCancel(
+        candidateIds: Collection<Int>,
+        planned: List<ReminderGroup>,
+        open: List<ReminderGroup>,
+    ): Set<Int> {
+        val keep = (planned + open).mapTo(hashSetOf()) { ReminderIds.requestCode(it) }
+        return candidateIds.filterNotTo(linkedSetOf()) { it in keep }
+    }
+
+    private val OPEN_STATES = setOf(DoseState.UPCOMING, DoseState.DUE, DoseState.OVERDUE)
 }
 
 /**
