@@ -18,6 +18,7 @@ import io.github.lgpy.familycare.core.ui.components.FcIcons
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardActions
 import io.github.lgpy.familycare.core.ui.dashboard.DashboardCard
 import io.github.lgpy.familycare.feature.medications.MedicationsRoutes
+import io.github.lgpy.familycare.feature.medications.data.RECENT_DOSE_DAYS
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealth
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderProblem
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderRoutes
@@ -36,11 +37,14 @@ import org.koin.compose.viewmodel.koinViewModel
  *    groups, most urgent first. The row's small button is the existing one-tap
  *    group confirmation ("Give" / "Give all 4"); tapping the row opens the
  *    dose-slot screen, where a dose can still be recorded or skipped.
- * 2. **Low stock** ([LowStockViewModel]) — one row naming the medication when
+ * 2. **Missed earlier** — one row while doses of the days before today are
+ *    still missed ("4 missed doses · in the last 7 days · whose"); it opens
+ *    the missed-doses list, where each can be marked given or not given.
+ * 3. **Low stock** ([LowStockViewModel]) — one row naming the medication when
  *    a single one is low, otherwise one summary row ("21 medicines are running
  *    low", with whose they are). Either opens the Shopping tab, which holds
  *    the full list; the card stays a digest, not a second shopping list.
- * 3. **Reminder health** ([ReminderHealthViewModel]) — only while the phone's
+ * 4. **Reminder health** ([ReminderHealthViewModel]) — only while the phone's
  *    reminder setup is broken; the detail names what to turn on and the row
  *    opens More → Reminders.
  *
@@ -115,6 +119,9 @@ internal sealed interface AttentionRow {
     /** An overdue or missed dose group of [NeedsAttentionViewModel]. */
     data class DoseGroup(val group: DoseGroupUi) : AttentionRow
 
+    /** Missed groups of earlier days: how many, and whose. */
+    data class MissedEarlier(val count: Int, val patientNames: List<String>) : AttentionRow
+
     /** One medication of [LowStockViewModel] about to run out. */
     data class LowStock(val line: LowStockLine) : AttentionRow
 
@@ -127,7 +134,7 @@ internal sealed interface AttentionRow {
 
 /**
  * The merged card's rows, in the mockup's order: doses first (most urgent),
- * then low stock (one row, whatever the count), then the reminder health row.
+ * then the earlier days' missed doses, then low stock (one row, whatever the count), then the reminder health row.
  *
  * A healthy reminder setup and an empty stock digest contribute nothing, so an
  * empty result means the card is hidden.
@@ -138,6 +145,14 @@ internal fun attentionRows(
     health: ReminderHealth?,
 ): List<AttentionRow> = buildList {
     doses.groups.forEach { group -> add(AttentionRow.DoseGroup(group)) }
+    if (doses.missedEarlier.isNotEmpty()) {
+        add(
+            AttentionRow.MissedEarlier(
+                count = doses.missedEarlier.size,
+                patientNames = doses.missedEarlier.map { it.patientName }.distinct(),
+            ),
+        )
+    }
     when (stock.lines.size) {
         0 -> Unit
         1 -> add(AttentionRow.LowStock(stock.lines.single()))
@@ -200,6 +215,17 @@ private fun AttentionRow.toItem(
                 ),
             )
         },
+    )
+
+    is AttentionRow.MissedEarlier -> AttentionItem(
+        icon = FcIcons.Schedule,
+        title = pluralStringResource(R.plurals.meds_attention_missed_title, count, count),
+        supportingText = stringResource(
+            R.string.meds_attention_missed_body,
+            RECENT_DOSE_DAYS,
+            joinNames(patientNames),
+        ),
+        onClick = { onNavigate(MedicationsRoutes.MISSED_DOSES) },
     )
 
     is AttentionRow.LowStock -> AttentionItem(

@@ -991,4 +991,21 @@
     <string name="pill_desc_two_colours">%1$s e %2$s</string>
     <string name="pill_desc_scored">%1$s com ranhura</string>
     <string name="pill_desc_sized">%2$s %1$s</string>
+
+    <!-- Tomas em falta: a lista para pôr em dia os dias anteriores e a linha em Hoje. -->
+    <string name="meds_missed_title">Tomas em falta</string>
+    <string name="meds_missed_subtitle">Últimos %1$d dias. Marque o que foi dado e não ficou registado.</string>
+    <string name="meds_missed_empty">Nada em falta nos últimos %1$d dias.</string>
+    <string name="meds_missed_yesterday">Ontem</string>
+    <string name="meds_missed_given">Foi dada</string>
+    <string name="meds_missed_not_given">Não foi dada</string>
+    <string name="meds_missed_marked_not_given">Marcada como não dada</string>
+    <plurals name="meds_attention_missed_title" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d toma em falta</item>
+        <item quantity="other">%1$d tomas em falta</item>
+    </plurals>
+    <string name="meds_attention_missed_body">Nos últimos %1$d dias · %2$s</string>
+    <string name="meds_slot_title_day">%1$s · %2$s</string>
+    <string name="meds_give_chip_given_at">Dada às %1$s</string>
+    <string name="meds_give_time_title">A que horas foi dada?</string>
 </resources>

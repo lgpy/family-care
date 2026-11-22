@@ -16,18 +16,15 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,8 +38,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -66,7 +61,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 import io.github.lgpy.familycare.core.domain.circle.ReminderPolicy
 import io.github.lgpy.familycare.core.ui.R
 import io.github.lgpy.familycare.core.ui.components.FcIcons
@@ -81,6 +75,7 @@ import io.github.lgpy.familycare.feature.medications.domain.MedicationForm
 import io.github.lgpy.familycare.feature.medications.domain.MedicationSuggestion
 import io.github.lgpy.familycare.feature.medications.domain.QuantityRules
 import io.github.lgpy.familycare.feature.medications.reminders.FirstMedicineReminderPrompt
+import io.github.lgpy.familycare.feature.medications.ui.TimePickerDialog
 import io.github.lgpy.familycare.feature.medications.ui.FieldError
 import io.github.lgpy.familycare.feature.medications.ui.PillLookSheet
 import io.github.lgpy.familycare.feature.medications.ui.DoseStepper
@@ -231,7 +226,8 @@ fun MedicationFormScreen(
     }
 
     if (showOtherTime) {
-        OtherTimeDialog(
+        TimePickerDialog(
+            title = stringResource(R.string.meds_time_other),
             onDismiss = { showOtherTime = false },
             onConfirm = { hour, minute ->
                 viewModel.onCustomTimeAdded(hour, minute)
@@ -1150,49 +1146,4 @@ private fun ReminderPolicy.labelRes(): Int = when (this) {
     ReminderPolicy.PRIMARY_ONLY -> R.string.patients_policy_primary_only
     ReminderPolicy.ALL_CAREGIVERS -> R.string.patients_policy_all_caregivers
     ReminderPolicy.ROTA -> R.string.patients_policy_unavailable
-}
-
-// --- Time picker ------------------------------------------------------------
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun OtherTimeDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (hour: Int, minute: Int) -> Unit,
-) {
-    val pickerState = rememberTimePickerState(initialHour = 12, initialMinute = 0, is24Hour = true)
-    BasicAlertDialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            tonalElevation = 6.dp,
-            modifier = Modifier
-                .padding(16.dp)
-                .widthIn(max = 400.dp),
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.meds_time_other),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                TimePicker(state = pickerState)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text(text = stringResource(R.string.cancel))
-                    }
-                    TextButton(onClick = { onConfirm(pickerState.hour, pickerState.minute) }) {
-                        Text(text = stringResource(android.R.string.ok))
-                    }
-                }
-            }
-        }
-    }
 }

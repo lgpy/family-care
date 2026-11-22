@@ -65,6 +65,20 @@ fun localizedDate(date: LocalDate): String {
     }
 }
 
+/**
+ * The weekday and date in the user's language ("Thursday, 19 November",
+ * "quinta-feira, 19 de novembro"): the platform picks the order and the
+ * connector words, as the Today header does.
+ */
+@Composable
+fun localizedWeekdayDate(date: LocalDate): String {
+    val locale = LocalConfiguration.current.locales[0]
+    return remember(date, locale) {
+        val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM")
+        date.format(DateTimeFormatter.ofPattern(pattern, locale))
+    }
+}
+
 /** The month and year of a prescription's last valid day (`nov 2026`). */
 @Composable
 fun localizedMonthYear(date: LocalDate): String {

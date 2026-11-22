@@ -987,4 +987,21 @@
     <string name="pill_desc_two_colours">%1$s and %2$s</string>
     <string name="pill_desc_scored">%1$s with a score line</string>
     <string name="pill_desc_sized">%1$s %2$s</string>
+
+    <!-- Missed doses: the catch-up list of the days before today and its Today row. -->
+    <string name="meds_missed_title">Missed doses</string>
+    <string name="meds_missed_subtitle">Last %1$d days. Mark what was given but never recorded.</string>
+    <string name="meds_missed_empty">Nothing missed in the last %1$d days.</string>
+    <string name="meds_missed_yesterday">Yesterday</string>
+    <string name="meds_missed_given">It was given</string>
+    <string name="meds_missed_not_given">Not given</string>
+    <string name="meds_missed_marked_not_given">Marked as not given</string>
+    <plurals name="meds_attention_missed_title">
+        <item quantity="one">%1$d missed dose</item>
+        <item quantity="other">%1$d missed doses</item>
+    </plurals>
+    <string name="meds_attention_missed_body">In the last %1$d days · %2$s</string>
+    <string name="meds_slot_title_day">%1$s · %2$s</string>
+    <string name="meds_give_chip_given_at">Given at %1$s</string>
+    <string name="meds_give_time_title">When was it given?</string>
 </resources>

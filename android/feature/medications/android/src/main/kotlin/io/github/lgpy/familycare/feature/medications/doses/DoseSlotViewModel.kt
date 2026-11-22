@@ -20,7 +20,10 @@ import io.github.lgpy.familycare.feature.medications.domain.SkipReason
 import io.github.lgpy.familycare.feature.medications.ui.MedsUiError
 import io.github.lgpy.familycare.feature.medications.ui.MemberOrder
 import io.github.lgpy.familycare.feature.medications.ui.uiError
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -85,6 +88,12 @@ data class SlotMedicationUi(
  * ([DoseLogRepository.correct]) rather than confirmed again — a second entry for
  * the same slot would read as a double dose.
  *
+ * A slot of an earlier day (from [DoseLogRepository.recentDoses], the "missed
+ * doses" list) is a catch-up ([DoseSlotUiState.backfill]): its doses are
+ * recorded as given **at the scheduled time** unless the caregiver picks
+ * another ([onGivenAt]). Recording them "now" would place them after a stock
+ * count made since, and stock would subtract them a second time.
+ *
  * A slot whose entries are all recorded opens read-only ([DoseSlotUiState
  * .confirmed]), showing who gave each dose and when; [onEdit] unlocks the
  * toggles so the existing correction path stays reachable.
@@ -103,17 +112,25 @@ class DoseSlotViewModel(
     /** The user's choices per regimen, layered over the stored entries. */
     private val edits = MutableStateFlow<Map<String, SlotEdit>>(emptyMap())
 
-    private val base = combine(
+    private val groups = combine(
         doseLogRepository.dosesToday,
+        doseLogRepository.recentDoses,
+    ) { today, recent -> today to recent }
+
+    private val base = combine(
+        groups,
         medicationRepository.activeMedications,
         patientRepository.observe(PatientId(patientId)),
         careCircleRepository.myRole,
         careCircleRepository.members,
-    ) { groups, medications, patient, role, members ->
+    ) { (today, recent), medications, patient, role, members ->
+        val matches = { group: TodayDoseGroup ->
+            group.patientId == PatientId(patientId) && group.scheduledLocal == scheduledLocal
+        }
+        val todayGroup = today.firstOrNull(matches)
         BaseState(
-            group = groups.firstOrNull { group ->
-                group.patientId == PatientId(patientId) && group.scheduledLocal == scheduledLocal
-            },
+            group = todayGroup ?: recent.firstOrNull(matches),
+            backfill = todayGroup == null && recent.any(matches),
             medications = medications.associate { it.medication.id.value to it.medication },
             patientName = patient?.displayName,
             canWrite = role.canWrite,
@@ -127,6 +144,7 @@ class DoseSlotViewModel(
             loaded = true,
             group = baseState.group,
             notFound = baseState.group == null,
+            backfill = baseState.backfill,
             patientName = baseState.patientName,
             canWrite = baseState.canWrite,
             members = baseState.members,
@@ -208,6 +226,11 @@ class DoseSlotViewModel(
         local.update { it.copy(someoneName = value) }
     }
 
+    /** The time a catch-up dose was really given, on the slot's own day. */
+    fun onGivenAt(time: LocalTime) {
+        local.update { it.copy(givenAt = time) }
+    }
+
     fun onNoteChanged(value: String) {
         local.update { it.copy(note = value) }
     }
@@ -247,6 +270,7 @@ class DoseSlotViewModel(
                     skipped = skipped,
                     givenBy = givenBy,
                     note = note,
+                    actualAt = if (state.backfill) state.backfillInstant(pending.first().slot) else null,
                 )
                 error = result.uiError()
             }
@@ -306,7 +330,25 @@ data class DoseSlotUiState(
     val confirmed: Boolean = false,
     /** The domain group being edited; null until the rows arrive. */
     val group: TodayDoseGroup? = null,
+    /** True for a slot of an earlier day, caught up from the missed-doses list. */
+    val backfill: Boolean = false,
+    /** For a [backfill]: when it was given; null means the scheduled time. */
+    val givenAt: LocalTime? = null,
 ) {
+
+    /** The time a [backfill] records, on the slot's day. */
+    val backfillTime: LocalTime?
+        get() = if (backfill) givenAt ?: group?.scheduledLocal?.toLocalTime() else null
+
+    /**
+     * The instant [backfillTime] is on [slot]'s day, in the slot's own zone: the
+     * slot's instant moved by the wall-clock difference, so no zone is needed.
+     */
+    fun backfillInstant(slot: DoseSlot): Instant {
+        val time = givenAt ?: return slot.instant
+        val chosen = slot.scheduledLocal.toLocalDate().atTime(time)
+        return slot.instant.plus(Duration.between(slot.scheduledLocal, chosen))
+    }
 
     /**
      * Whether closing the sheet would lose the caregiver's work: a typed note,
@@ -342,6 +384,7 @@ data class DoseSlotUiState(
 
 private data class BaseState(
     val group: TodayDoseGroup?,
+    val backfill: Boolean,
     val medications: Map<String, Medication>,
     val patientName: String?,
     val canWrite: Boolean,

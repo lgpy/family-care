@@ -10,6 +10,7 @@ import io.github.lgpy.familycare.feature.medications.data.CatalogTsv
 import io.github.lgpy.familycare.feature.medications.data.MedicationCatalogRepository
 import io.github.lgpy.familycare.feature.medications.detail.MedicationDetailViewModel
 import io.github.lgpy.familycare.feature.medications.doses.DoseSlotViewModel
+import io.github.lgpy.familycare.feature.medications.missed.MissedDosesViewModel
 import io.github.lgpy.familycare.feature.medications.form.MedicationFormViewModel
 import io.github.lgpy.familycare.feature.medications.list.PatientMedicationsViewModel
 import io.github.lgpy.familycare.feature.medications.regimen.ChangeRegimenViewModel
@@ -59,6 +60,14 @@ val medicationsModule: Module = module {
     }
 
     viewModel { ReminderHealthViewModel(checker = get()) }
+
+    viewModel {
+        MissedDosesViewModel(
+            doseLogRepository = get(),
+            medicationRepository = get(),
+            careCircleRepository = get(),
+        )
+    }
 
     // M5/D28: the Today card that digests the low-stock list.
     viewModel { LowStockViewModel(stockRepository = get()) }

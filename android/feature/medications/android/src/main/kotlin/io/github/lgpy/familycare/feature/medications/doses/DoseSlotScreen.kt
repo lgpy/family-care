@@ -70,7 +70,9 @@ import io.github.lgpy.familycare.feature.medications.ui.FastingTag
 import io.github.lgpy.familycare.feature.medications.ui.formatQuantity
 import io.github.lgpy.familycare.feature.medications.ui.instructionsMentionFasting
 import io.github.lgpy.familycare.feature.medications.ui.formatTime
+import io.github.lgpy.familycare.feature.medications.ui.TimePickerDialog
 import io.github.lgpy.familycare.feature.medications.ui.labelRes
+import io.github.lgpy.familycare.feature.medications.ui.localizedWeekdayDate
 import io.github.lgpy.familycare.feature.medications.ui.messageRes
 import io.github.lgpy.familycare.feature.medications.ui.stockUnitLabel
 import java.math.BigDecimal
@@ -123,6 +125,7 @@ fun DoseSlotScreen(
     var skipTarget by remember { mutableStateOf<SlotMedicationUi?>(null) }
     var givenByOpen by remember { mutableStateOf(false) }
     var discardDialog by remember { mutableStateOf(false) }
+    var givenAtOpen by remember { mutableStateOf(false) }
 
     val requestClose = {
         if (uiState.hasUnsavedChanges) discardDialog = true else onBack()
@@ -154,7 +157,16 @@ fun DoseSlotScreen(
             }
             Text(
                 // The patient's name is on the line below, beside the avatar.
-                text = stringResource(R.string.meds_slot_title, time),
+                text = if (uiState.backfill) {
+                    stringResource(
+                        R.string.meds_slot_title_day,
+                        localizedWeekdayDate(scheduledLocal.toLocalDate())
+                            .replaceFirstChar { it.titlecase() },
+                        time,
+                    )
+                } else {
+                    stringResource(R.string.meds_slot_title, time)
+                },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 4.dp),
@@ -247,10 +259,21 @@ fun DoseSlotScreen(
                                     null
                                 },
                             )
+                            val backfillTime = uiState.backfillTime
                             GiveChip(
                                 icon = FcIcons.Schedule,
-                                label = stringResource(R.string.meds_give_chip_at, time),
-                                onClick = null,
+                                label = if (backfillTime != null) {
+                                    stringResource(R.string.meds_give_chip_given_at, formatTime(backfillTime))
+                                } else {
+                                    stringResource(R.string.meds_give_chip_at, time)
+                                },
+                                // A catch-up records when it was really given;
+                                // today's doses are recorded as given now.
+                                onClick = if (backfillTime != null && uiState.canWrite) {
+                                    { givenAtOpen = true }
+                                } else {
+                                    null
+                                },
                             )
                         }
 
@@ -342,6 +365,18 @@ fun DoseSlotScreen(
                 TextButton(onClick = { givenByOpen = false }) {
                     Text(text = stringResource(R.string.close))
                 }
+            },
+        )
+    }
+
+    if (givenAtOpen) {
+        TimePickerDialog(
+            title = stringResource(R.string.meds_give_time_title),
+            initial = uiState.backfillTime ?: scheduledLocal.toLocalTime(),
+            onDismiss = { givenAtOpen = false },
+            onConfirm = { hour, minute ->
+                viewModel.onGivenAt(java.time.LocalTime.of(hour, minute))
+                givenAtOpen = false
             },
         )
     }
