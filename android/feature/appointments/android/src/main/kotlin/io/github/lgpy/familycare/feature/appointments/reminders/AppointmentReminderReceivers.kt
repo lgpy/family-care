@@ -15,7 +15,8 @@ import org.koin.core.context.GlobalContext
  *
  * The plans are computed when the alarms are scheduled, so this needs no
  * database read: the intent already holds the localized text and the route.
- * Signed out means no reminder. An unparsable intent is ignored and never
+ * A resolved signed-out session means no reminder; a session still loading in a
+ * fresh process is awaited, and if it is unresolved the reminder is posted. An unparsable intent is ignored and never
  * crashes the process.
  */
 class AppointmentReminderReceiver : BroadcastReceiver() {
@@ -24,13 +25,32 @@ class AppointmentReminderReceiver : BroadcastReceiver() {
         if (intent.action != AppointmentReminderContract.ACTION_REMIND) return
         val content = AppointmentReminderContract.contentFrom(intent) ?: return
         val id = AppointmentReminderContract.notificationIdFrom(intent) ?: return
-        val koin = GlobalContext.getOrNull() ?: return
-        val signedIn = koin.get<AuthRepository>().state.value is AuthState.SignedIn
-        if (!signedIn) return
-
+        val pending = goAsync()
         val appContext = context.applicationContext
-        AppointmentReminderNotifications.post(appContext, content, id)
-        AppointmentRemindersStore(appContext).addPosted(id)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // A fresh process starts with the session still loading: wait
+                // for it (bounded). Still loading after that, or no Koin at
+                // all, posts from the intent: the alarm was scheduled while
+                // signed in and failing to remind is the worse error. Only a
+                // resolved signed-out session stays silent.
+                val koin = GlobalContext.getOrNull()
+                val auth = if (koin == null) {
+                    AuthState.Loading
+                } else {
+                    AppointmentReminderDecisions.resolveAuth(koin.get<AuthRepository>().state)
+                }
+                if (!AppointmentReminderDecisions.shouldPost(auth)) return@launch
+
+                AppointmentReminderNotifications.post(appContext, content, id)
+                AppointmentRemindersStore(appContext).addPosted(id)
+            } catch (_: Exception) {
+                // A receiver must not crash the process; the next reschedule
+                // and the daily safety alarm remain the safety nets.
+            } finally {
+                pending.finish()
+            }
+        }
     }
 }
 
@@ -53,8 +73,9 @@ class AppointmentRescheduleReceiver : BroadcastReceiver() {
             try {
                 val koin = GlobalContext.getOrNull()
                 if (koin != null) {
-                    // Signed out? reschedule() computes a null plan and cancels
-                    // everything, which is exactly what should happen.
+                    // reschedule() waits for a session that is still loading
+                    // (fresh process), cancels everything only when it resolves
+                    // to signed out, and changes nothing on a failed read.
                     koin.get<AppointmentReminderScheduler>().reschedule()
                 }
             } catch (_: Exception) {
