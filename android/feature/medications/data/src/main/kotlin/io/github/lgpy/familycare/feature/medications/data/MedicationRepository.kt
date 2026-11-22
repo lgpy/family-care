@@ -88,8 +88,8 @@ interface MedicationRepository {
      * Ends [current] on the day before [effectiveFrom] and starts a new version
      * from that day, in one transaction, using [RegimenRules.changeRegimen].
      *
-     * [effectiveFrom] must be after the current version's start date and at
-     * most on its last day; anything else is [MedsError.Invalid] with the
+     * [effectiveFrom] must be after the current version's start date, after
+     * today in its time zone, and at most on its last day; anything else is [MedsError.Invalid] with the
      * offending [io.github.lgpy.familycare.feature.medications.domain.MedicationField]s.
      *
      * @return the new version's id.

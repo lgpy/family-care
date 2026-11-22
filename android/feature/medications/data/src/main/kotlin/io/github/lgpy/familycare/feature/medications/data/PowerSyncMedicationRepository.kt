@@ -185,6 +185,7 @@ internal class PowerSyncMedicationRepository(
             weekdays = weekdays,
             intervalDays = intervalDays,
             timeZone = timeZone,
+            now = now(),
         )
         val changed = when (change) {
             is RegimenChange.Rejected -> return MedsResult.Failure(MedsError.Invalid(change.errors))

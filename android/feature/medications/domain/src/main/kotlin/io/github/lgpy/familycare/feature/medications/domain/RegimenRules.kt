@@ -11,13 +11,18 @@ import java.time.temporal.ChronoUnit
  * starts a new one.
  *
  * Everything here is pure and clock-free: callers pass the date a change takes
- * effect, so the same rules run in tests, in the app and (mirrored in
- * TypeScript) on the server.
+ * effect and, where a rule depends on today, the instant to read it from, so
+ * the same rules run in tests, in the app and (mirrored in TypeScript) on the
+ * server.
  *
  * ### Versioning contract
  * - [changeRegimen] requires `effectiveFrom > current.startDate`; a change on
  *   the day the regimen started would leave a zero-day version and make history
  *   ambiguous. The UI asks for the next day instead.
+ * - [changeRegimen] also requires `effectiveFrom` to be after today in the
+ *   regimen's time zone: a change effective today or earlier would orphan
+ *   doses already given today and show them again as unconfirmed slots. The
+ *   caller passes `now` so the rule stays testable.
  * - When the current version has an end date, a change may take effect at most
  *   on that last day. Later than that would leave the new version no days (or,
  *   further out, days with no regimen); that is a new regimen, not a change.
@@ -106,6 +111,8 @@ object RegimenRules {
      *
      * @param times The new times (quantity changes live here). Defaults to the
      *   current ones.
+     * @param now The instant "today" is read from, in the regimen's zone;
+     *   [effectiveFrom] must be after that date.
      */
     fun changeRegimen(
         current: Regimen,
@@ -116,6 +123,7 @@ object RegimenRules {
         weekdays: Int? = current.weekdays,
         intervalDays: Int? = current.intervalDays,
         timeZone: ZoneId = current.timeZone,
+        now: Instant,
     ): RegimenChange {
         require(newId != current.id) { "A regimen change needs a new id" }
 
@@ -123,6 +131,12 @@ object RegimenRules {
 
         if (!effectiveFrom.isAfter(current.startDate)) {
             // A change on (or before) the first day would leave a zero-day version.
+            errors += MedicationField.REGIMEN_START_DATE
+        }
+        if (!effectiveFrom.isAfter(latestToday(now, current.timeZone, timeZone))) {
+            // A change effective today or earlier would end the old version
+            // before doses that already happened (or were confirmed) today, and
+            // the new version would show them as unconfirmed slots.
             errors += MedicationField.REGIMEN_START_DATE
         }
         val currentEnd = current.endDate
@@ -166,6 +180,14 @@ object RegimenRules {
         }
         return RegimenChange.Changed(ended = ended, started = started)
     }
+
+    /**
+     * "Today" at [now]: the later of the dates in the zone of the version being
+     * ended and in the zone of the new one, so a zone change cannot slip a date
+     * that is already today in either zone past the "after today" rule.
+     */
+    private fun latestToday(now: Instant, vararg zones: ZoneId): LocalDate =
+        zones.map { LocalDate.ofInstant(now, it) }.max()
 
     /**
      * The start date of the version that replaces [current] from [effectiveFrom].

@@ -22,6 +22,9 @@ class RegimenRulesTest {
 
     private val day = { text: String -> LocalDate.parse(text) }
 
+    /** "Now" for the versioning tests: 31 Oct, before every effective date used. */
+    private val NOW = Instant.parse("2026-10-31T12:00:00Z")
+
     // --- Validation --------------------------------------------------------
 
     @Test
@@ -281,6 +284,7 @@ class RegimenRulesTest {
             current = current,
             effectiveFrom = day("2026-11-10"),
             newId = RegimenId("reg-2"),
+            now = NOW,
             times = listOf(Fixtures.time("08:00", 2)),
         )
 
@@ -304,7 +308,7 @@ class RegimenRulesTest {
 
         val changed = assertInstanceOf(
             RegimenChange.Changed::class.java,
-            RegimenRules.changeRegimen(current, day("2026-11-10"), RegimenId("reg-2")),
+            RegimenRules.changeRegimen(current, day("2026-11-10"), RegimenId("reg-2"), now = NOW),
         )
 
         assertEquals(day("2026-12-31"), changed.started.endDate)
@@ -319,6 +323,7 @@ class RegimenRulesTest {
             current,
             day("2026-11-01"),
             RegimenId("reg-2"),
+            now = NOW,
         )
 
         val rejected = assertInstanceOf(RegimenChange.Rejected::class.java, outcome)
@@ -333,6 +338,7 @@ class RegimenRulesTest {
             current,
             day("2026-10-31"),
             RegimenId("reg-2"),
+            now = NOW,
         )
 
         assertInstanceOf(RegimenChange.Rejected::class.java, outcome)
@@ -349,6 +355,7 @@ class RegimenRulesTest {
             current,
             day("2026-11-22"),
             RegimenId("reg-2"),
+            now = NOW,
         )
 
         val rejected = assertInstanceOf(RegimenChange.Rejected::class.java, outcome)
@@ -357,13 +364,13 @@ class RegimenRulesTest {
         // The day after the last day would leave the new version zero days.
         assertInstanceOf(
             RegimenChange.Rejected::class.java,
-            RegimenRules.changeRegimen(current, day("2026-11-21"), RegimenId("reg-2")),
+            RegimenRules.changeRegimen(current, day("2026-11-21"), RegimenId("reg-2"), now = NOW),
         )
 
         // The last day itself is still a change: a one-day new version.
         val lastDay = assertInstanceOf(
             RegimenChange.Changed::class.java,
-            RegimenRules.changeRegimen(current, day("2026-11-20"), RegimenId("reg-2")),
+            RegimenRules.changeRegimen(current, day("2026-11-20"), RegimenId("reg-2"), now = NOW),
         )
         assertEquals(day("2026-11-19"), lastDay.ended.endDate)
         assertEquals(day("2026-11-20"), lastDay.started.startDate)
@@ -378,6 +385,7 @@ class RegimenRulesTest {
             current = current,
             effectiveFrom = day("2026-11-10"),
             newId = RegimenId("reg-2"),
+            now = NOW,
             times = listOf(Fixtures.time("08:00", 1), Fixtures.time("08:00", 2)),
         )
 
@@ -395,6 +403,7 @@ class RegimenRulesTest {
                 current = current,
                 effectiveFrom = day("2026-11-10"),
                 newId = RegimenId("reg-2"),
+                now = NOW,
                 scheduleType = ScheduleType.WEEKDAYS,
                 weekdays = WeekdayMask.MONDAY,
                 intervalDays = null,
@@ -403,6 +412,68 @@ class RegimenRulesTest {
 
         assertEquals(ScheduleType.WEEKDAYS, changed.started.scheduleType)
         assertEquals(WeekdayMask.MONDAY, changed.started.weekdays)
+    }
+
+    // --- The change must be after today ------------------------------------
+
+    @Test
+    fun `a change effective today is rejected`() {
+        // 15:00 today: the old version would end yesterday, this morning's
+        // confirmed dose would be orphaned and the new version would show it as
+        // an overdue slot again.
+        val current = Fixtures.regimen(startDate = day("2026-11-01"))
+        val now = Instant.parse("2026-11-10T15:00:00Z")
+
+        val rejected = assertInstanceOf(
+            RegimenChange.Rejected::class.java,
+            RegimenRules.changeRegimen(current, day("2026-11-10"), RegimenId("reg-2"), now = now),
+        )
+
+        assertEquals(setOf(MedicationField.REGIMEN_START_DATE), rejected.errors)
+    }
+
+    @Test
+    fun `a change effective yesterday is rejected`() {
+        val current = Fixtures.regimen(startDate = day("2026-11-01"))
+        val now = Instant.parse("2026-11-10T15:00:00Z")
+
+        val rejected = assertInstanceOf(
+            RegimenChange.Rejected::class.java,
+            RegimenRules.changeRegimen(current, day("2026-11-09"), RegimenId("reg-2"), now = now),
+        )
+
+        assertEquals(setOf(MedicationField.REGIMEN_START_DATE), rejected.errors)
+    }
+
+    @Test
+    fun `a change effective tomorrow is accepted`() {
+        val current = Fixtures.regimen(startDate = day("2026-11-01"))
+        val now = Instant.parse("2026-11-10T15:00:00Z")
+
+        val changed = assertInstanceOf(
+            RegimenChange.Changed::class.java,
+            RegimenRules.changeRegimen(current, day("2026-11-11"), RegimenId("reg-2"), now = now),
+        )
+
+        assertEquals(day("2026-11-10"), changed.ended.endDate)
+        assertEquals(day("2026-11-11"), changed.started.startDate)
+    }
+
+    @Test
+    fun `today is the day in the regimen's zone, not in UTC`() {
+        // 23:30 UTC on the 10th is already the 11th in Tokyo.
+        val tokyo = Fixtures.regimen(startDate = day("2026-11-01"), timeZone = ZoneId.of("Asia/Tokyo"))
+        val lisbon = Fixtures.regimen(startDate = day("2026-11-01"), timeZone = ZoneId.of("Europe/Lisbon"))
+        val now = Instant.parse("2026-11-10T23:30:00Z")
+
+        assertInstanceOf(
+            RegimenChange.Rejected::class.java,
+            RegimenRules.changeRegimen(tokyo, day("2026-11-11"), RegimenId("reg-2"), now = now),
+        )
+        assertInstanceOf(
+            RegimenChange.Changed::class.java,
+            RegimenRules.changeRegimen(lisbon, day("2026-11-11"), RegimenId("reg-2"), now = now),
+        )
     }
 
     private fun weekly(startDate: String = "2026-11-02", endDate: String? = null) = Fixtures.regimen(
@@ -424,6 +495,7 @@ class RegimenRulesTest {
                 current = current,
                 effectiveFrom = day("2026-11-18"),
                 newId = RegimenId("reg-2"),
+                now = NOW,
                 times = listOf(Fixtures.time("08:00", 2)),
             ),
         )
@@ -448,7 +520,7 @@ class RegimenRulesTest {
 
         val changed = assertInstanceOf(
             RegimenChange.Changed::class.java,
-            RegimenRules.changeRegimen(current, day("2026-11-16"), RegimenId("reg-2")),
+            RegimenRules.changeRegimen(current, day("2026-11-16"), RegimenId("reg-2"), now = NOW),
         )
 
         assertEquals(day("2026-11-15"), changed.ended.endDate)
@@ -460,7 +532,7 @@ class RegimenRulesTest {
     fun `a change the day after a phase day starts on the next phase day`() {
         val changed = assertInstanceOf(
             RegimenChange.Changed::class.java,
-            RegimenRules.changeRegimen(weekly(), day("2026-11-10"), RegimenId("reg-2")),
+            RegimenRules.changeRegimen(weekly(), day("2026-11-10"), RegimenId("reg-2"), now = NOW),
         )
 
         assertEquals(day("2026-11-16"), changed.started.startDate)
@@ -476,6 +548,7 @@ class RegimenRulesTest {
                 current = current,
                 effectiveFrom = day("2026-11-18"),
                 newId = RegimenId("reg-2"),
+                now = NOW,
                 intervalDays = 14,
             ),
         )
@@ -487,6 +560,7 @@ class RegimenRulesTest {
                 current = current,
                 effectiveFrom = day("2026-11-18"),
                 newId = RegimenId("reg-3"),
+                now = NOW,
                 scheduleType = ScheduleType.DAILY,
                 intervalDays = null,
             ),
@@ -499,6 +573,7 @@ class RegimenRulesTest {
                 current = Fixtures.regimen(startDate = day("2026-11-02")),
                 effectiveFrom = day("2026-11-18"),
                 newId = RegimenId("reg-4"),
+                now = NOW,
                 scheduleType = ScheduleType.EVERY_N_DAYS,
                 intervalDays = 7,
             ),
@@ -514,7 +589,7 @@ class RegimenRulesTest {
 
         val rejected = assertInstanceOf(
             RegimenChange.Rejected::class.java,
-            RegimenRules.changeRegimen(current, day("2026-11-18"), RegimenId("reg-2")),
+            RegimenRules.changeRegimen(current, day("2026-11-18"), RegimenId("reg-2"), now = NOW),
         )
 
         assertEquals(setOf(MedicationField.REGIMEN_START_DATE), rejected.errors)
@@ -525,7 +600,7 @@ class RegimenRulesTest {
         val current = Fixtures.regimen()
 
         assertThrows(IllegalArgumentException::class.java) {
-            RegimenRules.changeRegimen(current, day("2026-11-10"), current.id)
+            RegimenRules.changeRegimen(current, day("2026-11-10"), current.id, now = NOW)
         }
     }
 
@@ -708,6 +783,7 @@ class RegimenRulesTest {
                 current = current,
                 effectiveFrom = day("2026-11-10"),
                 newId = RegimenId("reg-2"),
+                now = NOW,
                 timeZone = ZoneId.of("America/Sao_Paulo"),
             ),
         )

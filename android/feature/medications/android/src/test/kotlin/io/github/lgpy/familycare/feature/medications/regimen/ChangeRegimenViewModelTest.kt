@@ -104,6 +104,46 @@ class ChangeRegimenViewModelTest {
     }
 
     @Test
+    fun `a change effective today or yesterday is rejected before the write`() = runTest {
+        val viewModel = viewModel()
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+
+            listOf(today, today.minusDays(1)).forEach { date ->
+                viewModel.onEffectiveFromChanged(date.toString())
+                viewModel.save()
+
+                assertTrue("$date", MedicationField.REGIMEN_START_DATE in viewModel.uiState.value.errors)
+            }
+            assertEquals(0, meds.changes.size)
+
+            viewModel.onEffectiveFromChanged(today.plusDays(1).toString())
+            viewModel.save()
+            assertEquals(today.plusDays(1), meds.changes.single().effectiveFrom)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `today is read in the regimen's time zone`() = runTest {
+        val zones = mutableListOf<java.time.ZoneId>()
+        val viewModel = ChangeRegimenViewModel(
+            medicationId = "med-1",
+            medicationRepository = meds,
+            careCircleRepository = circles,
+            newId = { "reg-new" },
+            today = { zone -> zones += zone; today },
+        )
+        viewModel.uiState.test {
+            awaitWhere { it.loaded }
+            viewModel.save()
+
+            assertTrue(zones.last() == java.time.ZoneId.of("Europe/Lisbon"))
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `a new quantity reaches changeRegimen`() = runTest {
         val viewModel = viewModel()
         viewModel.uiState.test {

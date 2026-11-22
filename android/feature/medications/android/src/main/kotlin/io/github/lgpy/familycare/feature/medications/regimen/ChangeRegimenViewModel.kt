@@ -20,6 +20,7 @@ import io.github.lgpy.familycare.feature.medications.ui.uiError
 import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,21 +34,21 @@ import kotlinx.coroutines.launch
  *
  * A change never edits the current version: [MedicationRepository.changeRegimen]
  * ends it the day before [ChangeRegimenUiState.effectiveFrom] and starts a new
- * one. The date defaults to tomorrow, because a change must be *after* the
- * current version's start (today is allowed only when the version started
- * earlier); the domain rejects anything else and this form mirrors the check so
- * the date field is marked before the write.
+ * one. The date defaults to tomorrow, because a change must be *after* today in
+ * the regimen's time zone and after the current version's start; the domain
+ * rejects anything else and this form mirrors the check so the date field is
+ * marked before the write.
  */
 class ChangeRegimenViewModel(
     private val medicationId: String,
     private val medicationRepository: MedicationRepository,
     careCircleRepository: CareCircleRepository,
     private val newId: () -> String = { UUID.randomUUID().toString() },
-    private val today: () -> LocalDate = { LocalDate.now() },
+    private val today: (ZoneId) -> LocalDate = { zone -> LocalDate.now(zone) },
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        ChangeRegimenUiState(effectiveFrom = today().plusDays(1).toString()),
+        ChangeRegimenUiState(effectiveFrom = today(ZoneId.systemDefault()).plusDays(1).toString()),
     )
     val uiState: StateFlow<ChangeRegimenUiState> = _uiState.asStateFlow()
 
@@ -130,7 +131,10 @@ class ChangeRegimenViewModel(
 
         if (effectiveFrom != null) {
             val end = regimen.endDate
-            if (!effectiveFrom.isAfter(regimen.startDate) || (end != null && effectiveFrom.isAfter(end))) {
+            if (!effectiveFrom.isAfter(regimen.startDate) ||
+                !effectiveFrom.isAfter(today(regimen.timeZone)) ||
+                (end != null && effectiveFrom.isAfter(end))
+            ) {
                 fields += MedicationField.REGIMEN_START_DATE
             }
         }

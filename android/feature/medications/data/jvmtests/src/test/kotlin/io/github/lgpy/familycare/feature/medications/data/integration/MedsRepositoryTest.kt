@@ -190,7 +190,7 @@ class MedsRepositoryTest {
         val repository = medicationRepository(newId = { REGIMEN_2 })
         val result = repository.changeRegimen(
             current = regimen(REGIMEN_1, MED_1),
-            effectiveFrom = LocalDate.of(2026, 11, 10),
+            effectiveFrom = LocalDate.of(2026, 11, 20),
             times = listOf(DoseTime(LocalTime.of(9, 0), BigDecimal("1"))),
         )
 
@@ -206,11 +206,11 @@ class MedsRepositoryTest {
 
         // Only end_date: the server's trigger refuses every other change.
         assertEquals(
-            JsonObject(mapOf("end_date" to JsonPrimitive("2026-11-09"))),
+            JsonObject(mapOf("end_date" to JsonPrimitive("2026-11-19"))),
             transaction.crud.first().values(),
         )
         val started = transaction.crud.last().values()
-        assertEquals(JsonPrimitive("2026-11-10"), started["start_date"])
+        assertEquals(JsonPrimitive("2026-11-20"), started["start_date"])
         assertNull(started["end_date"], "An open-ended new version sends no end date")
     }
 
@@ -226,6 +226,24 @@ class MedsRepositoryTest {
 
         assertInstanceOf(MedsResult.Failure::class.java, result)
         assertNull(local.database.getNextCrudTransaction())
+    }
+
+    @Test
+    fun `a change effective today or earlier is refused`() = runBlocking {
+        seedCircleAndPatient()
+        val created = medicationRepository()
+        created.create(medication(MED_1), regimen(REGIMEN_1, MED_1))
+        local.database.drainUploadQueue()
+
+        // NOW is 10:00 on the 19th: today and yesterday would orphan the doses
+        // already confirmed and show them again as unconfirmed.
+        listOf(TODAY, TODAY.minusDays(1)).forEach { effectiveFrom ->
+            val result = medicationRepository(newId = { REGIMEN_2 })
+                .changeRegimen(regimen(REGIMEN_1, MED_1), effectiveFrom = effectiveFrom)
+
+            assertInstanceOf(MedsResult.Failure::class.java, result, "$effectiveFrom")
+            assertNull(local.database.getNextCrudTransaction(), "$effectiveFrom")
+        }
     }
 
     // --- Stopping -----------------------------------------------------------
