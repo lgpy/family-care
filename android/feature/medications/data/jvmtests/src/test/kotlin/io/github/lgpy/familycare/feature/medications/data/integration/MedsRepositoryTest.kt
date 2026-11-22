@@ -572,6 +572,32 @@ class MedsRepositoryTest {
     }
 
     @Test
+    fun `a late dose still overdue at 00_20 is in recent doses and not in doses today`() = runBlocking {
+        seedCircleAndPatient()
+        local.database.execute(
+            INSERT_MEDICATION,
+            listOf(MED_1, PATIENT_1, "Metformin", "tablet", "tablet", 0L, 7L),
+        )
+        local.database.execute(
+            INSERT_REGIMEN,
+            listOf(REGIMEN_1, MED_1, "daily", "2026-11-01", "Europe/Lisbon",
+                """[{"time":"23:00","quantity":1}]"""),
+        )
+        local.database.drainUploadQueue()
+        // 00:20 on the 20th in Lisbon (UTC+0 in November); the patient's defaults
+        // are a 30-minute escalation delay and a 120-minute missed window.
+        val repository = doseLogRepositoryAt(Instant.parse("2026-11-20T00:20:00Z"))
+
+        val today = withTimeout(TIMEOUT_MS) { repository.dosesToday.first() }
+        val recent = withTimeout(TIMEOUT_MS) { repository.recentDoses.first { it.isNotEmpty() } }
+
+        assertEquals(listOf(LocalDate.of(2026, 11, 20).atTime(23, 0)), today.map { it.scheduledLocal })
+        val lastNight = recent.first()
+        assertEquals(LocalDate.of(2026, 11, 19).atTime(23, 0), lastNight.scheduledLocal)
+        assertEquals(DoseState.OVERDUE, lastNight.statuses.single().state)
+    }
+
+    @Test
     fun `a catch-up confirmation keeps the time it was given`() = runBlocking {
         seedCircleAndPatient()
         medicationRepository().create(medication(MED_1), regimen(REGIMEN_1, MED_1))
@@ -648,6 +674,15 @@ class MedsRepositoryTest {
             authState = local.authState,
             now = { NOW },
             newId = newId,
+        )
+
+    private fun doseLogRepositoryAt(at: Instant): DoseLogRepository =
+        PowerSyncDoseLogRepository(
+            database = local.database,
+            authState = local.authState,
+            now = { at },
+            ticks = flowOf(at),
+            newId = { entryIds.next() },
         )
 
     private var entryIds = listOf(ENTRY_1, ENTRY_2).iterator()

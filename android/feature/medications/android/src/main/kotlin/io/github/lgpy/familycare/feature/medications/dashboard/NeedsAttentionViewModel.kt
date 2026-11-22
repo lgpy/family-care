@@ -9,6 +9,7 @@ import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.GivenBy
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
 import io.github.lgpy.familycare.feature.medications.data.RECENT_DOSE_DAYS
+import io.github.lgpy.familycare.feature.medications.data.TodayDoseGroup
 import io.github.lgpy.familycare.feature.medications.domain.DoseState
 import io.github.lgpy.familycare.feature.medications.ui.MedsUiError
 import io.github.lgpy.familycare.feature.medications.ui.uiError
@@ -27,7 +28,9 @@ import kotlinx.coroutines.launch
  *
  * Missed groups of the [RECENT_DOSE_DAYS] days before today are not rows of
  * their own: [NeedsAttentionUiState.missedEarlier] becomes one summary row that
- * opens the missed-doses list.
+ * opens the missed-doses list. Groups of those days that are still due or
+ * overdue (a late-evening dose just after midnight) are rows of their own,
+ * above today's, until they are confirmed or turn missed.
  *
  * It reuses the doses-today view of the data ([DoseLogRepository.dosesToday])
  * and the same group-confirm write; only the filter differs. A group that is
@@ -59,21 +62,28 @@ class NeedsAttentionViewModel(
         val memberNames = members.associate { it.userId to it.displayName }
         val myUserId = members.firstOrNull { it.isMe }?.userId
         val pillLooks = medications.associate { it.medication.id.value to it.medication.pillLook }
+        fun TodayDoseGroup.row() = toUi(
+            patientName = patientNames[patientId].orEmpty(),
+            memberNames = memberNames,
+            myUserId = myUserId,
+            pillLooks = pillLooks,
+        )
+
+        // A dose of an earlier day that is still due or overdue (a 23:00 dose at
+        // 00:20) is not in today's list and not yet in the missed list: without
+        // this row it would be on no screen. It leaves when it is confirmed or
+        // turns missed (then the missed list has it).
+        val earlierOpen = recent
+            .map { it.row() }
+            .filter { it.state == DoseGroupState.DUE || it.state == DoseGroupState.OVERDUE }
+            .sortedBy { it.scheduledLocal }
+        val todays = groups
+            .map { it.row() }
+            .filter { it.state == DoseGroupState.OVERDUE || it.state == DoseGroupState.MISSED }
         state.copy(
             loaded = true,
             canWrite = role.canWrite,
-            groups = groups
-                .map { group ->
-                    group.toUi(
-                        patientName = patientNames[group.patientId].orEmpty(),
-                        memberNames = memberNames,
-                        myUserId = myUserId,
-                        pillLooks = pillLooks,
-                    )
-                }
-                .filter { group ->
-                    group.state == DoseGroupState.OVERDUE || group.state == DoseGroupState.MISSED
-                },
+            groups = earlierOpen + todays,
             missedEarlier = recent
                 .filter { group -> group.statuses.any { it.state == DoseState.MISSED } }
                 .map { group ->
