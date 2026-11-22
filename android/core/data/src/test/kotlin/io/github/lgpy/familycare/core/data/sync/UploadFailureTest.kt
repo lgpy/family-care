@@ -51,6 +51,21 @@ class UploadFailureTest {
     }
 
     @Test
+    fun anUnauthenticatedRequestIsRetriedWhateverThePostgresCode() {
+        // A write sent without a user token runs as `anon`: PostgREST answers
+        // 401 with 42501. That is "no session yet", not a refusal of the row.
+        assertFalse(isPermanentUploadFailure(statusCode = 401, postgresCode = "42501"))
+        assertFalse(isPermanentUploadFailure(statusCode = 401, postgresCode = "23502"))
+        assertFalse(UploadFailure(statusCode = 401, postgresCode = "42501").isPermanent)
+    }
+
+    @Test
+    fun aPolicyDenialForASignedInUserStaysPermanent() {
+        assertTrue(isPermanentUploadFailure(statusCode = 403, postgresCode = "42501"))
+        assertTrue(isPermanentUploadFailure(statusCode = null, postgresCode = "42501"))
+    }
+
+    @Test
     fun serverAndNetworkFailuresAreRetried() {
         assertFalse(isPermanentUploadFailure(statusCode = 500, postgresCode = null))
         assertFalse(isPermanentUploadFailure(statusCode = 503, postgresCode = null))
