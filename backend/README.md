@@ -606,6 +606,21 @@ old/new columns) and the quiet appointment push for an archived patient.
 `db lint --level error` and the Deno suite/type-check in `supabase/functions/`
 are unchanged.
 
+## Fixes after M7
+
+- Removing a member linked to an archived patient —
+  `migrations/20261127120000_remove_member_archived_patients.sql`. Before, the
+  archive trigger refused `core.remove_member`'s link cleanup on an archived
+  patient, so the whole removal rolled back and the member kept access. Now
+  `core.remove_member` writes one row (current transaction id, circle, removed
+  user) to the server-only `core.member_removal_unlinks` around its patient
+  update, and `core.check_patient_archive()` accepts an update of an archived
+  patient whose only change is clearing `primary_caregiver_id` /
+  `linked_user_id` from the user that row names. No API role can write the
+  table (no grant, forced RLS, no policy), so a client still cannot change an
+  archived patient directly; no session setting is involved. Tests:
+  `supabase/tests/remove_member_archived_test.sql`.
+
 ## Tests
 
 `npx supabase@latest test db` runs every `*.sql` file in `supabase/tests/` inside
@@ -634,6 +649,13 @@ both D11 default branches (caregiver set, viewer left null), sign-in/session-end
 security events, the 6-year/1-year retention purge and its privileges, the
 owner-only `patient_access_overrides` rules, circle rename by non-owners,
 cross-circle patient insert, and the invitation role/email rules.
+
+`remove_member_archived_test.sql` covers removing a member linked to archived
+patients: a caregiver and an owner still cannot clear the links of an archived
+patient directly and a client cannot write `core.member_removal_unlinks`, the
+last-owner guard, the removal clearing primary/linked on archived and active
+patients alike (archived ones otherwise unchanged and still archived, cleanup
+audited, no marker row left), and the direct update still refused afterwards.
 
 `meds_test.sql` covers the M3 tables: the same isolation scenarios (owner and
 caregiver read/write, another circle sees and writes nothing, a viewer reads but
