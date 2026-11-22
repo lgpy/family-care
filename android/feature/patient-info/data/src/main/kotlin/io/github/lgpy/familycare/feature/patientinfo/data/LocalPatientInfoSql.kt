@@ -38,9 +38,23 @@ internal const val SELECT_PATIENT_INFO = """
       AND p.circle_id IN (SELECT circle_id FROM memberships WHERE user_id = ?)
 """
 
-/** Whether a row exists locally for the patient, whatever its circle. */
-internal const val SELECT_PATIENT_INFO_PRESENT = """
-    SELECT id FROM patient_info WHERE id = ?
+/**
+ * The patient's row by id (`id = patient_id`), whatever its circle. Read inside
+ * the write transaction, so a save merges onto the row as it is at that moment.
+ */
+internal const val SELECT_PATIENT_INFO_BY_ID = """
+    SELECT pi.id AS id,
+           pi.patient_id AS patient_id,
+           pi.allergies AS allergies,
+           pi.conditions AS conditions,
+           pi.sns_number AS sns_number,
+           pi.family_doctor AS family_doctor,
+           pi.health_centre AS health_centre,
+           pi.health_centre_phone AS health_centre_phone,
+           pi.emergency_contacts AS emergency_contacts,
+           pi.notes AS notes
+    FROM patient_info pi
+    WHERE pi.id = ?
 """
 
 /** Whether a patient belongs to [given circle]. */
@@ -60,18 +74,16 @@ internal const val INSERT_PATIENT_INFO = """
 """
 
 /**
- * Updates the editable columns. `id`/`patient_id` are deliberately absent: the
- * row belongs to its patient (the server trigger refuses a move too).
+ * Updates only [columns] of the patient's row. `id`/`patient_id` are deliberately
+ * absent: the row belongs to its patient (the server trigger refuses a move too).
+ *
+ * A column not named here is not in the statement at all, so it is neither
+ * overwritten locally nor uploaded. The names come from [PatientInfoColumns],
+ * never from user input; the values are bound.
  */
-internal const val UPDATE_PATIENT_INFO = """
-    UPDATE patient_info SET
-        allergies = ?,
-        conditions = ?,
-        sns_number = ?,
-        family_doctor = ?,
-        health_centre = ?,
-        health_centre_phone = ?,
-        emergency_contacts = ?,
-        notes = ?
-    WHERE id = ?
-"""
+internal fun updatePatientInfoSql(columns: List<String>): String {
+    require(columns.isNotEmpty() && PatientInfoColumns.ALL.containsAll(columns)) {
+        "Unknown or no patient_info columns: $columns"
+    }
+    return "UPDATE patient_info SET " + columns.joinToString(", ") { "$it = ?" } + " WHERE id = ?"
+}

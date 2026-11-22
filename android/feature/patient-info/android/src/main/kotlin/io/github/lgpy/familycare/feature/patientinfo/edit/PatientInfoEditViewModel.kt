@@ -40,8 +40,10 @@ data class ContactDraft(
  * entry that came from an older record is written back exactly as it was.
  *
  * The record is read once (the form is not a live mirror of the synced row) and
- * written with [PatientInfoRepository.save], which inserts the row on the first
- * save and updates it afterwards. A viewer never sees the form's save action,
+ * that snapshot is kept: a save hands it to [PatientInfoRepository.saveChanges]
+ * together with the form, so only what the user changed is written, merged onto
+ * the row as it is by then (another caregiver's edit synced meanwhile is not
+ * undone). The row is inserted on the first save. A viewer never sees the form's save action,
  * and a refusal from the repository is shown rather than swallowed.
  */
 class PatientInfoEditViewModel(
@@ -54,6 +56,9 @@ class PatientInfoEditViewModel(
     private val _uiState = MutableStateFlow(PatientInfoEditUiState())
     val uiState: StateFlow<PatientInfoEditUiState> = _uiState.asStateFlow()
 
+    /** The record the form was filled from; null when the patient had no row yet. */
+    private var loadedInfo: PatientInfo? = null
+
     init {
         viewModelScope.launch { load() }
     }
@@ -62,6 +67,7 @@ class PatientInfoEditViewModel(
         val role = careCircleRepository.myRole.first()
         val info = patientInfoRepository.observe(PatientId(patientId)).first()
         val patient = patientRepository.observe(PatientId(patientId)).first()
+        loadedInfo = info
 
         _uiState.update { state ->
             state.copy(
@@ -228,7 +234,7 @@ class PatientInfoEditViewModel(
         }
 
         viewModelScope.launch {
-            when (val result = patientInfoRepository.save(PatientId(patientId), info)) {
+            when (val result = patientInfoRepository.saveChanges(PatientId(patientId), loadedInfo, info)) {
                 is PatientInfoResult.Success -> _uiState.update {
                     it.copy(saving = false, saved = true)
                 }

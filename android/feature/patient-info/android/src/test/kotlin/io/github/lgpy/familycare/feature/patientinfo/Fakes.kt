@@ -58,7 +58,14 @@ fun patientInfo(
 )
 
 /** One recorded [PatientInfoRepository.save] call. */
-data class SaveCall(val patientId: PatientId, val info: PatientInfo)
+data class SaveCall(
+    val patientId: PatientId,
+    val info: PatientInfo,
+    /** The snapshot the form was loaded from; set only for [PatientInfoRepository.saveChanges]. */
+    val loaded: PatientInfo? = null,
+    /** Whether the call was [PatientInfoRepository.saveChanges] rather than a replace. */
+    val isChange: Boolean = false,
+)
 
 class FakePatientInfoRepository : PatientInfoRepository {
 
@@ -77,6 +84,15 @@ class FakePatientInfoRepository : PatientInfoRepository {
 
     override suspend fun save(patientId: PatientId, info: PatientInfo): PatientInfoResult<Unit> {
         saves += SaveCall(patientId, info)
+        return saveResult
+    }
+
+    override suspend fun saveChanges(
+        patientId: PatientId,
+        loaded: PatientInfo?,
+        edited: PatientInfo,
+    ): PatientInfoResult<Unit> {
+        saves += SaveCall(patientId, edited, loaded = loaded, isChange = true)
         return saveResult
     }
 }

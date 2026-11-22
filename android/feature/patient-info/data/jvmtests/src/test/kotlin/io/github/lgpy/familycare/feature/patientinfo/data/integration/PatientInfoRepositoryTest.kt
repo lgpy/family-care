@@ -145,6 +145,279 @@ class PatientInfoRepositoryTest {
         assertEquals("Allergic to nuts.", info?.notes)
     }
 
+    // --- Saving changes made from a possibly stale form ------------------------
+
+    @Test
+    fun `a notes-only edit writes only the notes and keeps another caregivers allergy`() = runBlocking {
+        val repository = seededRow(allergies = listOf("Latex"))
+        val loaded = readInfo(repository)
+        // Caregiver B adds Penicillin and it syncs to this phone.
+        syncFromServer(allergies = """["Latex","Penicillin"]""")
+
+        val result = repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(notes = "Call before 10:00."),
+        )
+
+        assertEquals(PatientInfoResult.Success(Unit), result)
+        val entry = local.database.nextTransaction().crud.single()
+        assertEquals(UpdateType.PATCH, entry.op)
+        assertEquals(setOf("notes"), entry.values().keys)
+        assertEquals(listOf("Latex", "Penicillin"), readInfo(repository).allergies)
+        assertEquals("Call before 10:00.", readInfo(repository).notes)
+    }
+
+    @Test
+    fun `an allergy added meanwhile is kept and the users addition is appended`() = runBlocking {
+        val repository = seededRow(allergies = listOf("Latex"))
+        val loaded = readInfo(repository)
+        syncFromServer(allergies = """["Latex","Penicillin"]""")
+
+        repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(allergies = listOf("Latex", "Nuts")),
+        )
+
+        assertEquals(listOf("Latex", "Penicillin", "Nuts"), readInfo(repository).allergies)
+        val values = local.database.nextTransaction().crud.single().values()
+        assertEquals(setOf("allergies"), values.keys)
+    }
+
+    @Test
+    fun `an edited entry is a removal plus an addition on the current row`() = runBlocking {
+        val repository = seededRow(conditions = listOf("Asthma", "Diabetes"))
+        val loaded = readInfo(repository)
+        syncFromServer(conditions = """["Asthma","Diabetes","Gout"]""")
+
+        repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(conditions = listOf("Asthma", "Type 2 diabetes")),
+        )
+
+        assertEquals(
+            listOf("Asthma", "Gout", "Type 2 diabetes"),
+            readInfo(repository).conditions,
+        )
+    }
+
+    @Test
+    fun `a removal is applied to the current row and keeps what was added meanwhile`() = runBlocking {
+        val repository = seededRow(allergies = listOf("Latex", "Penicillin"))
+        val loaded = readInfo(repository)
+        syncFromServer(allergies = """["Latex","Penicillin","Nuts"]""")
+
+        repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(allergies = listOf("Latex")),
+        )
+
+        assertEquals(listOf("Latex", "Nuts"), readInfo(repository).allergies)
+    }
+
+    @Test
+    fun `an entry someone else already removed is not written again`() = runBlocking {
+        val repository = seededRow(allergies = listOf("Latex", "Penicillin"))
+        val loaded = readInfo(repository)
+        // Caregiver B removes Penicillin.
+        syncFromServer(allergies = """["Latex"]""")
+
+        // Caregiver A removes it too, and edits the notes.
+        val result = repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(allergies = listOf("Latex"), notes = "Note."),
+        )
+
+        assertEquals(PatientInfoResult.Success(Unit), result)
+        assertEquals(setOf("notes"), local.database.nextTransaction().crud.single().values().keys)
+        assertEquals(listOf("Latex"), readInfo(repository).allergies)
+    }
+
+    @Test
+    fun `a removal never removes an entry the user did not see`() = runBlocking {
+        val repository = seededRow(allergies = listOf("Latex", "Penicillin"))
+        val loaded = readInfo(repository)
+        syncFromServer(allergies = """["Latex","Nuts"]""")
+
+        repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(allergies = listOf("Latex")),
+        )
+
+        assertEquals(listOf("Latex", "Nuts"), readInfo(repository).allergies)
+    }
+
+    @Test
+    fun `contacts are merged the same way`() = runBlocking {
+        val ana = EmergencyContact("Ana", "Daughter", "912 345 678")
+        val bruno = EmergencyContact("Bruno", null, "(21) 000-0000")
+        val carla = EmergencyContact("Carla", "Niece", "919 000 000")
+        val repository = seededRow(contacts = listOf(ana))
+        val loaded = readInfo(repository)
+        syncFromServer(
+            contacts = """[{"name": "Ana", "phone": "912 345 678", "relationship": "Daughter"}, """ +
+                """{"name": "Carla", "phone": "919 000 000", "relationship": "Niece"}]""",
+        )
+
+        repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(emergencyContacts = listOf(ana, bruno)),
+        )
+
+        assertEquals(listOf(ana, carla, bruno), readInfo(repository).emergencyContacts)
+    }
+
+    @Test
+    fun `lists stored in Postgres spaced format are not rewritten by an unrelated edit`() = runBlocking {
+        val repository = seededRow(
+            allergies = listOf("Latex", "Penicillin"),
+            conditions = listOf("Asthma"),
+            contacts = listOf(EmergencyContact("Ana", "Daughter", "912 345 678")),
+        )
+        val loaded = readInfo(repository)
+        // The server returns the same lists, re-serialised by jsonb.
+        syncFromServer(
+            allergies = """["Latex", "Penicillin"]""",
+            conditions = """["Asthma"]""",
+            contacts = """[{"name": "Ana", "phone": "912 345 678", "relationship": "Daughter"}]""",
+        )
+
+        repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(familyDoctor = "Dra. Silva"),
+        )
+
+        val values = local.database.nextTransaction().crud.single().values()
+        assertEquals(setOf("family_doctor"), values.keys)
+    }
+
+    @Test
+    fun `an unchanged list is left out even when the stored text is spaced`() = runBlocking {
+        val repository = seededRow(allergies = listOf("Latex"))
+        val loaded = readInfo(repository)
+        syncFromServer(allergies = """["Latex", "Penicillin"]""")
+
+        repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(allergies = listOf("Latex"), healthCentre = "Centro"),
+        )
+
+        assertEquals(setOf("health_centre"), local.database.nextTransaction().crud.single().values().keys)
+    }
+
+    @Test
+    fun `a scalar the user changed wins over a concurrent change and untouched ones stay`() = runBlocking {
+        val repository = seededRow(notes = "Original.", familyDoctor = "Dra. Silva")
+        val loaded = readInfo(repository)
+        local.database.execute(
+            "UPDATE patient_info SET notes = ?, family_doctor = ? WHERE id = ?",
+            listOf("B's note.", "Dr. Costa", PATIENT_1),
+        )
+        local.database.drainUploadQueue()
+
+        repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(notes = "A's note."),
+        )
+
+        assertEquals(setOf("notes"), local.database.nextTransaction().crud.single().values().keys)
+        val stored = readInfo(repository)
+        assertEquals("A's note.", stored.notes)
+        assertEquals("Dr. Costa", stored.familyDoctor)
+    }
+
+    @Test
+    fun `clearing a scalar the user changed writes null`() = runBlocking {
+        val repository = seededRow(notes = "Original.")
+        val loaded = readInfo(repository)
+
+        repository.saveChanges(PatientId(PATIENT_1), loaded, loaded.copy(notes = null))
+
+        assertNull(readInfo(repository).notes)
+    }
+
+    @Test
+    fun `nothing changed queues nothing`() = runBlocking {
+        val repository = seededRow(allergies = listOf("Latex"))
+        val loaded = readInfo(repository)
+
+        val result = repository.saveChanges(PatientId(PATIENT_1), loaded, loaded)
+
+        assertEquals(PatientInfoResult.Success(Unit), result)
+        assertNull(local.database.getNextCrudTransaction())
+    }
+
+    @Test
+    fun `the merged list keeps the entry limit`() = runBlocking {
+        val repository = seededRow(allergies = List(29) { "Allergy $it" })
+        val loaded = readInfo(repository)
+        syncFromServer(allergies = formatJson(List(29) { "Allergy $it" } + "Others"))
+
+        val result = repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = loaded,
+            edited = loaded.copy(allergies = loaded.allergies + "Mine"),
+        )
+
+        val failure = assertInstanceOf(PatientInfoResult.Failure::class.java, result)
+        assertEquals(
+            PatientInfoError.Invalid(PatientInfoValidation(errors = setOf(PatientInfoField.ALLERGIES))),
+            failure.error,
+        )
+        assertNull(local.database.getNextCrudTransaction())
+        assertEquals(30, readInfo(repository).allergies.size)
+    }
+
+    @Test
+    fun `a form that started empty merges onto a row that synced meanwhile`() = runBlocking {
+        seedCircleAndPatient()
+        val repository = repository()
+        repository.save(PatientId(PATIENT_1), PatientInfo(allergies = listOf("Penicillin"), notes = "B's note."))
+        local.database.drainUploadQueue()
+
+        repository.saveChanges(
+            PatientId(PATIENT_1),
+            loaded = null,
+            edited = PatientInfo(allergies = listOf("Latex")),
+        )
+
+        val stored = readInfo(repository)
+        assertEquals(listOf("Penicillin", "Latex"), stored.allergies)
+        assertEquals("B's note.", stored.notes)
+        assertEquals(setOf("allergies"), local.database.nextTransaction().crud.single().values().keys)
+    }
+
+    @Test
+    fun `with no row yet saveChanges inserts the whole record`() = runBlocking {
+        seedCircleAndPatient()
+
+        val result = repository().saveChanges(PatientId(PATIENT_1), loaded = null, edited = fullInfo())
+
+        assertEquals(PatientInfoResult.Success(Unit), result)
+        val entry = local.database.nextTransaction().crud.single()
+        assertEquals(UpdateType.PUT, entry.op)
+        assertEquals(JsonPrimitive("""["Penicillin","Nuts"]"""), entry.values()["allergies"])
+    }
+
+    @Test
+    fun `a viewer cannot save changes`() = runBlocking {
+        seedCircleAndPatient(role = PatientInfoLocalDatabase.VIEWER)
+
+        val result = repository().saveChanges(PatientId(PATIENT_1), null, fullInfo())
+
+        assertEquals(PatientInfoResult.Failure(PatientInfoError.NotAllowed), result)
+        assertNull(local.database.getNextCrudTransaction())
+    }
+
     // --- Refusals ------------------------------------------------------------
 
     @Test
@@ -232,6 +505,63 @@ class PatientInfoRepositoryTest {
     }
 
     // --- Helpers -------------------------------------------------------------
+
+    /** A row saved by this phone and synced, so the queue is empty. */
+    private suspend fun seededRow(
+        allergies: List<String> = emptyList(),
+        conditions: List<String> = emptyList(),
+        contacts: List<EmergencyContact> = emptyList(),
+        notes: String? = null,
+        familyDoctor: String? = null,
+    ): PowerSyncPatientInfoRepository {
+        seedCircleAndPatient()
+        val repository = repository()
+        repository.save(
+            PatientId(PATIENT_1),
+            PatientInfo(
+                allergies = allergies,
+                conditions = conditions,
+                emergencyContacts = contacts,
+                notes = notes,
+                familyDoctor = familyDoctor,
+            ),
+        )
+        local.database.drainUploadQueue()
+        return repository
+    }
+
+    /** What the form is filled from, and what is stored now. */
+    private suspend fun readInfo(repository: PowerSyncPatientInfoRepository): PatientInfo =
+        checkNotNull(
+            withTimeout(TIMEOUT_MS) { repository.observe(PatientId(PATIENT_1)).first { it != null } },
+        )
+
+    /**
+     * Another caregiver's change arriving through sync: the list columns hold
+     * the JSON text Postgres sends, spaces included, and the queue stays empty.
+     */
+    private suspend fun syncFromServer(
+        allergies: String? = null,
+        conditions: String? = null,
+        contacts: String? = null,
+    ) {
+        allergies?.let {
+            local.database.execute("UPDATE patient_info SET allergies = ? WHERE id = ?", listOf(it, PATIENT_1))
+        }
+        conditions?.let {
+            local.database.execute("UPDATE patient_info SET conditions = ? WHERE id = ?", listOf(it, PATIENT_1))
+        }
+        contacts?.let {
+            local.database.execute(
+                "UPDATE patient_info SET emergency_contacts = ? WHERE id = ?",
+                listOf(it, PATIENT_1),
+            )
+        }
+        local.database.drainUploadQueue()
+    }
+
+    private fun formatJson(values: List<String>): String =
+        values.joinToString(prefix = "[", postfix = "]", separator = ", ") { "\"$it\"" }
 
     private suspend fun seedCircleAndPatient(role: String = PatientInfoLocalDatabase.OWNER) {
         local.seedOwner(role = role)

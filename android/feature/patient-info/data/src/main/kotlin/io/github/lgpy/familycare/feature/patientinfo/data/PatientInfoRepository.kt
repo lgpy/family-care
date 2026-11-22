@@ -68,4 +68,26 @@ interface PatientInfoRepository {
      * current circle, and for input the domain rules reject.
      */
     suspend fun save(patientId: PatientId, info: PatientInfo): PatientInfoResult<Unit>
+
+    /**
+     * Stores what the user changed in a form that was filled from [loaded] and
+     * edited into [edited]; [loaded] is null when the form started empty (the
+     * patient had no row yet).
+     *
+     * Unlike [save] this never replaces the row with the form: only the columns
+     * the user touched are written, and a list column (allergies, conditions,
+     * emergency contacts) receives the user's *difference* — entries added and
+     * entries removed — applied to the row's value at write time, so what
+     * someone else added since the form was opened is kept. A scalar the user
+     * changed takes the user's value. With no row at write time it inserts
+     * [edited] whole, like [save].
+     *
+     * The default replaces the row, for implementations that have no stored row
+     * to merge into (test fakes).
+     */
+    suspend fun saveChanges(
+        patientId: PatientId,
+        loaded: PatientInfo?,
+        edited: PatientInfo,
+    ): PatientInfoResult<Unit> = save(patientId, edited)
 }

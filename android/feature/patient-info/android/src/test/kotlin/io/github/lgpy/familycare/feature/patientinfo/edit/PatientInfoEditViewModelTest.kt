@@ -346,4 +346,68 @@ class PatientInfoEditViewModelTest {
         assertTrue(viewModel.uiState.value.saveFailed)
         assertEquals("Morning only.", viewModel.uiState.value.notes)
     }
+
+    // --- Saving from a snapshot ----------------------------------------------
+
+    @Test
+    fun `a save hands the repository the snapshot the form was loaded from`() {
+        val loaded = patientInfo(allergies = listOf("Latex"), notes = "Old note.")
+        info.setInfo(info = loaded)
+        val viewModel = viewModel()
+
+        viewModel.onNotesChanged("New note.")
+        viewModel.save()
+
+        val call = info.saves.single()
+        assertTrue(call.isChange)
+        assertEquals(loaded, call.loaded)
+        assertEquals(listOf("Latex"), call.info.allergies)
+        assertEquals("New note.", call.info.notes)
+    }
+
+    @Test
+    fun `a record that syncs after the form opened does not refresh the snapshot`() {
+        info.setInfo(info = patientInfo(allergies = listOf("Latex")))
+        val viewModel = viewModel()
+
+        // Another caregiver adds an allergy and it syncs while the form is open.
+        info.setInfo(info = patientInfo(allergies = listOf("Latex", "Penicillin")))
+        viewModel.onNotesChanged("Call before 10:00.")
+        viewModel.save()
+
+        val call = info.saves.single()
+        assertEquals(listOf("Latex"), call.loaded?.allergies)
+        assertEquals(listOf("Latex"), call.info.allergies)
+        assertEquals("Call before 10:00.", call.info.notes)
+    }
+
+    @Test
+    fun `a form that started empty saves against no snapshot`() {
+        val viewModel = viewModel()
+
+        viewModel.onNotesChanged("First note.")
+        viewModel.save()
+
+        val call = info.saves.single()
+        assertTrue(call.isChange)
+        assertEquals(null, call.loaded)
+    }
+
+    @Test
+    fun `a retry after a failed save still diffs against the original snapshot`() {
+        val loaded = patientInfo(allergies = listOf("Latex"))
+        info.setInfo(info = loaded)
+        info.saveResult = PatientInfoResult.Failure(PatientInfoError.Unknown)
+        val viewModel = viewModel()
+        viewModel.addAllergyEntry("Nuts")
+        viewModel.save()
+
+        info.setInfo(info = patientInfo(allergies = listOf("Latex", "Penicillin")))
+        info.saveResult = PatientInfoResult.Success(Unit)
+        viewModel.save()
+
+        assertEquals(2, info.saves.size)
+        assertEquals(loaded, info.saves.last().loaded)
+        assertEquals(listOf("Latex", "Nuts"), info.saves.last().info.allergies)
+    }
 }
