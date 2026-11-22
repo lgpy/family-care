@@ -33,6 +33,9 @@ object MedicationsRoutes {
      */
     const val SHOPPING: String = "shopping"
 
+    /** The doses of the last days nobody confirmed, to catch up on. */
+    const val MISSED_DOSES: String = "doses/missed"
+
     /** Navigation argument holding the patient a medication belongs to. */
     const val PATIENT_ID_ARG: String = "patientId"
 

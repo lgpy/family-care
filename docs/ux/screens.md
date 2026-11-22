@@ -41,6 +41,7 @@ Sorted by urgency, not by module. Each section is a card contributed by a module
 - Opening the slot allows exceptions (e.g. one pill refused → skipped, reason "refused").
 - Recording "given by someone else" is available.
 - **Notification actions:** "Given ✓" and "Snooze 15 min", usable without opening the app.
+- **Missed doses** ([mockup](mockups/missed-doses.html)): doses of the 7 days before today that are still missed appear as one row on Today's attention card ("4 missed doses"). It opens a list by day where each one is marked **It was given** (opens the slot, recorded at the scheduled time unless another time is picked, so a stock count made since is not double-counted) or **Not given** (recorded as skipped right away, no reason asked).
 
 ## 3. Patient profile
 

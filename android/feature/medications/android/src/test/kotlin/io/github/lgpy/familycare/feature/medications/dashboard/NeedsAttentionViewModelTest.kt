@@ -174,4 +174,25 @@ class NeedsAttentionViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `counts the missed groups of earlier days, not their confirmed ones`() = runTest {
+        val yesterday = scheduled.minusDays(1)
+        val missedSlot = slot(firstRegimen, yesterday)
+        val takenSlot = slot(firstRegimen, yesterday.plusHours(5))
+        doses.recentFlow.value = listOf(
+            todayGroup(slots = listOf(missedSlot), statuses = listOf(status(missedSlot, DoseState.MISSED))),
+            todayGroup(
+                slots = listOf(takenSlot),
+                statuses = listOf(status(takenSlot, DoseState.TAKEN, listOf(entry(takenSlot)))),
+            ),
+        )
+
+        viewModel().uiState.test {
+            val state = awaitWhere { it.loaded && it.missedEarlier.isNotEmpty() }
+            assertEquals(1, state.missedEarlier.size)
+            assertTrue(state.groups.isEmpty())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

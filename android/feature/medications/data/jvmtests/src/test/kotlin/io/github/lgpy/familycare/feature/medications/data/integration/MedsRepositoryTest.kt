@@ -473,6 +473,57 @@ class MedsRepositoryTest {
         assertTrue(groups.isEmpty(), "A stopped medication has no doses today")
     }
 
+    @Test
+    fun `recent doses cover the seven days before today, newest day first`() = runBlocking {
+        seedCircleAndPatient()
+        local.database.execute(
+            INSERT_MEDICATION,
+            listOf(MED_1, PATIENT_1, "Metformin", "tablet", "tablet", 0L, 7L),
+        )
+        local.database.execute(
+            INSERT_REGIMEN,
+            listOf(REGIMEN_1, MED_1, "daily", "2026-11-01", "Europe/Lisbon",
+                """[{"time":"08:00","quantity":1}]"""),
+        )
+        // Yesterday's dose was given; the six days before it were not.
+        local.database.execute(
+            INSERT_DOSE_LOG,
+            listOf(ENTRY_1, REGIMEN_1, MED_1, "2026-11-18 08:00:00", "taken", null,
+                "2026-11-18T08:05:00Z", "1.000", USER),
+        )
+        local.database.drainUploadQueue()
+
+        val groups = withTimeout(TIMEOUT_MS) {
+            doseLogRepository().recentDoses.first { it.isNotEmpty() }
+        }
+
+        assertEquals(
+            (1L..7L).map { TODAY.minusDays(it).atTime(8, 0) },
+            groups.map { it.scheduledLocal },
+        )
+        assertEquals(DoseState.TAKEN, groups.first().statuses.single().state)
+        assertTrue(groups.drop(1).all { it.statuses.single().state == DoseState.MISSED })
+    }
+
+    @Test
+    fun `a catch-up confirmation keeps the time it was given`() = runBlocking {
+        seedCircleAndPatient()
+        medicationRepository().create(medication(MED_1), regimen(REGIMEN_1, MED_1))
+        local.database.drainUploadQueue()
+        val slot = DoseSlotRules.doseSlots(
+            listOf(regimen(REGIMEN_1, MED_1)),
+            TODAY.minusDays(1),
+            TODAY.minusDays(1),
+        ).first { it.localTime == LocalTime.of(8, 0) }
+
+        val result = doseLogRepository().confirm(group(listOf(slot)), actualAt = slot.instant)
+
+        assertEquals(MedsResult.Success(Unit), result)
+        val values = local.database.nextTransaction().crud.single().values()
+        assertEquals(JsonPrimitive("2026-11-18 08:00:00"), values["scheduled_local"])
+        assertEquals(JsonPrimitive(slot.instant.toString()), values["actual_at"])
+    }
+
     // --- Helpers ------------------------------------------------------------
 
     private suspend fun seedCircleAndPatient(role: String = MedsLocalDatabase.OWNER) {

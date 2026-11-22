@@ -13,6 +13,7 @@ import io.github.lgpy.familycare.feature.medications.domain.RegimenId
 import io.github.lgpy.familycare.feature.medications.domain.SkipReason
 import io.github.lgpy.familycare.feature.medications.domain.TimeSlotGroup
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.flow.Flow
@@ -111,8 +112,20 @@ interface DoseLogRepository {
     val dosesToday: Flow<List<TodayDoseGroup>>
 
     /**
+     * The doses of the [RECENT_DOSE_DAYS] days **before** today (each regimen's
+     * own today), grouped like [dosesToday] and with the same statuses, newest
+     * day first and oldest time first within a day.
+     *
+     * Every group is included, confirmed or not: the "missed doses" list filters
+     * the ones still missed, and the dose-slot screen finds a past group here
+     * after it has been confirmed. Same inclusion rules as [dosesToday].
+     */
+    val recentDoses: Flow<List<TodayDoseGroup>>
+
+    /**
      * Records one time-slot group: a TAKEN entry per slot, with the slot's
-     * quantity, `actual_at` at the current time, `confirmed_by` the signed-in
+     * quantity, `actual_at` at [actualAt] (the current time when null),
+     * `confirmed_by` the signed-in
      * user and the same [givenBy] for all of them — **and** a SKIPPED entry with
      * its [SkipReason] for every slot listed in [skipped], all in one write
      * transaction.
@@ -126,6 +139,7 @@ interface DoseLogRepository {
         skipped: Map<DoseSlotId, SkipReason> = emptyMap(),
         givenBy: GivenBy = GivenBy.Me,
         note: String? = null,
+        actualAt: Instant? = null,
     ): MedsResult<Unit>
 
     /**
@@ -151,3 +165,9 @@ interface DoseLogRepository {
     fun existingConfirmation(slot: DoseSlot, entries: List<DoseLogEntry>): List<DoseLogEntry> =
         DoseLogRules.existingConfirmation(slot, entries)
 }
+
+/**
+ * How many days before today [DoseLogRepository.recentDoses] covers, and so how
+ * far back the "missed doses" list lets a caregiver catch up.
+ */
+const val RECENT_DOSE_DAYS: Int = 7

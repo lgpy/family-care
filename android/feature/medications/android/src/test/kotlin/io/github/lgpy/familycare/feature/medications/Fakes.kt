@@ -205,6 +205,7 @@ data class ConfirmCall(
     val skipped: Map<DoseSlotId, SkipReason>,
     val givenBy: GivenBy,
     val note: String?,
+    val actualAt: Instant? = null,
 )
 
 /** One recorded [DoseLogRepository.correct] call. */
@@ -335,6 +336,10 @@ class FakeDoseLogRepository : DoseLogRepository {
 
     override val dosesToday: Flow<List<TodayDoseGroup>> = todayFlow
 
+    val recentFlow = MutableStateFlow<List<TodayDoseGroup>>(emptyList())
+
+    override val recentDoses: Flow<List<TodayDoseGroup>> = recentFlow
+
     val confirmations = mutableListOf<ConfirmCall>()
     var confirmResult: MedsResult<Unit> = MedsResult.Success(Unit)
 
@@ -359,8 +364,9 @@ class FakeDoseLogRepository : DoseLogRepository {
         skipped: Map<DoseSlotId, SkipReason>,
         givenBy: GivenBy,
         note: String?,
+        actualAt: Instant?,
     ): MedsResult<Unit> {
-        confirmations += ConfirmCall(group, skipped, givenBy, note)
+        confirmations += ConfirmCall(group, skipped, givenBy, note, actualAt)
         return confirmResult
     }
 

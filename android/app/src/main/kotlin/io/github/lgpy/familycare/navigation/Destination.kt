@@ -44,6 +44,7 @@ enum class Destination(val route: String) {
     MedicationEdit(MedicationsRoutes.MEDICATION_EDIT),
     MedicationSchedule(MedicationsRoutes.REGIMEN_CHANGE),
     DoseSlot(MedicationsRoutes.DOSE_SLOT),
+    MissedDoses(MedicationsRoutes.MISSED_DOSES),
     About("about"),
     ;
 

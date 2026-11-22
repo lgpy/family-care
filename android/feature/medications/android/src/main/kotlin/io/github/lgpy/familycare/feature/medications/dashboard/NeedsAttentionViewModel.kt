@@ -8,6 +8,8 @@ import io.github.lgpy.familycare.core.domain.circle.canWrite
 import io.github.lgpy.familycare.feature.medications.data.DoseLogRepository
 import io.github.lgpy.familycare.feature.medications.data.GivenBy
 import io.github.lgpy.familycare.feature.medications.data.MedicationRepository
+import io.github.lgpy.familycare.feature.medications.data.RECENT_DOSE_DAYS
+import io.github.lgpy.familycare.feature.medications.domain.DoseState
 import io.github.lgpy.familycare.feature.medications.ui.MedsUiError
 import io.github.lgpy.familycare.feature.medications.ui.uiError
 import java.time.LocalDateTime
@@ -23,6 +25,10 @@ import kotlinx.coroutines.launch
  * The "Needs attention" card (docs/ux/screens.md §1, docs/domain/medications.md):
  * overdue and missed dose groups of the circle, ordered above "Doses today".
  *
+ * Missed groups of the [RECENT_DOSE_DAYS] days before today are not rows of
+ * their own: [NeedsAttentionUiState.missedEarlier] becomes one summary row that
+ * opens the missed-doses list.
+ *
  * It reuses the doses-today view of the data ([DoseLogRepository.dosesToday])
  * and the same group-confirm write; only the filter differs. A group that is
  * still unconfirmed cannot already have a confirmation, but the same
@@ -37,13 +43,18 @@ class NeedsAttentionViewModel(
 
     private val local = MutableStateFlow(NeedsAttentionUiState())
 
+    private val groupsFlow = combine(
+        doseLogRepository.dosesToday,
+        doseLogRepository.recentDoses,
+    ) { today, recent -> today to recent }
+
     val uiState: StateFlow<NeedsAttentionUiState> = combine(
         local,
-        doseLogRepository.dosesToday,
+        groupsFlow,
         medicationRepository.activeMedications,
         careCircleRepository.myRole,
         careCircleRepository.members,
-    ) { state, groups, medications, role, members ->
+    ) { state, (groups, recent), medications, role, members ->
         val patientNames = medications.associate { it.patient.patientId to it.patient.displayName }
         val memberNames = members.associate { it.userId to it.displayName }
         val myUserId = members.firstOrNull { it.isMe }?.userId
@@ -62,6 +73,14 @@ class NeedsAttentionViewModel(
                 }
                 .filter { group ->
                     group.state == DoseGroupState.OVERDUE || group.state == DoseGroupState.MISSED
+                },
+            missedEarlier = recent
+                .filter { group -> group.statuses.any { it.state == DoseState.MISSED } }
+                .map { group ->
+                    MissedEarlier(
+                        patientId = group.patientId,
+                        patientName = patientNames[group.patientId].orEmpty(),
+                    )
                 },
         )
     }.stateIn(
@@ -113,4 +132,12 @@ data class NeedsAttentionUiState(
     val saving: Boolean = false,
     val warning: DoseGroupUi? = null,
     val error: MedsUiError? = null,
+    /** One entry per missed group of the days before today, newest day first. */
+    val missedEarlier: List<MissedEarlier> = emptyList(),
+)
+
+/** A missed group of an earlier day, as far as the summary row needs it. */
+data class MissedEarlier(
+    val patientId: PatientId,
+    val patientName: String,
 )

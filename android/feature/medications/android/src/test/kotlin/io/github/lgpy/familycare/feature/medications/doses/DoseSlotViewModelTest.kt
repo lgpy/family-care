@@ -369,4 +369,59 @@ class DoseSlotViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `a catch-up of an earlier day is recorded at the scheduled time`() = runTest {
+        doses.recentFlow.value = listOf(
+            todayGroup(
+                slots = listOf(firstSlot, secondSlot),
+                statuses = listOf(status(firstSlot, DoseState.MISSED), status(secondSlot, DoseState.MISSED)),
+            ),
+        )
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            val state = awaitWhere { it.loaded && it.items.size == 2 }
+            assertTrue(state.backfill)
+            assertEquals(scheduled.toLocalTime(), state.backfillTime)
+            viewModel.save()
+
+            assertEquals(firstSlot.instant, doses.confirmations.single().actualAt)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a catch-up can say when it was really given`() = runTest {
+        doses.recentFlow.value = listOf(todayGroup(listOf(firstSlot)))
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            awaitWhere { it.loaded && it.items.size == 1 }
+            viewModel.onGivenAt(java.time.LocalTime.of(9, 30))
+            assertEquals(java.time.LocalTime.of(9, 30), viewModel.uiState.value.backfillTime)
+            viewModel.save()
+
+            assertEquals(
+                firstSlot.instant.plusSeconds(90 * 60),
+                doses.confirmations.single().actualAt,
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `today's doses are still recorded as given now`() = runTest {
+        doses.todayFlow.value = listOf(todayGroup(listOf(firstSlot)))
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            val state = awaitWhere { it.loaded && it.items.size == 1 }
+            assertFalse(state.backfill)
+            viewModel.save()
+
+            assertEquals(null, doses.confirmations.single().actualAt)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

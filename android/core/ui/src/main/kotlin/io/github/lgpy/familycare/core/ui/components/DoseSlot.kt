@@ -3,6 +3,7 @@ package io.github.lgpy.familycare.core.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -34,6 +36,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.lgpy.familycare.core.domain.circle.PatientId
@@ -67,6 +70,9 @@ enum class DoseSlotState { DONE, NEXT, UPCOMING }
  * @param givenText For [DoseSlotState.DONE]: "Given by Mom at 08:04".
  * @param actionLabel The button label ("Give"), null for no action.
  * @param onAction What the button does; required when [actionLabel] is set.
+ * @param secondaryActionLabel A second, outlined button ("Not given"). When
+ *   set, both buttons sit side by side under the name instead of beside it.
+ * @param onSecondaryAction What the second button does.
  * @param onClick What tapping the slot itself does (opens the dose-slot
  *   screen), null when the slot is not a link.
  */
@@ -80,6 +86,8 @@ data class DoseSlotUi(
     val givenText: String? = null,
     val actionLabel: String? = null,
     val onAction: (() -> Unit)? = null,
+    val secondaryActionLabel: String? = null,
+    val onSecondaryAction: (() -> Unit)? = null,
     val onClick: (() -> Unit)? = null,
 )
 
@@ -148,12 +156,15 @@ fun DoseSlot(
                 ),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            val paired = !done &&
+                slot.actionLabel != null && slot.onAction != null &&
+                slot.secondaryActionLabel != null && slot.onSecondaryAction != null
             ReflowRow(
                 modifier = Modifier.fillMaxWidth(),
                 spacing = 12.dp,
                 content = { WhoRow(slot) },
                 action = {
-                    if (!done && slot.actionLabel != null && slot.onAction != null) {
+                    if (!paired && !done && slot.actionLabel != null && slot.onAction != null) {
                         SlotActionButton(
                             label = slot.actionLabel,
                             next = slot.state == DoseSlotState.NEXT,
@@ -162,6 +173,37 @@ fun DoseSlot(
                     }
                 },
             )
+            val primaryLabel = slot.actionLabel
+            val primary = slot.onAction
+            val secondaryLabel = slot.secondaryActionLabel
+            val secondary = slot.onSecondaryAction
+            if (paired && primaryLabel != null && primary != null && secondaryLabel != null && secondary != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    val shape = RoundedCornerShape(percent = 50)
+                    val buttonModifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = FamilyCareDimens.MinTouchTarget)
+                    FilledTonalButton(
+                        onClick = primary,
+                        modifier = buttonModifier,
+                        shape = shape,
+                        contentPadding = PairedButtonPadding,
+                    ) {
+                        Text(text = primaryLabel, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    }
+                    OutlinedButton(
+                        onClick = secondary,
+                        modifier = buttonModifier,
+                        shape = shape,
+                        contentPadding = PairedButtonPadding,
+                    ) {
+                        Text(text = secondaryLabel, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    }
+                }
+            }
         }
     }
 }
@@ -261,6 +303,9 @@ private fun SlotActionButton(
         OutlinedButton(onClick = onClick, modifier = modifier, shape = shape) { text() }
     }
 }
+
+/** Paired buttons share the card's width, so they keep less side padding. */
+private val PairedButtonPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
 
 /** A 1 dp dashed rounded outline, drawn inside the bounds. */
 internal fun Modifier.dashedOutline(color: Color, radius: Dp): Modifier = drawBehind {

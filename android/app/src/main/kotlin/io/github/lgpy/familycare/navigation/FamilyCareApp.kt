@@ -46,6 +46,7 @@ import io.github.lgpy.familycare.feature.medications.detail.MedicationDetailScre
 import io.github.lgpy.familycare.feature.medications.doses.DoseSlotScreen
 import io.github.lgpy.familycare.feature.medications.form.MedicationFormScreen
 import io.github.lgpy.familycare.feature.medications.list.PatientMedicationsScreen
+import io.github.lgpy.familycare.feature.medications.missed.MissedDosesScreen
 import io.github.lgpy.familycare.feature.medications.regimen.ChangeRegimenScreen
 import io.github.lgpy.familycare.feature.medications.shopping.ShoppingScreen
 import io.github.lgpy.familycare.feature.patientinfo.PatientInfoRoutes
@@ -367,6 +368,12 @@ fun FamilyCareApp(
                 ChangeRegimenScreen(
                     medicationId = entry.arguments?.getString(MEDICATION_ID_ARG).orEmpty(),
                     onBack = { navController.popBackStack() },
+                )
+            }
+            composable(route = Destination.MissedDoses.route) {
+                MissedDosesScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigate = { route -> navController.navigate(route) },
                 )
             }
             composable(

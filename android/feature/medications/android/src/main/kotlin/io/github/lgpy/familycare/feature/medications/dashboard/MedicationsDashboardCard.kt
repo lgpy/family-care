@@ -254,7 +254,7 @@ private fun lateText(span: LateSpan): String = when (span) {
  * time to show. Never invents a giver.
  */
 @Composable
-private fun givenByText(group: DoseGroupUi): String? {
+internal fun givenByText(group: DoseGroupUi): String? {
     val at = group.at ?: return null
     val time = formatTime(at)
     val givenBy = group.givenBy

@@ -97,7 +97,27 @@ internal class PowerSyncDoseLogRepository(
                 cursor.toMedicationRow()
             }.map { rows -> rows.toMedicationWithRegimens() }
                 .distinctUntilChanged()
-                .flatMapLatest { medications -> todayGroupsFlow(medications) }
+                .flatMapLatest { medications -> groupsFlow(medications, daysBack = 0, daysForward = 0) }
+        }
+    }
+
+    override val recentDoses: Flow<List<TodayDoseGroup>> = signedInUserId.flatMapLatest { userId ->
+        if (userId == null) {
+            flowOf(emptyList())
+        } else {
+            database.watch(SELECT_ACTIVE_MEDICATIONS, listOf(userId)) { cursor ->
+                cursor.toMedicationRow()
+            }.map { rows -> rows.toMedicationWithRegimens() }
+                .distinctUntilChanged()
+                .flatMapLatest { medications ->
+                    groupsFlow(medications, daysBack = RECENT_DOSE_DAYS, daysForward = -1)
+                }
+                .map { groups ->
+                    groups.sortedWith(
+                        compareByDescending<TodayDoseGroup> { it.scheduledLocal.toLocalDate() }
+                            .thenBy { it.scheduledLocal.toLocalTime() },
+                    )
+                }
         }
     }
 
@@ -106,6 +126,7 @@ internal class PowerSyncDoseLogRepository(
         skipped: Map<DoseSlotId, SkipReason>,
         givenBy: GivenBy,
         note: String?,
+        actualAt: Instant?,
     ): MedsResult<Unit> {
         val userId = writableUserId() ?: return denied()
 
@@ -114,7 +135,7 @@ internal class PowerSyncDoseLogRepository(
             return MedsResult.Failure(MedsError.NotAllowed)
         }
 
-        val at = now()
+        val at = actualAt ?: now()
         val entries = group.slots.map { slot ->
             val reason = skipped[slot.slotId]
             val outcome = if (reason == null) DoseOutcome.TAKEN else DoseOutcome.SKIPPED
@@ -188,17 +209,22 @@ internal class PowerSyncDoseLogRepository(
         }
     }
 
-    // --- Doses today ---------------------------------------------------------
+    // --- Doses by day ---------------------------------------------------------
 
     /**
-     * The entries watch plus the tick, combined into groups.
+     * The entries watch plus the tick, combined into groups of the days from
+     * today − [daysBack] to today + [daysForward] (each regimen's own today).
      *
-     * The SQL window is fixed for a whole day (device-local today ± 2 days, wide
+     * The SQL window is fixed for a whole day (device-local range ± 2 days, wide
      * enough for every regimen zone), so the watch is not re-subscribed every
      * minute; the tick only re-derives the statuses. At midnight the window moves
      * to the new day.
      */
-    private fun todayGroupsFlow(medications: List<MedicationWithRegimens>): Flow<List<TodayDoseGroup>> {
+    private fun groupsFlow(
+        medications: List<MedicationWithRegimens>,
+        daysBack: Int,
+        daysForward: Int,
+    ): Flow<List<TodayDoseGroup>> {
         val regimenIds = medications.flatMap { it.regimens }.map { it.id.value }.distinct()
         if (regimenIds.isEmpty()) return flowOf(emptyList())
 
@@ -211,26 +237,35 @@ internal class PowerSyncDoseLogRepository(
             .flatMapLatest { day ->
                 database.watch(
                     sql,
-                    regimenIds + listOf(day.minusDays(2).toString(), day.plusDays(2).toString()),
+                    regimenIds + listOf(
+                        day.minusDays(daysBack + 2L).toString(),
+                        day.plusDays(daysForward + 2L).toString(),
+                    ),
                 ) { cursor -> cursor.toDoseLogRow() }
                     .map { rows -> rows.toEntries() }
             }
 
         return combine(window, ticks) { entries, instant ->
-            todayGroups(medications, entries, instant)
+            groupsOfDays(medications, entries, instant, daysBack, daysForward)
         }
     }
 
-    private fun todayGroups(
+    private fun groupsOfDays(
         medications: List<MedicationWithRegimens>,
         entries: List<DoseLogEntry>,
         at: Instant,
+        daysBack: Int,
+        daysForward: Int,
     ): List<TodayDoseGroup> {
         val slots = mutableListOf<DoseSlot>()
         medications.forEach { item ->
             item.regimens.forEach { regimen ->
                 val today = at.atZone(regimen.timeZone).toLocalDate()
-                slots += DoseSlotRules.doseSlots(listOf(regimen), today, today)
+                slots += DoseSlotRules.doseSlots(
+                    listOf(regimen),
+                    today.minusDays(daysBack.toLong()),
+                    today.plusDays(daysForward.toLong()),
+                )
             }
         }
         if (slots.isEmpty()) return emptyList()

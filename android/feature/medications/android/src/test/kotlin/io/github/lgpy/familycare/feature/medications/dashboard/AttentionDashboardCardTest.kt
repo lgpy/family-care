@@ -2,6 +2,7 @@ package io.github.lgpy.familycare.feature.medications.dashboard
 
 import io.github.lgpy.familycare.feature.medications.regimen
 import io.github.lgpy.familycare.feature.medications.slot
+import io.github.lgpy.familycare.feature.medications.testPatientId
 import io.github.lgpy.familycare.feature.medications.todayGroup
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderHealth
 import io.github.lgpy.familycare.feature.medications.reminders.ReminderProblem
@@ -154,5 +155,30 @@ class AttentionDashboardCardTest {
         ).single() as AttentionRow.DoseGroup
 
         assertEquals(1, row.group.doseCount)
+    }
+
+    @Test
+    fun `earlier missed doses are one row, after today's doses and before low stock`() {
+        val rows = attentionRows(
+            doses = NeedsAttentionUiState(
+                groups = listOf(doseGroup),
+                missedEarlier = listOf(
+                    MissedEarlier(testPatientId, "Grandpa"),
+                    MissedEarlier(testPatientId, "Grandpa"),
+                    MissedEarlier(io.github.lgpy.familycare.core.domain.circle.PatientId("p2"), "Grandma"),
+                ),
+            ),
+            stock = LowStockUiState(loaded = true, lines = listOf(lowStockLine)),
+            health = null,
+        )
+
+        assertEquals(
+            listOf("DoseGroup", "MissedEarlier", "LowStock"),
+            rows.map { it::class.simpleName },
+        )
+        assertEquals(
+            AttentionRow.MissedEarlier(count = 3, patientNames = listOf("Grandpa", "Grandma")),
+            rows[1],
+        )
     }
 }
