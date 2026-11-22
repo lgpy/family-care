@@ -47,10 +47,27 @@ export interface StockMedication {
 
 export type ShoppingStatus = 'needs_prescription' | 'ready_to_buy';
 
-/** Three decimals, like `numeric(9,3)`, so sums do not carry binary dust. */
-function round3(value: number): number {
-  return Math.round(value * 1000) / 1000;
+/**
+ * Quantities are exact decimals in the database (`numeric(9,3)` movements,
+ * `numeric(7,3)` actual quantities, regimen quantities of at most three
+ * decimals) and `BigDecimal` in the app. A JS number cannot hold 0.1, so every
+ * sum and division here runs on whole thousandths instead: `Math.round` of
+ * `value * 1000` recovers the exact integer for any value with <= 3 decimals.
+ */
+const SCALE = 1000;
+
+function toMilli(value: number): number {
+  return Math.round(value * SCALE);
 }
+
+function sumOfQuantities(regimen: Regimen): number {
+  let milli = 0;
+  for (const time of regimen.times) milli += toMilli(time.quantity);
+  return milli;
+}
+
+/** `Int.MAX_VALUE`: the Kotlin app caps days remaining there. */
+const MAX_DAYS = 2_147_483_647;
 
 /**
  * The baseline count: the one with the latest `occurred_at`, ties broken by the
@@ -115,14 +132,15 @@ export function currentStock(
   const baseline = latestCount(movements);
   const baselineMs = baseline === null ? -Infinity : Date.parse(baseline.occurred_at);
 
-  let stock = baseline === null ? 0 : baseline.quantity;
+  // Whole thousandths: exact, whatever order the quantities are added in.
+  let stock = baseline === null ? 0 : toMilli(baseline.quantity);
 
   for (const movement of movements) {
     if (movement === baseline) continue;
     // "After the baseline": at or before it is already reflected in the count.
     if (Date.parse(movement.occurred_at) <= baselineMs) continue;
-    if (movement.kind === 'refill') stock += movement.quantity;
-    else if (movement.kind === 'discard') stock -= movement.quantity;
+    if (movement.kind === 'refill') stock += toMilli(movement.quantity);
+    else if (movement.kind === 'discard') stock -= toMilli(movement.quantity);
   }
 
   const voided = voidedEntryIds(doseLog);
@@ -130,10 +148,10 @@ export function currentStock(
     if (voided.has(entry.id)) continue;
     if (entry.outcome !== 'taken') continue;
     if (Date.parse(entry.actual_at) <= baselineMs) continue;
-    stock -= entry.actual_quantity ?? slotQuantity(entry, regimens);
+    stock -= toMilli(entry.actual_quantity ?? slotQuantity(entry, regimens));
   }
 
-  return round3(stock);
+  return stock / SCALE;
 }
 
 /**
@@ -174,8 +192,7 @@ export function popcount(bitmask: number): number {
 export function dailyConsumption(regimen: Regimen | null): number {
   if (regimen === null) return 0;
 
-  let quantity = 0;
-  for (const time of regimen.times) quantity += time.quantity;
+  const quantity = sumOfQuantities(regimen) / SCALE;
 
   switch (regimen.schedule_type) {
     case 'daily':
@@ -203,7 +220,9 @@ export function dailyConsumption(regimen: Regimen | null): number {
  *
  * `floor(stock × P / (Q × K))` with P the period in days and K the occurrences
  * per period. Multiplying first matters: `18 × 7 / 3` is exactly 42, while
- * `18 / (3/7)` can floor to 41 in floating point.
+ * `18 / (3/7)` can floor to 41 in floating point. The arithmetic is exact: stock
+ * and quantities are whole thousandths and the floor is a `BigInt` division, so
+ * 0.3 of a 0.1 daily dose is 3 days (as `BigDecimal` in the app), not 2.
  */
 export function daysRemaining(
   stock: number,
@@ -211,8 +230,7 @@ export function daysRemaining(
 ): number | null {
   if (regimen === null) return null;
 
-  let quantity = 0;
-  for (const time of regimen.times) quantity += time.quantity;
+  const quantity = sumOfQuantities(regimen);
 
   let periodDays: number;
   let occurrences: number;
@@ -241,7 +259,9 @@ export function daysRemaining(
   // Empty or overdrawn stock is out of stock today.
   if (stock <= 0) return 0;
 
-  return Math.floor((stock * periodDays) / (quantity * occurrences));
+  const days = (BigInt(toMilli(stock)) * BigInt(periodDays)) /
+    (BigInt(quantity) * BigInt(occurrences));
+  return days > BigInt(MAX_DAYS) ? MAX_DAYS : Number(days);
 }
 
 /** Low stock when the days left are known and at or below the threshold. */

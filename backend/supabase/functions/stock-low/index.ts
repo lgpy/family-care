@@ -8,11 +8,13 @@
  * single user may.
  *
  * What it does, in order:
- * 1. Reads the active (not stopped) medications, their regimens, their stock
+ * 1. Reads the active medications (not stopped: `stopped_at` is null or later
+ *    than now, since a stop may be scheduled for a future last day), their regimens, their stock
  *    movements, the `meds.stock_alerts` ledger, and only the dose-log entries
  *    that can affect a stock figure (taken/correcting entries after each
  *    medication's latest count, or the whole history of a medication that has
- *    never been counted).
+ *    never been counted). Every read is paged past the 1000-row PostgREST cut
+ *    (`_shared/paging.ts`).
  * 2. Hands all of it to `_shared/stockAlerts.ts` (pure, unit-tested): which
  *    medications are low, who gets the one push of the low episode, which
  *    ledger rows to write and which to clear.
@@ -31,48 +33,37 @@ import {
   type StockMovementRow,
 } from '../_shared/stockAlerts.ts';
 import { latestCount } from '../_shared/stock.ts';
+import { rowsToRecord, type SendAttempt } from '../_shared/delivery.ts';
 import type { DoseLogEntry } from '../_shared/doseStatus.ts';
 import type { Regimen } from '../_shared/doseSlots.ts';
 import type { Membership, Profile, PushDevice, ReminderPolicy } from '../_shared/escalation.ts';
 import { createFcmSender, parseServiceAccount } from '../_shared/fcm.ts';
 import { errorText } from '../_shared/log.ts';
+import { fetchAllPages, type Page } from '../_shared/paging.ts';
 
 const ENTRY_COLUMNS =
   'id, regimen_id, medication_id, scheduled_local, outcome, actual_at, ' +
   'actual_quantity, corrects_entry_id';
-
-/** PostgREST caps a response (max_rows, 1000 locally): page through it. */
-const PAGE_SIZE = 1000;
 
 /**
  * Dose-log entries for these medications, at or after `lowerBound` (every
  * entry when it is null). Paged, because a baseline count can be months old and
  * a truncated read would silently overstate stock.
  */
-async function readEntries(
+function readEntries(
   supabase: SupabaseClient,
   medicationIds: string[],
   lowerBound: string | null,
 ): Promise<DoseLogEntry[]> {
-  const entries: DoseLogEntry[] = [];
-
-  for (let from = 0; ; from += PAGE_SIZE) {
+  return fetchAllPages<DoseLogEntry>((from, to) => {
     let query = supabase
       .schema('meds')
       .from('dose_log')
       .select(ENTRY_COLUMNS)
-      .in('medication_id', medicationIds)
-      .order('id')
-      .range(from, from + PAGE_SIZE - 1);
+      .in('medication_id', medicationIds);
     if (lowerBound !== null) query = query.gte('actual_at', lowerBound);
-
-    const { data, error } = await query;
-    if (error) throw error;
-
-    const page = (data ?? []) as unknown as DoseLogEntry[];
-    entries.push(...page);
-    if (page.length < PAGE_SIZE) return entries;
-  }
+    return query.order('id').range(from, to) as unknown as PromiseLike<Page<DoseLogEntry>>;
+  });
 }
 
 function secretsEqual(given: string | null, expected: string): boolean {
@@ -128,17 +119,7 @@ Deno.serve(async (request) => {
 
     // 1. Active medications. Stopped medications are not on the shopping list
     //    (D28); their alert rows are cleared below so a restart re-arms them.
-    const { data: medicationRows, error: medicationError } = await supabase
-      .schema('meds')
-      .from('medications')
-      .select(
-        'id, patient_id, requires_prescription, prescription_valid_until, ' +
-          'low_stock_threshold_days, reminder_policy, primary_caregiver_id',
-      )
-      .is('stopped_at', null);
-    if (medicationError) throw medicationError;
-
-    const medicationData = (medicationRows ?? []) as unknown as Array<{
+    interface MedicationRow {
       id: string;
       patient_id: string;
       requires_prescription: boolean;
@@ -146,18 +127,33 @@ Deno.serve(async (request) => {
       low_stock_threshold_days: number;
       reminder_policy: ReminderPolicy | null;
       primary_caregiver_id: string | null;
-    }>;
+      stopped_at: string | null;
+    }
+    const medicationData = await fetchAllPages<MedicationRow>((from, to) =>
+      supabase
+        .schema('meds')
+        .from('medications')
+        .select(
+          'id, patient_id, requires_prescription, prescription_valid_until, ' +
+            'low_stock_threshold_days, reminder_policy, primary_caregiver_id, stopped_at',
+        )
+        // Stopped means `stopped_at <= now`; a future last day leaves it active.
+        .or(`stopped_at.is.null,stopped_at.gt.${now}`)
+        .order('id')
+        .range(from, to) as unknown as PromiseLike<Page<MedicationRow>>
+    );
 
     // 1b. The alert ledger, unfiltered: rows for stopped or deleted medications
     //     must be cleared too, and they are not in `medicationIds`.
-    const { data: alertRows, error: alertError } = await supabase
-      .schema('meds')
-      .from('stock_alerts')
-      .select('medication_id');
-    if (alertError) throw alertError;
-    const alerted = (alertRows ?? []).map(
-      (row: { medication_id: string }) => row.medication_id,
+    const alertRows = await fetchAllPages<{ medication_id: string }>((from, to) =>
+      supabase
+        .schema('meds')
+        .from('stock_alerts')
+        .select('medication_id')
+        .order('medication_id')
+        .range(from, to) as unknown as PromiseLike<Page<{ medication_id: string }>>
     );
+    const alerted = alertRows.map((row) => row.medication_id);
 
     if (medicationData.length === 0) {
       // Nothing is active: every alert row is stale and is re-armed. Without
@@ -186,29 +182,29 @@ Deno.serve(async (request) => {
 
     // 2. The circle each patient belongs to, so recipients can be resolved,
     //    plus the patient's reminder settings (the medication's override wins).
-    const { data: patientRows, error: patientError } = await supabase
-      .schema('core')
-      .from('patients')
-      .select(
-        'id, circle_id, archived_at, reminder_policy, primary_caregiver_id',
-      )
-      .in('id', patientIds);
-    if (patientError) throw patientError;
-
-    const patientById = new Map(
-      (patientRows ?? []).map((row: {
-        id: string;
-        circle_id: string;
-        archived_at: string | null;
-        reminder_policy: ReminderPolicy;
-        primary_caregiver_id: string | null;
-      }) => [row.id, row]),
+    interface PatientRow {
+      id: string;
+      circle_id: string;
+      archived_at: string | null;
+      reminder_policy: ReminderPolicy;
+      primary_caregiver_id: string | null;
+    }
+    const patientRows = await fetchAllPages<PatientRow>((from, to) =>
+      supabase
+        .schema('core')
+        .from('patients')
+        .select(
+          'id, circle_id, archived_at, reminder_policy, primary_caregiver_id',
+        )
+        .in('id', patientIds)
+        .order('id')
+        .range(from, to) as unknown as PromiseLike<Page<PatientRow>>
     );
 
+    const patientById = new Map(patientRows.map((row) => [row.id, row]));
+
     const archivedPatients = new Set(
-      (patientRows ?? [])
-        .filter((row: { archived_at: string | null }) => row.archived_at !== null)
-        .map((row: { id: string }) => row.id),
+      patientRows.filter((row) => row.archived_at !== null).map((row) => row.id),
     );
 
     const medications: ActiveStockMedication[] = medicationData
@@ -220,6 +216,7 @@ Deno.serve(async (request) => {
           patient_id: row.patient_id,
           circle_id: patient.circle_id,
           patient_archived: archivedPatients.has(row.patient_id),
+          stopped_at: row.stopped_at,
           low_stock_threshold_days: row.low_stock_threshold_days,
           requires_prescription: row.requires_prescription,
           prescription_valid_until: row.prescription_valid_until,
@@ -234,24 +231,28 @@ Deno.serve(async (request) => {
 
     // 3. Regimens (every version: a dose may belong to an older one) and the
     //    stock ledger.
-    const { data: regimenRows, error: regimenError } = await supabase
-      .schema('meds')
-      .from('regimens')
-      .select(
-        'id, medication_id, schedule_type, weekdays, interval_days, ' +
-          'start_date, end_date, time_zone, times',
-      )
-      .in('medication_id', medicationIds);
-    if (regimenError) throw regimenError;
-    const regimens = (regimenRows ?? []) as unknown as Regimen[];
+    const regimens = await fetchAllPages<Regimen>((from, to) =>
+      supabase
+        .schema('meds')
+        .from('regimens')
+        .select(
+          'id, medication_id, schedule_type, weekdays, interval_days, ' +
+            'start_date, end_date, time_zone, times',
+        )
+        .in('medication_id', medicationIds)
+        .order('id')
+        .range(from, to) as unknown as PromiseLike<Page<Regimen>>
+    );
 
-    const { data: movementRows, error: movementError } = await supabase
-      .schema('meds')
-      .from('stock_movements')
-      .select('id, medication_id, kind, quantity, occurred_at')
-      .in('medication_id', medicationIds);
-    if (movementError) throw movementError;
-    const movements = (movementRows ?? []) as unknown as StockMovementRow[];
+    const movements = await fetchAllPages<StockMovementRow>((from, to) =>
+      supabase
+        .schema('meds')
+        .from('stock_movements')
+        .select('id, medication_id, kind, quantity, occurred_at')
+        .in('medication_id', medicationIds)
+        .order('id')
+        .range(from, to) as unknown as PromiseLike<Page<StockMovementRow>>
+    );
 
     // 4. The dose-log entries that can change a stock figure. A baseline count
     //    already contains everything at or before its instant, so only later
@@ -290,35 +291,41 @@ Deno.serve(async (request) => {
 
     // 5. Who to notify: the circles' owners and caregivers, then their language
     //    and devices. Viewers are never told (D28).
-    const { data: membershipRows, error: membershipError } = await supabase
-      .schema('core')
-      .from('memberships')
-      .select('circle_id, user_id, role')
-      .in('circle_id', circleIds)
-      .in('role', ['owner', 'caregiver']);
-    if (membershipError) throw membershipError;
-
-    const memberships = (membershipRows ?? []) as Membership[];
+    const memberships = await fetchAllPages<Membership>((from, to) =>
+      supabase
+        .schema('core')
+        .from('memberships')
+        .select('circle_id, user_id, role')
+        .in('circle_id', circleIds)
+        .in('role', ['owner', 'caregiver'])
+        .order('circle_id')
+        .order('user_id')
+        .range(from, to) as unknown as PromiseLike<Page<Membership>>
+    );
     const recipientIds = [...new Set(memberships.map((row) => row.user_id))];
 
     let profiles: Profile[] = [];
     let devices: PushDevice[] = [];
     if (recipientIds.length > 0) {
-      const { data: profileRows, error: profileError } = await supabase
-        .schema('core')
-        .from('profiles')
-        .select('id, preferred_language')
-        .in('id', recipientIds);
-      if (profileError) throw profileError;
-      profiles = (profileRows ?? []) as Profile[];
+      profiles = await fetchAllPages<Profile>((from, to) =>
+        supabase
+          .schema('core')
+          .from('profiles')
+          .select('id, preferred_language')
+          .in('id', recipientIds)
+          .order('id')
+          .range(from, to) as unknown as PromiseLike<Page<Profile>>
+      );
 
-      const { data: deviceRows, error: deviceError } = await supabase
-        .schema('core')
-        .from('push_devices')
-        .select('user_id, fcm_token')
-        .in('user_id', recipientIds);
-      if (deviceError) throw deviceError;
-      devices = (deviceRows ?? []) as PushDevice[];
+      devices = await fetchAllPages<PushDevice>((from, to) =>
+        supabase
+          .schema('core')
+          .from('push_devices')
+          .select('user_id, fcm_token')
+          .in('user_id', recipientIds)
+          .order('fcm_token')
+          .range(from, to) as unknown as PromiseLike<Page<PushDevice>>
+      );
     }
 
     const input: StockAlertInput = {
@@ -338,6 +345,7 @@ Deno.serve(async (request) => {
     // 6. Send. A dead token is deleted; a transient failure leaves the ledger
     //    row unwritten, so tomorrow's run retries while the medication is low.
     const deadTokens = new Set<string>();
+    const attempts: SendAttempt[] = [];
     let sent = 0;
     let failed = 0;
 
@@ -354,6 +362,8 @@ Deno.serve(async (request) => {
             },
           },
         });
+
+        attempts.push({ key: notification.medication_id, status: result.status });
 
         if (result.status === 'sent') {
           sent += 1;
@@ -376,14 +386,18 @@ Deno.serve(async (request) => {
       }
     }
 
-    // 7. Record the episodes and re-arm the recovered ones. The primary key
-    //    makes a concurrent run harmless (duplicate beats lost).
-    if (plan.alerts.length > 0) {
+    // 7. Record the episodes that were delivered to at least one device or had
+    //    nothing to retry, and re-arm the recovered ones. An episode whose every
+    //    send failed transiently stays out of the ledger, so tomorrow's run
+    //    retries. The primary key makes a concurrent run harmless (duplicate
+    //    beats lost).
+    const recorded = rowsToRecord(plan.alerts, (row) => row.medication_id, attempts);
+    if (recorded.length > 0) {
       const { error: insertError } = await supabase
         .schema('meds')
         .from('stock_alerts')
         .upsert(
-          plan.alerts.map((row) => ({
+          recorded.map((row) => ({
             medication_id: row.medication_id,
             recipients: row.recipients,
           })),
@@ -403,7 +417,8 @@ Deno.serve(async (request) => {
 
     return json(200, {
       low: plan.low.length,
-      alerts: plan.alerts.length,
+      alerts: recorded.length,
+      to_retry: plan.alerts.length - recorded.length,
       cleared: plan.cleared.length,
       notifications: plan.notifications.length,
       sent,

@@ -84,6 +84,8 @@ export interface EscalationInput {
 export type Language = 'pt-PT' | 'en';
 
 export interface EscalationNotification {
+  /** The slot this push is for (with `data.scheduled_local`); never sent to the phone. */
+  regimen_id: string;
   user_id: string;
   tokens: string[];
   language: Language;
@@ -111,6 +113,17 @@ export interface EscalationPlan {
   escalations: EscalationRecord[];
   /** Every slot considered overdue, in the order they were processed. */
   overdue: DoseSlot[];
+}
+
+/** The ledger key of a slot: a notification and a ledger row for it match. */
+export function escalationSlotKey(
+  slot: { regimen_id: string } & (
+    | { scheduled_local: string }
+    | { data: { scheduled_local: string } }
+  ),
+): string {
+  const scheduledLocal = 'data' in slot ? slot.data.scheduled_local : slot.scheduled_local;
+  return `${slot.regimen_id}|${scheduledLocal}`;
 }
 
 /** The generic, localized text (D8, D4). Never medication or patient names. */
@@ -214,6 +227,7 @@ export function planEscalations(input: EscalationInput): EscalationPlan {
         const language = languageOf(profileByUser.get(userId));
         const text = MESSAGES[language];
         notifications.push({
+          regimen_id: slot.regimen_id,
           user_id: userId,
           tokens: [...tokens],
           language,

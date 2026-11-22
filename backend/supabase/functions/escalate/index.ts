@@ -8,8 +8,9 @@
  *
  * What it does, in order:
  * 1. Reads active medications with their effective reminder settings, the
- *    regimens, the dose log for a bounded look-back, the escalation ledger,
- *    memberships, profiles and devices.
+ *    regimens, the dose log and the escalation ledger for a bounded look-back,
+ *    memberships, profiles and devices. Every read is paged past the 1000-row
+ *    PostgREST cut (`_shared/paging.ts`).
  * 2. Hands all of it to `_shared/escalation.ts` (pure, unit-tested): overdue
  *    slots under `primary_with_escalation` that are not yet in the ledger, and
  *    the caregivers to notify (never the primary, never a viewer).
@@ -21,9 +22,11 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
+  escalationSlotKey,
   LOOKBACK_MARGIN_MINUTES,
   planEscalations,
   type EffectiveReminder,
+  type EscalationLedgerRow,
   type EscalationInput,
   type Membership,
   type Profile,
@@ -32,7 +35,9 @@ import {
 import type { DoseLogEntry } from '../_shared/doseStatus.ts';
 import type { Regimen } from '../_shared/doseSlots.ts';
 import { createFcmSender, parseServiceAccount } from '../_shared/fcm.ts';
+import { rowsToRecord, type SendAttempt } from '../_shared/delivery.ts';
 import { errorText } from '../_shared/log.ts';
+import { fetchAllPages, type Page } from '../_shared/paging.ts';
 
 const MS_PER_MINUTE = 60_000;
 const DAY_MS = 24 * 60 * MS_PER_MINUTE;
@@ -90,16 +95,17 @@ Deno.serve(async (request) => {
     const nowMs = Date.parse(now);
 
     // 1. Active medications with the coalesced policy/primary and the delays.
-    const { data: reminderRows, error: reminderError } = await supabase
-      .schema('meds')
-      .from('effective_reminder')
-      .select(
-        'medication_id, patient_id, circle_id, reminder_policy, ' +
-          'primary_caregiver_id, escalation_delay_minutes, missed_window_minutes',
-      );
-    if (reminderError) throw reminderError;
-
-    const reminders = (reminderRows ?? []) as unknown as EffectiveReminder[];
+    const reminders = await fetchAllPages<EffectiveReminder>((from, to) =>
+      supabase
+        .schema('meds')
+        .from('effective_reminder')
+        .select(
+          'medication_id, patient_id, circle_id, reminder_policy, ' +
+            'primary_caregiver_id, escalation_delay_minutes, missed_window_minutes',
+        )
+        .order('medication_id')
+        .range(from, to) as unknown as PromiseLike<Page<EffectiveReminder>>
+    );
     if (reminders.length === 0) {
       return json(200, { notifications: 0, escalations: 0 });
     }
@@ -109,17 +115,18 @@ Deno.serve(async (request) => {
 
     // 2. Regimen versions for those medications (overlap is prevented by the
     //    M3 trigger; the window filter is in `slotsDueBetween`).
-    const { data: regimenRows, error: regimenError } = await supabase
-      .schema('meds')
-      .from('regimens')
-      .select(
-        'id, medication_id, schedule_type, weekdays, interval_days, ' +
-          'start_date, end_date, time_zone, times',
-      )
-      .in('medication_id', medicationIds);
-    if (regimenError) throw regimenError;
-
-    const regimens = (regimenRows ?? []) as unknown as Regimen[];
+    const regimens = await fetchAllPages<Regimen>((from, to) =>
+      supabase
+        .schema('meds')
+        .from('regimens')
+        .select(
+          'id, medication_id, schedule_type, weekdays, interval_days, ' +
+            'start_date, end_date, time_zone, times',
+        )
+        .in('medication_id', medicationIds)
+        .order('id')
+        .range(from, to) as unknown as PromiseLike<Page<Regimen>>
+    );
     if (regimens.length === 0) {
       return json(200, { notifications: 0, escalations: 0 });
     }
@@ -139,63 +146,80 @@ Deno.serve(async (request) => {
       .toISOString()
       .slice(0, 19);
 
-    const { data: entryRows, error: entryError } = await supabase
-      .schema('meds')
-      .from('dose_log')
-      .select(
-        'id, regimen_id, medication_id, scheduled_local, outcome, actual_at, ' +
-          'corrects_entry_id',
-      )
-      .in('regimen_id', regimenIds)
-      .gte('scheduled_local', lowerBound);
-    if (entryError) throw entryError;
+    const entries = await fetchAllPages<DoseLogEntry>((from, to) =>
+      supabase
+        .schema('meds')
+        .from('dose_log')
+        .select(
+          'id, regimen_id, medication_id, scheduled_local, outcome, actual_at, ' +
+            'corrects_entry_id',
+        )
+        .in('regimen_id', regimenIds)
+        .gte('scheduled_local', lowerBound)
+        .order('id')
+        .range(from, to) as unknown as PromiseLike<Page<DoseLogEntry>>
+    );
 
-    // 4. The ledger that makes this job idempotent.
-    const { data: escalationRows, error: escalationError } = await supabase
-      .schema('meds')
-      .from('escalations')
-      .select('regimen_id, scheduled_local')
-      .in('regimen_id', regimenIds);
-    if (escalationError) throw escalationError;
+    // 4. The ledger that makes this job idempotent. A row is written per
+    //    escalated slot, so it grows without bound: read it with the same lower
+    //    bound as the dose log (older slots are missed, never escalated) and
+    //    page it, or recent slots fall outside a 1000-row cut and look new.
+    const escalations = await fetchAllPages<EscalationLedgerRow>((from, to) =>
+      supabase
+        .schema('meds')
+        .from('escalations')
+        .select('regimen_id, scheduled_local')
+        .in('regimen_id', regimenIds)
+        .gte('scheduled_local', lowerBound)
+        .order('regimen_id')
+        .order('scheduled_local')
+        .range(from, to) as unknown as PromiseLike<Page<EscalationLedgerRow>>
+    );
 
     // 5. Who to notify: owners and caregivers, then their language and devices.
-    const { data: membershipRows, error: membershipError } = await supabase
-      .schema('core')
-      .from('memberships')
-      .select('circle_id, user_id, role')
-      .in('circle_id', circleIds)
-      .in('role', ['owner', 'caregiver']);
-    if (membershipError) throw membershipError;
-
-    const memberships = (membershipRows ?? []) as Membership[];
+    const memberships = await fetchAllPages<Membership>((from, to) =>
+      supabase
+        .schema('core')
+        .from('memberships')
+        .select('circle_id, user_id, role')
+        .in('circle_id', circleIds)
+        .in('role', ['owner', 'caregiver'])
+        .order('circle_id')
+        .order('user_id')
+        .range(from, to) as unknown as PromiseLike<Page<Membership>>
+    );
     const recipientIds = [...new Set(memberships.map((m) => m.user_id))];
 
     let profiles: Profile[] = [];
     let devices: PushDevice[] = [];
     if (recipientIds.length > 0) {
-      const { data: profileRows, error: profileError } = await supabase
-        .schema('core')
-        .from('profiles')
-        .select('id, preferred_language')
-        .in('id', recipientIds);
-      if (profileError) throw profileError;
-      profiles = (profileRows ?? []) as Profile[];
+      profiles = await fetchAllPages<Profile>((from, to) =>
+        supabase
+          .schema('core')
+          .from('profiles')
+          .select('id, preferred_language')
+          .in('id', recipientIds)
+          .order('id')
+          .range(from, to) as unknown as PromiseLike<Page<Profile>>
+      );
 
-      const { data: deviceRows, error: deviceError } = await supabase
-        .schema('core')
-        .from('push_devices')
-        .select('user_id, fcm_token')
-        .in('user_id', recipientIds);
-      if (deviceError) throw deviceError;
-      devices = (deviceRows ?? []) as PushDevice[];
+      devices = await fetchAllPages<PushDevice>((from, to) =>
+        supabase
+          .schema('core')
+          .from('push_devices')
+          .select('user_id, fcm_token')
+          .in('user_id', recipientIds)
+          .order('fcm_token')
+          .range(from, to) as unknown as PromiseLike<Page<PushDevice>>
+      );
     }
 
     const input: EscalationInput = {
       now,
       reminders,
       regimens,
-      entries: (entryRows ?? []) as unknown as DoseLogEntry[],
-      escalations: escalationRows ?? [],
+      entries,
+      escalations,
       memberships,
       profiles,
       devices,
@@ -207,6 +231,7 @@ Deno.serve(async (request) => {
     //    row unwritten, so the next tick retries while the slot is still
     //    overdue (a missed slot is never escalated, which bounds retries).
     const deadTokens = new Set<string>();
+    const attempts: SendAttempt[] = [];
     let sent = 0;
     let failed = 0;
 
@@ -223,6 +248,8 @@ Deno.serve(async (request) => {
             },
           },
         });
+
+        attempts.push({ key: escalationSlotKey(notification), status: result.status });
 
         if (result.status === 'sent') {
           sent += 1;
@@ -245,13 +272,16 @@ Deno.serve(async (request) => {
       }
     }
 
-    // 7. Record only the slots we attempted, after sending (duplicate beats
-    //    lost). The unique key makes a concurrent tick harmless.
-    if (plan.escalations.length > 0) {
+    // 7. Record the slots that were delivered to at least one device or had
+    //    nothing to retry, after sending (duplicate beats lost). A slot whose
+    //    every send failed transiently stays out of the ledger so the next tick
+    //    retries it. The unique key makes a concurrent tick harmless.
+    const recorded = rowsToRecord(plan.escalations, escalationSlotKey, attempts);
+    if (recorded.length > 0) {
       const { error: insertError } = await supabase
         .schema('meds')
         .from('escalations')
-        .upsert(plan.escalations, {
+        .upsert(recorded, {
           onConflict: 'regimen_id,scheduled_local',
           ignoreDuplicates: true,
         });
@@ -260,7 +290,8 @@ Deno.serve(async (request) => {
 
     return json(200, {
       overdue: plan.overdue.length,
-      escalations: plan.escalations.length,
+      escalations: recorded.length,
+      to_retry: plan.escalations.length - recorded.length,
       notifications: plan.notifications.length,
       sent,
       failed,

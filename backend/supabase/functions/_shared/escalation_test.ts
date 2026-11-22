@@ -9,6 +9,7 @@
 import { assert, assertEquals } from './testing.ts';
 import {
   circleRecipients,
+  escalationSlotKey,
   MESSAGES,
   planEscalations,
   type EscalationInput,
@@ -74,6 +75,9 @@ Deno.test('escalation: an overdue slot notifies the caregivers but never the pri
   assertEquals(plan.notifications.length, 1, 'one notification');
   const notification = plan.notifications[0];
   assertEquals(notification.user_id, BOB);
+  // Names the slot, so the job can tell which ledger row a send belongs to.
+  assertEquals(notification.regimen_id, REGIMEN.id);
+  assertEquals(escalationSlotKey(notification), escalationSlotKey(plan.escalations[0]));
   assertEquals(notification.tokens, ['tok-bob']);
   assertEquals(notification.language, 'en');
   assertEquals(notification.title, 'Family Care');

@@ -6,8 +6,11 @@
  * every rule. The IO layer is `stock-low/index.ts`.
  *
  * Rules (D28):
- * - Only active (not stopped) medications with a regimen are considered; the
- *   stock itself is derived by `stock.ts` (the shared vectors are the contract).
+ * - Only active medications are considered: stopped means `stopped_at` is set and
+ *   not after the run's `now` (a future `stopped_at` is still active). They also
+ *   need a regimen and at least one stock movement of any kind; with none the
+ *   stock is untracked and never low, like the app (`StockOverview.tracked`).
+ *   The stock itself is derived by `stock.ts` (the shared vectors are the contract).
  * - One push per **low episode**: a medication that already has a
  *   `meds.stock_alerts` row is skipped until that row is cleared.
  * - The row is written even when nobody has a device, so the episode is not
@@ -52,6 +55,12 @@ export interface ActiveStockMedication extends StockMedication {
    * it is never low here and its alert row is cleared like a stopped one.
    */
   patient_archived?: boolean;
+  /**
+   * When the stop takes effect, if one was set. It may lie in the future (a
+   * medication stopped with a future last day): the medication is stopped only
+   * when this is not null and not after `now`.
+   */
+  stopped_at?: string | null;
 }
 
 /** A `meds.stock_movements` row as the job reads it (one medication each). */
@@ -60,7 +69,10 @@ export type StockMovementRow = StockMovement & { medication_id: string };
 export interface StockAlertInput {
   /** The job's clock, an ISO instant. */
   now: string;
-  /** Active medications only (`medications.stopped_at is null`). */
+  /**
+   * Active medications: `stopped_at` is null or later than `now`. One whose stop
+   * has already taken effect is skipped here too, so a stale read cannot alert.
+   */
   medications: ActiveStockMedication[];
   /** Every regimen version of those medications. */
   regimens: Regimen[];
@@ -217,11 +229,23 @@ export function planStockAlerts(input: StockAlertInput): StockAlertPlan {
     // An archived patient is hidden from every server job (D30). It is not
     // low here, so its ledger row falls out through `cleared` below.
     if (medication.patient_archived) continue;
+    // Stopped: the stop has taken effect (`stopped_at <= now`). A future
+    // `stopped_at` is still active.
+    if (
+      medication.stopped_at != null && Date.parse(medication.stopped_at) <= nowMs
+    ) continue;
 
     const regimens = regimensByMedication.get(medication.id) ?? [];
     // No regimen means no scheduled consumption, so days remaining is unknown
     // and the medication can never be low.
     if (regimens.length === 0) continue;
+
+    // No movement of any kind: nobody has recorded what is in the box. The
+    // stock maths start such a ledger at 0 ("0 days left"), but the app treats
+    // the medication as untracked and never low (`StockOverview.tracked`), so the
+    // server does not push about a box it was never told about. It still
+    // reaches `cleared` below if it had a row.
+    if ((movementsByMedication.get(medication.id) ?? []).length === 0) continue;
 
     const today = currentLocalDate(
       input.now,
