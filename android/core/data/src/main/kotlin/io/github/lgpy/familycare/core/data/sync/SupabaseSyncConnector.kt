@@ -61,21 +61,24 @@ internal class SupabaseSyncConnector(
      * user. Everything else is rethrown for PowerSync to retry. Neither branch
      * logs row data, and neither puts a token anywhere.
      */
-    override suspend fun uploadData(database: PowerSyncDatabase) {
-        while (true) {
-            val transaction = database.getNextCrudTransaction() ?: return
-            uploadTransaction(
-                // Only the tables this app may write are sent; anything else in
-                // the transaction (a local-only table, a stray memberships write,
-                // an UPDATE of an append-only row) is completed without reaching
-                // the server.
-                writes = transaction.crudWrites(tables),
-                uploader = uploader,
-                rejections = rejections,
-                complete = { transaction.complete(null) },
-            )
-        }
-    }
+    override suspend fun uploadData(database: PowerSyncDatabase) = uploadQueue(
+        nextTransaction = {
+            database.getNextCrudTransaction()?.let { transaction ->
+                PendingTransaction(
+                    // Only the tables this app may write are sent; anything else
+                    // in the transaction (a local-only table, a stray memberships
+                    // write, an UPDATE of an append-only row) is completed
+                    // without reaching the server.
+                    writes = transaction.crudWrites(tables),
+                    complete = { transaction.complete(null) },
+                )
+            }
+        },
+        // Null outside Authenticated, e.g. while a refresh fails offline.
+        hasUserToken = { supabase.auth.currentAccessTokenOrNull() != null },
+        uploader = uploader,
+        rejections = rejections,
+    )
 
     private suspend fun refreshedToken(): String? {
         supabase.auth.refreshCurrentSession()
@@ -85,5 +88,46 @@ internal class SupabaseSyncConnector(
     private companion object {
         /** Refresh ahead of expiry, so an upload never races a token change. */
         val REFRESH_MARGIN = 60.seconds
+    }
+}
+
+/** One queued PowerSync transaction, in the terms [uploadQueue] needs. */
+internal class PendingTransaction(
+    val writes: List<CrudWrite>,
+    val complete: suspend () -> Unit,
+)
+
+/**
+ * Thrown instead of sending a write when there is no user access token.
+ *
+ * supabase-kt would otherwise authorize the request with the publishable key,
+ * PostgREST would run it as `anon`, and the refusal could be mistaken for a
+ * permanent one and the change discarded. Not a REST error, so the retry
+ * policy treats it as transient and PowerSync retries after its delay.
+ */
+internal class MissingUserTokenException :
+    IllegalStateException("No user access token: the upload waits for the session")
+
+/**
+ * Sends the queue oldest transaction first, each only while a user access
+ * token exists (see [MissingUserTokenException]). The token is checked per
+ * transaction; a token lost mid-request comes back as a 401, which the retry
+ * policy also retries.
+ */
+internal suspend fun uploadQueue(
+    nextTransaction: suspend () -> PendingTransaction?,
+    hasUserToken: () -> Boolean,
+    uploader: CrudUploader,
+    rejections: UploadRejections,
+) {
+    while (true) {
+        val transaction = nextTransaction() ?: return
+        if (!hasUserToken()) throw MissingUserTokenException()
+        uploadTransaction(
+            writes = transaction.writes,
+            uploader = uploader,
+            rejections = rejections,
+            complete = transaction.complete,
+        )
     }
 }

@@ -21,6 +21,7 @@ import io.github.lgpy.familycare.core.data.sync.AndroidKeystoreCipher
 import io.github.lgpy.familycare.core.data.sync.CoreSyncedTables
 import io.github.lgpy.familycare.core.data.sync.DATABASE_FILE_NAME
 import io.github.lgpy.familycare.core.data.sync.FileKeyBlobStore
+import io.github.lgpy.familycare.core.data.sync.FileLocalOwnerStore
 import io.github.lgpy.familycare.core.data.sync.PowerSyncSyncService
 import io.github.lgpy.familycare.core.data.sync.SupabaseCrudUploader
 import io.github.lgpy.familycare.core.data.sync.SupabaseSyncConnector
@@ -150,6 +151,8 @@ class DataLayer internal constructor(
                 authState = authRepository.state,
                 connectionFailed = connectionFailed,
                 rejections = rejections,
+                // Beside the wrapped key: never backed up (security-and-privacy §4).
+                owners = FileLocalOwnerStore(File(context.noBackupFilesDir, FileLocalOwnerStore.FILE_NAME)),
                 scope = scope,
             )
 

@@ -60,13 +60,20 @@ internal data class UploadFailure(
  *
  * Everything else is transient and is rethrown so PowerSync retries after its
  * delay: no response at all (offline), 5xx, and the client errors that mean
- * "not now": 401 (the token is being refreshed), 408 (timeout) and 429 (rate
- * limited).
+ * "not now": 401 (no valid user token: being refreshed, or the write went out
+ * as `anon`), 408 (timeout) and 429 (rate limited). A 401 is transient whatever
+ * its Postgres code; a policy refusal for a signed-in user is a 403 with 42501
+ * and stays permanent.
  */
 internal fun isPermanentUploadFailure(
     statusCode: Int?,
     postgresCode: String?,
 ): Boolean {
+    // First, whatever the body says: a request without a user token runs as
+    // `anon`, and PostgREST reports the policy refusal that follows as 401 with
+    // 42501. That is "no session right now", not a verdict on the row.
+    if (statusCode == UNAUTHORIZED) return false
+
     if (postgresCode != null) {
         if (postgresCode == RLS_DENIED) return true
         // Class 22 = data exception, class 23 = integrity constraint violation.
@@ -85,5 +92,6 @@ private const val RLS_DENIED = "42501"
 
 private const val SQLSTATE_LENGTH = 5
 private val PERMANENT_SQLSTATE_CLASSES = setOf("22", "23")
+private const val UNAUTHORIZED = 401
 private val CLIENT_ERROR_RANGE = 400..499
 private val TRANSIENT_CLIENT_ERRORS = setOf(401, 408, 429)

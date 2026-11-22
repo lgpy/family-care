@@ -58,10 +58,12 @@ internal class PowerSyncSyncService(
     private val authState: StateFlow<AuthState>,
     private val connectionFailed: MutableStateFlow<Boolean>,
     private val rejections: UploadRejections,
+    /** Whose data the local database holds, kept across process restarts. */
+    owners: LocalOwnerStore,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : SyncService, SyncSession {
 
-    private val lifecycle = SyncLifecycle(session = this)
+    private val lifecycle = SyncLifecycle(session = this, owners = owners)
     private var started = false
 
     override val state: StateFlow<SyncState> = combine(
