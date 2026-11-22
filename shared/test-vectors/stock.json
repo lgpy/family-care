@@ -241,6 +241,73 @@
       ],
       "dose_log": [],
       "expected": { "stock": 0.5, "daily_consumption": 1, "days_remaining": 0, "low": true, "shopping_status": "ready_to_buy" }
+    },
+    {
+      "name": "decimal-quantities-0.3-over-0.1-is-3-days",
+      "today": "2026-11-18",
+      "medication": { "low_stock_threshold_days": 7, "requires_prescription": false, "prescription_valid_until": null },
+      "regimens": [
+        {"id": "r1", "medication_id": "m1", "schedule_type": "daily", "weekdays": null, "interval_days": null, "start_date": "2026-11-01", "end_date": null, "time_zone": "Europe/Lisbon", "times": [{"time": "08:00", "quantity": 0.1}] }
+      ],
+      "movements": [
+        { "id": "mv1", "kind": "count", "quantity": 0.3, "occurred_at": "2026-11-16T10:00:00Z" }
+      ],
+      "dose_log": [],
+      "expected": { "stock": 0.3, "daily_consumption": 0.1, "days_remaining": 3, "low": true, "shopping_status": "ready_to_buy" }
+    },
+    {
+      "name": "decimal-stock-sum-1-minus-0.3-over-0.1-is-7-days",
+      "today": "2026-11-18",
+      "medication": { "low_stock_threshold_days": 7, "requires_prescription": false, "prescription_valid_until": null },
+      "regimens": [
+        {"id": "r1", "medication_id": "m1", "schedule_type": "daily", "weekdays": null, "interval_days": null, "start_date": "2026-11-01", "end_date": null, "time_zone": "Europe/Lisbon", "times": [{"time": "08:00", "quantity": 0.1}] }
+      ],
+      "movements": [
+        { "id": "mv1", "kind": "count", "quantity": 1, "occurred_at": "2026-11-16T10:00:00Z" }
+      ],
+      "dose_log": [
+        { "id": "d1", "regimen_id": "r1", "medication_id": "m1", "scheduled_local": "2026-11-17T08:00", "outcome": "taken", "skip_reason": null, "actual_at": "2026-11-17T08:00:00Z", "actual_quantity": 0.3, "corrects_entry_id": null }
+      ],
+      "expected": { "stock": 0.7, "daily_consumption": 0.1, "days_remaining": 7, "low": true, "shopping_status": "ready_to_buy" }
+    },
+    {
+      "name": "decimal-quantities-0.6-over-0.1-plus-0.2-is-2-days",
+      "today": "2026-11-18",
+      "medication": { "low_stock_threshold_days": 7, "requires_prescription": false, "prescription_valid_until": null },
+      "regimens": [
+        {"id": "r1", "medication_id": "m1", "schedule_type": "daily", "weekdays": null, "interval_days": null, "start_date": "2026-11-01", "end_date": null, "time_zone": "Europe/Lisbon", "times": [{"time": "08:00", "quantity": 0.1}, {"time": "20:00", "quantity": 0.2}] }
+      ],
+      "movements": [
+        { "id": "mv1", "kind": "count", "quantity": 0.6, "occurred_at": "2026-11-16T10:00:00Z" }
+      ],
+      "dose_log": [],
+      "expected": { "stock": 0.6, "daily_consumption": 0.3, "days_remaining": 2, "low": true, "shopping_status": "ready_to_buy" }
+    },
+    {
+      "name": "decimal-quantities-1.2-over-0.4-is-3-days",
+      "today": "2026-11-18",
+      "medication": { "low_stock_threshold_days": 7, "requires_prescription": false, "prescription_valid_until": null },
+      "regimens": [
+        {"id": "r1", "medication_id": "m1", "schedule_type": "daily", "weekdays": null, "interval_days": null, "start_date": "2026-11-01", "end_date": null, "time_zone": "Europe/Lisbon", "times": [{"time": "08:00", "quantity": 0.4}] }
+      ],
+      "movements": [
+        { "id": "mv1", "kind": "count", "quantity": 1.2, "occurred_at": "2026-11-16T10:00:00Z" }
+      ],
+      "dose_log": [],
+      "expected": { "stock": 1.2, "daily_consumption": 0.4, "days_remaining": 3, "low": true, "shopping_status": "ready_to_buy" }
+    },
+    {
+      "name": "weekdays-mask-mon-wed-fri-decimal-quantity-is-7-days",
+      "today": "2026-11-18",
+      "medication": { "low_stock_threshold_days": 7, "requires_prescription": false, "prescription_valid_until": null },
+      "regimens": [
+        {"id": "r1", "medication_id": "m1", "schedule_type": "weekdays", "weekdays": 21, "interval_days": null, "start_date": "2026-11-01", "end_date": null, "time_zone": "Europe/Lisbon", "times": [{"time": "08:00", "quantity": 0.1}] }
+      ],
+      "movements": [
+        { "id": "mv1", "kind": "count", "quantity": 0.3, "occurred_at": "2026-11-16T10:00:00Z" }
+      ],
+      "dose_log": [],
+      "expected": { "stock": 0.3, "daily_consumption": 0.042857142857, "days_remaining": 7, "low": true, "shopping_status": "ready_to_buy" }
     }
   ]
 }
