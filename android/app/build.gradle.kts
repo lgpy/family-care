@@ -18,25 +18,28 @@ plugins {
  * to be public; the service-role/admin key must never be put there
  * (security-and-privacy §3, §4).
  *
- * Only `dev` exists today. A prod file with the same keys can be dropped next
- * to it and selected with `-Pfamilycare.env=prod`; no other change is needed.
+ * Each build type has its own default environment: debug builds talk to dev,
+ * release builds to prod (the real data). `-Pfamilycare.env=<name>` overrides
+ * both, e.g. `-Pfamilycare.env=dev` for a release build against dev. Release
+ * once defaulted to dev too, and a 0.9.0 APK built without the flag reached the
+ * family's phones showing dev test data; a release must never pick dev silently.
  */
-val environmentName: String = providers.gradleProperty("familycare.env").getOrElse("dev")
-val environmentFile = rootProject.layout.projectDirectory.file("environments/$environmentName.properties")
-val environmentValues: Map<String, String> = Properties()
-    .apply {
-        val text = providers.fileContents(environmentFile).asText.orNull
-            ?: throw GradleException(
-                "Missing environment file ${environmentFile.asFile} " +
-                    "(familycare.env=$environmentName). See android/environments/dev.properties.",
-            )
-        text.reader().use { load(it) }
-    }
-    .entries
-    .associate { it.key.toString() to it.value.toString() }
+val explicitEnvironment: String? = providers.gradleProperty("familycare.env").orNull
 
-fun environmentValue(key: String): String = environmentValues[key]
-    ?: throw GradleException("Missing '$key' in ${environmentFile.asFile} (familycare.env=$environmentName)")
+fun loadEnvironment(name: String): Map<String, String> {
+    val file = rootProject.layout.projectDirectory.file("environments/$name.properties")
+    val text = providers.fileContents(file).asText.orNull
+        ?: throw GradleException(
+            "Missing environment file ${file.asFile} (familycare.env=$name). " +
+                "See android/environments/dev.properties.",
+        )
+    val values = Properties().apply { text.reader().use { load(it) } }
+        .entries
+        .associate { it.key.toString() to it.value.toString() }
+    return values.withDefault { key ->
+        throw GradleException("Missing '$key' in ${file.asFile} (familycare.env=$name)")
+    }
+}
 
 /*
  * Release signing (build-plan §7, D18). The key and its passwords live in the
@@ -54,6 +57,17 @@ val releaseSigning: Properties? = rootProject.layout.projectDirectory.file("keys
     .let { providers.fileContents(it).asText.orNull }
     ?.let { text -> Properties().apply { text.reader().use { load(it) } } }
 
+/** The backend identifiers of [environment], compiled into this build type's BuildConfig. */
+fun com.android.build.api.dsl.ApplicationBuildType.environmentFields(environment: String) {
+    val values = loadEnvironment(environment)
+    fun field(name: String, key: String) =
+        buildConfigField("String", name, buildConfigString(values.getValue(key)))
+    field("SUPABASE_URL", "supabase.url")
+    field("SUPABASE_PUBLISHABLE_KEY", "supabase.publishableKey")
+    field("GOOGLE_WEB_CLIENT_ID", "google.webClientId")
+    field("POWERSYNC_URL", "powersync.url")
+}
+
 /** A Java/Kotlin string literal safe to embed in generated BuildConfig code. */
 fun buildConfigString(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
@@ -64,20 +78,6 @@ android {
     defaultConfig {
         // D21: permanent application ID.
         applicationId = "io.github.lgpy.familycare"
-
-        buildConfigField("String", "SUPABASE_URL", buildConfigString(environmentValue("supabase.url")))
-        buildConfigField(
-            "String",
-            "SUPABASE_PUBLISHABLE_KEY",
-            buildConfigString(environmentValue("supabase.publishableKey")),
-        )
-        buildConfigField(
-            "String",
-            "GOOGLE_WEB_CLIENT_ID",
-            buildConfigString(environmentValue("google.webClientId")),
-        )
-        // Not used yet: PowerSync is the next M1 step and reads this value then.
-        buildConfigField("String", "POWERSYNC_URL", buildConfigString(environmentValue("powersync.url")))
     }
 
     if (releaseSigning != null) {
@@ -104,6 +104,10 @@ android {
             // installing a debug APK would overwrite (or be blocked as a
             // signature conflict by) the real release-signed app on the phone.
             applicationIdSuffix = ".debug"
+            environmentFields(explicitEnvironment ?: "dev")
+        }
+        getByName("release") {
+            environmentFields(explicitEnvironment ?: "prod")
         }
     }
 
