@@ -21,6 +21,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
+  escalationSlotKey,
   LOOKBACK_MARGIN_MINUTES,
   planEscalations,
   type EffectiveReminder,
@@ -32,6 +33,7 @@ import {
 import type { DoseLogEntry } from '../_shared/doseStatus.ts';
 import type { Regimen } from '../_shared/doseSlots.ts';
 import { createFcmSender, parseServiceAccount } from '../_shared/fcm.ts';
+import { rowsToRecord, type SendAttempt } from '../_shared/delivery.ts';
 import { errorText } from '../_shared/log.ts';
 
 const MS_PER_MINUTE = 60_000;
@@ -207,6 +209,7 @@ Deno.serve(async (request) => {
     //    row unwritten, so the next tick retries while the slot is still
     //    overdue (a missed slot is never escalated, which bounds retries).
     const deadTokens = new Set<string>();
+    const attempts: SendAttempt[] = [];
     let sent = 0;
     let failed = 0;
 
@@ -223,6 +226,8 @@ Deno.serve(async (request) => {
             },
           },
         });
+
+        attempts.push({ key: escalationSlotKey(notification), status: result.status });
 
         if (result.status === 'sent') {
           sent += 1;
@@ -245,13 +250,16 @@ Deno.serve(async (request) => {
       }
     }
 
-    // 7. Record only the slots we attempted, after sending (duplicate beats
-    //    lost). The unique key makes a concurrent tick harmless.
-    if (plan.escalations.length > 0) {
+    // 7. Record the slots that were delivered to at least one device or had
+    //    nothing to retry, after sending (duplicate beats lost). A slot whose
+    //    every send failed transiently stays out of the ledger so the next tick
+    //    retries it. The unique key makes a concurrent tick harmless.
+    const recorded = rowsToRecord(plan.escalations, escalationSlotKey, attempts);
+    if (recorded.length > 0) {
       const { error: insertError } = await supabase
         .schema('meds')
         .from('escalations')
-        .upsert(plan.escalations, {
+        .upsert(recorded, {
           onConflict: 'regimen_id,scheduled_local',
           ignoreDuplicates: true,
         });
@@ -260,7 +268,8 @@ Deno.serve(async (request) => {
 
     return json(200, {
       overdue: plan.overdue.length,
-      escalations: plan.escalations.length,
+      escalations: recorded.length,
+      to_retry: plan.escalations.length - recorded.length,
       notifications: plan.notifications.length,
       sent,
       failed,

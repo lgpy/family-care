@@ -31,6 +31,7 @@ import {
   type StockMovementRow,
 } from '../_shared/stockAlerts.ts';
 import { latestCount } from '../_shared/stock.ts';
+import { rowsToRecord, type SendAttempt } from '../_shared/delivery.ts';
 import type { DoseLogEntry } from '../_shared/doseStatus.ts';
 import type { Regimen } from '../_shared/doseSlots.ts';
 import type { Membership, Profile, PushDevice, ReminderPolicy } from '../_shared/escalation.ts';
@@ -338,6 +339,7 @@ Deno.serve(async (request) => {
     // 6. Send. A dead token is deleted; a transient failure leaves the ledger
     //    row unwritten, so tomorrow's run retries while the medication is low.
     const deadTokens = new Set<string>();
+    const attempts: SendAttempt[] = [];
     let sent = 0;
     let failed = 0;
 
@@ -354,6 +356,8 @@ Deno.serve(async (request) => {
             },
           },
         });
+
+        attempts.push({ key: notification.medication_id, status: result.status });
 
         if (result.status === 'sent') {
           sent += 1;
@@ -376,14 +380,18 @@ Deno.serve(async (request) => {
       }
     }
 
-    // 7. Record the episodes and re-arm the recovered ones. The primary key
-    //    makes a concurrent run harmless (duplicate beats lost).
-    if (plan.alerts.length > 0) {
+    // 7. Record the episodes that were delivered to at least one device or had
+    //    nothing to retry, and re-arm the recovered ones. An episode whose every
+    //    send failed transiently stays out of the ledger, so tomorrow's run
+    //    retries. The primary key makes a concurrent run harmless (duplicate
+    //    beats lost).
+    const recorded = rowsToRecord(plan.alerts, (row) => row.medication_id, attempts);
+    if (recorded.length > 0) {
       const { error: insertError } = await supabase
         .schema('meds')
         .from('stock_alerts')
         .upsert(
-          plan.alerts.map((row) => ({
+          recorded.map((row) => ({
             medication_id: row.medication_id,
             recipients: row.recipients,
           })),
@@ -403,7 +411,8 @@ Deno.serve(async (request) => {
 
     return json(200, {
       low: plan.low.length,
-      alerts: plan.alerts.length,
+      alerts: recorded.length,
+      to_retry: plan.alerts.length - recorded.length,
       cleared: plan.cleared.length,
       notifications: plan.notifications.length,
       sent,
